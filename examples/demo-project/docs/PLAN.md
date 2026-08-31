@@ -18,10 +18,21 @@
 
 `pair.py claim` 靠 `- [ ] **ID** —` 这个格式识别,不要改动它。
 
-- [ ] **W1** — `slugify(text)` 把文本转成 URL slug
+类型标记决定阶段序列和红绿纪律,省略则为 `feature`。
+`对应契约` 那一行是必须的,verify-setup 会检查它指向的小节真实存在。
+
+- [ ] **W1** [feature] — `slugify(text)` 把文本转成 URL slug
   - 验收标准:小写化、空白转连字符、去掉首尾连字符、空串抛 ValueError
   - 对应契约:`docs/CONTRACT.md` → slugify
 
-- [ ] **W2** — `truncate(text, n)` 按字符数截断并加省略号
+- [ ] **W2** [feature] — `truncate(text, n)` 按字符数截断并加省略号
   - 验收标准:短于 n 时原样返回;n < 1 抛 ValueError;省略号计入长度
   - 对应契约:`docs/CONTRACT.md` → truncate
+
+- [ ] **W3** [cover] — 为 slugify 的非 ASCII 行为补测试
+  - 验收标准:契约说"非 ASCII 原样保留并转小写",但 W1 没有断言它
+  - 对应契约:`docs/CONTRACT.md` → slugify
+
+- [ ] **W4** [refactor] — 把 slugify 的正则提取成具名常量
+  - 验收标准:行为不变,测试全程保持绿
+  - 对应契约:`docs/CONTRACT.md` → slugify

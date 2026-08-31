@@ -18,12 +18,13 @@ SKILL_SRC = REPO / ".agents" / "skills" / "pair-protocol"
 PAIR_PY = ".agents/skills/pair-protocol/scripts/pair.py"
 
 # 微型 TDD:tests/ 下每有一个文件,src/ 下就必须有同名文件,否则红。
-# 空的 tests/ 也算红。这让红绿状态完全由文件布局决定,便于测试驱动。
+# 空的 tests/ 算绿 —— 真实项目接入时基线必须是全绿的,init 与 verify-setup
+# 都依赖这一点。红绿状态完全由文件布局决定,便于测试驱动。
 TEST_CMD = (
     "python3 -c \""
     "import os,sys;"
     "t=[n for n in os.listdir('tests') if not n.startswith('.')];"
-    "sys.exit(0 if t and all(os.path.exists(os.path.join('src',n)) for n in t) else 1)"
+    "sys.exit(0 if all(os.path.exists(os.path.join('src',n)) for n in t) else 1)"
     "\""
 )
 
@@ -31,10 +32,23 @@ PLAN_TEMPLATE = """# 项目规划
 
 ## 工作项
 
-- [ ] **W1** — 第一个工作项
-  - 验收标准:tests/w1 存在时 src/w1 也存在
-- [ ] **W2** — 第二个工作项
+- [ ] **W1** [feature] — 第一个工作项
+  - 验收标准:tests/W1 存在时 src/W1 也存在
+  - 对应契约:`docs/CONTRACT.md` → W1
+- [ ] **W2** [feature] — 第二个工作项
   - 验收标准:同上
+  - 对应契约:`docs/CONTRACT.md` → W2
+"""
+
+CONTRACT_TEMPLATE = """# 接口契约
+
+## W1
+
+**行为** tests/W1 存在时 src/W1 必须存在。
+
+## W2
+
+**行为** tests/W2 存在时 src/W2 必须存在。
 """
 
 CONFIG = {
@@ -43,7 +57,11 @@ CONFIG = {
     "shared_paths": ["docs/reviews"],
     "frozen_paths": ["docs/PLAN.md", "docs/CONTRACT.md", ".agents", ".pair"],
     "plan_file": "docs/PLAN.md",
+    "contract_file": "docs/CONTRACT.md",
+    "ignore_paths": [],
     "sync": False,
+    # 绝大多数用例不测这条门禁,单独有一组用例专门测它
+    "require_setup_verification": False,
 }
 
 
@@ -61,17 +79,23 @@ def install_protocol(target: Path, config=None):
     (pair / "config.json").write_text(
         json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
     (pair / "state.json").write_text(json.dumps({
-        "round": 0, "phase": "spec", "item": None,
+        "round": 0, "phase": "idle", "item": None, "item_type": None,
         "last_actor": None, "changes_count": 0, "completed_items": [],
+        "setup_verified": False,
     }, indent=2), encoding="utf-8")
 
     for d in ("src", "tests", "docs/reviews"):
         (target / d).mkdir(parents=True, exist_ok=True)
         (target / d / ".gitkeep").write_text("", encoding="utf-8")
     (target / "docs" / "PLAN.md").write_text(PLAN_TEMPLATE, encoding="utf-8")
-    (target / "docs" / "CONTRACT.md").write_text("# 契约\n", encoding="utf-8")
+    (target / "docs" / "CONTRACT.md").write_text(CONTRACT_TEMPLATE, encoding="utf-8")
     (target / ".gitignore").write_text(
         ".pair/.last-test.log\n.pair/whoami\n", encoding="utf-8")
+    # 入口文件:真实项目由 init 铺设,这里手工放两个主要的
+    (target / "AGENTS.md").write_text(
+        "本仓库是双 AI agent 结对开发项目,先读 "
+        ".agents/skills/pair-protocol/SKILL.md\n", encoding="utf-8")
+    (target / "CLAUDE.md").write_text("@AGENTS.md\n", encoding="utf-8")
 
 
 class Result:
@@ -149,6 +173,14 @@ class PairRepo:
         st.update(kw)
         self.write(".pair/state.json", json.dumps(st, indent=2))
 
+    def set_plan(self, text, contract=None):
+        """以人类身份改写 PLAN/CONTRACT 并提交(agent 不能做这件事)。"""
+        self.write("docs/PLAN.md", text)
+        if contract is not None:
+            self.write("docs/CONTRACT.md", contract)
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", "docs: 人类更新了规划")
+
     def head_subject(self):
         return self.git("log", "-1", "--format=%s").stdout.decode("utf-8").strip()
 
@@ -158,9 +190,12 @@ class PairRepo:
     # --- 合法地推进回合 ------------------------------------------------
     def advance_to(self, phase, item="W1"):
         """通过合法交接把状态推到指定阶段。测试用来搭场景。"""
+        if phase == "idle":
+            return
+        r = self.run("claim", item, role="tester")
+        assert r.code == 0, r
         if phase == "spec":
             return
-        assert self.run("claim", item, role="tester").code == 0
         self.write("tests/%s" % item)
         r = self.run("handoff", "写了 %s 的失败用例" % item, role="tester")
         assert r.code == 0, r
@@ -196,3 +231,63 @@ class PairTestCase(unittest.TestCase):
 
     def assertAccepted(self, result):
         self.assertEqual(result.code, 0, "本应放行,却被拒绝。\n%r" % result)
+
+
+# Go 同目录布局:每个 X_test.go 都要有对应的 X.go,否则红。
+GO_TEST_CMD = (
+    "python3 -c \""
+    "import os,sys,glob;"
+    "t=glob.glob('**/*_test.go',recursive=True);"
+    "sys.exit(0 if all(os.path.exists(f[:-8]+'.go') for f in t) else 1)"
+    "\""
+)
+
+GO_CONFIG = {
+    "test_cmd": GO_TEST_CMD,
+    "roles": {
+        "tester": ["**/*_test.go"],
+        "dev": ["**/*.go", "!**/*_test.go"],
+    },
+}
+
+
+class BareRepo:
+    """一个只有源码、还没装协议的 git 仓库 —— 用来测 init 与 CLI bootstrap。"""
+
+    def __init__(self, files=None, install_skill=True):
+        self.dir = Path(tempfile.mkdtemp(prefix="pair-bare-"))
+        for rel, content in (files or {}).items():
+            p = self.dir / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(content, encoding="utf-8")
+        if install_skill:
+            dest = self.dir / ".agents" / "skills" / "pair-protocol"
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(SKILL_SRC, dest, dirs_exist_ok=True)
+        self.git("init", "-q")
+        self.git("config", "user.email", "conformance@test")
+        self.git("config", "user.name", "conformance")
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", "initial")
+
+    def cleanup(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def git(self, *args):
+        return subprocess.run(("git",) + args, cwd=self.dir,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def run(self, *args, role="tester"):
+        e = dict(os.environ)
+        e.pop("PAIR_TEST_CMD", None)
+        e["PAIR_ROLE"] = role
+        return Result(subprocess.run(["python3", PAIR_PY] + list(args),
+                                     cwd=self.dir, env=e,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE))
+
+    def exists(self, rel):
+        return (self.dir / rel).exists()
+
+    def read(self, rel):
+        return (self.dir / rel).read_text(encoding="utf-8")

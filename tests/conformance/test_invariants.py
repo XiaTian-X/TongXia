@@ -74,7 +74,7 @@ class TestClaim(PairTestCase):
     def test_不能中途改领别的工作项(self):
         self.repo.run("claim", "W1", role="tester")
         r = self.repo.run("claim", "W2", role="tester")
-        self.assertRefused(r, "不能中途改领")
+        self.assertRefused(r, "还在进行中")
 
     def test_不能重复认领已完成的工作项(self):
         self.repo.advance_to("review-test")

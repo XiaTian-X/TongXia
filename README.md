@@ -11,6 +11,10 @@ Copilot / Goose / OpenCode …)结对开发同一个项目:一个只写测试,�
 tester 写失败测试  →  dev 实现至绿  →  tester 审实现  →  dev 审测试  →  下一项
 ```
 
+```bash
+uvx --from git+https://github.com/<你>/TongXia pair init /你的项目
+```
+
 ## 为什么是这个设计
 
 **回合信号用测试的红绿,不用 LLM 判断。** spec 回合结束时测试必须是红的,
@@ -30,6 +34,19 @@ impl 回合结束时必须是绿的——`handoff` 强制检查。"做完了没"
 **通信只走 git。** 两个 agent 看不到对方的对话,上下文靠仓库重新推导——这恰好是
 agent 擅长的,也比传递对话记录省得多。`pair.py inbox` 就是收件箱。
 
+## 适用范围
+
+| 场景 | 工作项类型 | 契合度 |
+|---|---|---|
+| 新项目做功能 | `feature` | ✅ |
+| **已完成项目修 bug** | `bug` | ✅ **最佳场景** —— 写复现测试 → 修绿,天然就是 TDD |
+| 存量项目提覆盖率 | `cover` | ✅ 跳过 impl,dev 只评审"这测试能否发现回归" |
+| 存量项目还技术债 | `refactor` | ✅ 跳过 spec,tester 只评审"行为有没有变" |
+
+布局上支持目录切分(`tests/` + `src/`)和同目录布局(Go 的 `*_test.go`、
+JS 的 `*.test.ts`,靠 glob 负模式切分)。**Rust 的文件内单元测试不支持** ——
+`#[cfg(test)] mod tests` 和实现在同一个文件里,目录切分物理上不成立。
+
 ## 仓库结构
 
 ```
@@ -37,10 +54,15 @@ agent 擅长的,也比传递对话记录省得多。`pair.py inbox` 就是收件
 ├── SKILL.md                        协议正文(渐进式加载,不常驻上下文)
 ├── references/rules.md             硬性规则详解与判例(按需加载)
 └── scripts/pair.py                 执行层。单文件,仅 stdlib
+cli/pair_bootstrap/               ← 极薄 bootstrap:复制 skill → 调用 pair.py init
 tests/conformance/                ← 协议一致性测试 + 变异检查
 examples/demo-project/            ← 样板项目模板
 INSTALL.md                        ← 怎么接入已有项目
 ```
+
+CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交给它。这条约束是
+刻意的:一旦 CLI 里出现协议逻辑,它就会和 skill 漂移,而防漂移正是这个项目
+从头到尾在做的事。
 
 ## 开发
 
@@ -75,6 +97,8 @@ python3 examples/make-demo.py /tmp/pair-demo
   它到底有没有读到 SKILL.md。
 - **不能执行 shell 命令的 harness 不在支持范围。** 执行层跑不起来,协议只能
   退化成纯 prose 约束,强制力归零。
+- **基线必须全绿才能接入。** `impl` 阶段的 GREEN 要求依赖这一点,基线本来
+  就红的话协议要么卡死、要么那条不变量形同虚设。`init` 会拒绝。
 - **契约质量决定成败。** 两个 agent 从不交谈,只靠 `docs/CONTRACT.md` 对齐。
   契约含糊 → tester 测 `login() -> token`,dev 写 `authenticate() -> Session`,
   两边各自都"对",合起来是废的。这是唯一会致命的失败模式。

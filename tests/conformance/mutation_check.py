@@ -30,7 +30,7 @@ MUTATIONS = [
      '    if False:\n        die("现在是 %s 的 %s 回合'),
 
     ("拆掉评审只读",
-     "    if phase in REVIEW_PHASES:\n        return shared",
+     '    if phase in REVIEW_PHASES or phase == "idle":\n        return shared',
      "    if False:\n        return shared"),
 
     ("拆掉写权限边界",
@@ -42,11 +42,11 @@ MUTATIONS = [
      "    if False:"),
 
     ("拆掉 spec 阶段红绿检查",
-     '    if phase == "spec" and green:',
+     '    if expect == "RED" and green:',
      "    if False:"),
 
     ("拆掉 impl 阶段红绿检查",
-     '    if phase == "impl" and not green:',
+     '    if expect == "GREEN" and not green:',
      "    if False:"),
 
     ("拆掉评审理由强制",
@@ -57,13 +57,46 @@ MUTATIONS = [
      "        if changes_n >= DEADLOCK_LIMIT:",
      "        if False:"),
 
-    ("拆掉认领工作项强制",
-     '    if phase == "spec" and not item:',
-     "    if False:"),
-
     ("拆掉 PLAN 全完成的终止检查",
      "    if plan_all_done(root, cfg):\n        die(",
      "    if False:\n        die("),
+
+    # --- v1 新增防护 ---------------------------------------------------
+    ("拆掉 cover 新增测试检查",
+     '    if phase in flow["require_new_tests"]:',
+     "    if False:"),
+
+    ("拆掉 verify-setup 门禁",
+     '    if cfg["require_setup_verification"] and not state["setup_verified"]:\n        die("尚未通过开工前校验',
+     '    if False:\n        die("尚未通过开工前校验'),
+
+    ("拆掉角色重叠检测",
+     '    if both:\n        bad("以下文件同时属于两个角色',
+     '    if False:\n        bad("以下文件同时属于两个角色'),
+
+    ("拆掉 init 基线检查",
+     "    if not run_tests(root, probe_cfg):",
+     "    if False:"),
+
+    ("拆掉 verify-setup 基线检查",
+     "    elif not run_tests(root, cfg):",
+     "    elif False:"),
+
+    ("拆掉 glob 负模式",
+     '        if pat.startswith("!"):\n            if path_matches(path, pat[1:]):',
+     '        if pat.startswith("!"):\n            if False:'),
+
+    ("拆掉 idle 阶段交接拦截",
+     '    if phase == "idle":\n        die("还没有认领工作项',
+     '    if False:\n        die("还没有认领工作项'),
+
+    ("拆掉 ignore_paths",
+     '        if path == TESTLOG_REL or matches_any(path, cfg["ignore_paths"]):',
+     "        if path == TESTLOG_REL:"),
+
+    ("拆掉契约覆盖度检查",
+     '            if not refs:\n                bad("工作项',
+     '            if False:\n                bad("工作项'),
 ]
 
 FAIL_RE = re.compile(r"^(?:FAIL|ERROR): (\S+)", re.M)

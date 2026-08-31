@@ -19,6 +19,9 @@
     ".claude",
     ".pair"
   ],
+  "ignore_paths": [],
   "plan_file": "docs/PLAN.md",
-  "sync": false
+  "contract_file": "docs/CONTRACT.md",
+  "sync": false,
+  "require_setup_verification": true
 }

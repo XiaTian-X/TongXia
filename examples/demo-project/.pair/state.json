@@ -1,8 +1,10 @@
 {
   "round": 0,
-  "phase": "spec",
+  "phase": "idle",
   "item": null,
+  "item_type": null,
   "last_actor": null,
   "changes_count": 0,
-  "completed_items": []
+  "completed_items": [],
+  "setup_verified": false
 }

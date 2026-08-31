@@ -34,7 +34,7 @@ class TestStateTamper(PairTestCase):
         self.repo.tamper_state(phase="impl", changes_count=99)
         self.repo.run("handoff", "抢回合", role="dev")
         st = self.repo.state()
-        self.assertEqual(st["phase"], "spec", "状态没有被还原")
+        self.assertEqual(st["phase"], "idle", "状态没有被还原")
         self.assertEqual(st["changes_count"], 0, "打回计数没有被还原")
 
     def test_篡改不会产生提交(self):

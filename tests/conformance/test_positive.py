@@ -59,7 +59,7 @@ class TestFullCycle(PairTestCase):
         self.assertAccepted(self.repo.run("handoff", "approve", "只断言契约", role="dev"))
 
         st = self.repo.state()
-        self.assertEqual(st["phase"], "spec")
+        self.assertEqual(st["phase"], "idle")
         self.assertEqual(st["item"], None)
         self.assertEqual(st["completed_items"], ["W1"])
         self.assertEqual(st["round"], 1)

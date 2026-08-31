@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pair-protocol"
+version = "1.0.0"
+description = "让任意两个 AI coding agent 结对开发同一项目的协议:一个写测试、一个写实现、互相评审"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []
+
+[project.scripts]
+pair = "pair_bootstrap:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cli/pair_bootstrap"]
+
+# 协议目录是唯一真源,构建时原样打进包里。
+# CLI 不复制、不改写协议内容,只负责把它搬到目标项目。
+[tool.hatch.build.targets.wheel.force-include]
+".agents/skills/pair-protocol" = "pair_bootstrap/skill"
