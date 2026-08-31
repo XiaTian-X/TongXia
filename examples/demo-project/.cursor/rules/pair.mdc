@@ -7,5 +7,5 @@ alwaysApply: true
 
 开工前必须:(1) 激活 `pair-protocol` 技能,或直接读
 `.agents/skills/pair-protocol/SKILL.md`;(2) 运行
-`.agents/skills/pair-protocol/scripts/status` 确认角色和回合。
+`python3 .agents/skills/pair-protocol/scripts/pair.py status` 确认角色和回合。
 在此之前不要修改任何文件。

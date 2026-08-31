@@ -1,0 +1,24 @@
+{
+  "test_cmd": "python3 -m unittest discover -s tests -t .",
+  "roles": {
+    "tester": [
+      "tests"
+    ],
+    "dev": [
+      "src"
+    ]
+  },
+  "shared_paths": [
+    "docs/reviews"
+  ],
+  "frozen_paths": [
+    "docs/PLAN.md",
+    "docs/CONTRACT.md",
+    "AGENTS.md",
+    ".agents",
+    ".claude",
+    ".pair"
+  ],
+  "plan_file": "docs/PLAN.md",
+  "sync": false
+}
