@@ -4,7 +4,7 @@
 这两条是协议的地基:回合能被抢,或状态能被改,其余所有强制都失效。
 """
 
-from harness import PairTestCase
+from harness import EVIDENCE, PairTestCase, with_loc
 
 
 class TestTurnOwnership(PairTestCase):
@@ -47,13 +47,13 @@ class TestStateTamper(PairTestCase):
 
     def test_清零打回计数绕过死锁闸被拒绝(self):
         self.repo.advance_to("review-impl")
-        self.repo.run("handoff", "changes", "第一次", role="tester")
+        self.repo.run("handoff", "changes", with_loc("第一次"), role="tester")
         self.repo.run("handoff", "修好了", role="dev")
-        self.repo.run("handoff", "changes", "第二次", role="tester")
+        self.repo.run("handoff", "changes", with_loc("第二次"), role="tester")
         self.repo.run("handoff", "又修好了", role="dev")
         # tester 想把计数清零来躲开死锁闸
         self.repo.tamper_state(changes_count=0)
-        r = self.repo.run("handoff", "changes", "第三次", role="tester")
+        r = self.repo.run("handoff", "changes", with_loc("第三次"), role="tester")
         self.assertRefused(r, "state.json")
 
     def test_status_会警告状态被篡改(self):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """写权限边界:角色隔离、评审只读、冻结文件、测试删除防护。"""
 
-from harness import PairTestCase
+from harness import EVIDENCE, PairTestCase, with_loc
 
 
 class TestRoleBoundaries(PairTestCase):
@@ -34,19 +34,19 @@ class TestReviewIsReadOnly(PairTestCase):
     def test_评审时不能改测试(self):
         self.repo.advance_to("review-impl")
         self.repo.write("tests/夹带", "评审时偷偷加的")
-        r = self.repo.run("handoff", "approve", "看过了没问题", role="tester")
+        r = self.repo.run("handoff", "approve", "看过了没问题", *EVIDENCE, role="tester")
         self.assertRefused(r, "只读评审")
 
     def test_评审时不能改实现(self):
         self.repo.advance_to("review-test")
         self.repo.write("src/夹带", "评审时偷偷加的")
-        r = self.repo.run("handoff", "approve", "测试写得不错", role="dev")
+        r = self.repo.run("handoff", "approve", "测试写得不错", *EVIDENCE, role="dev")
         self.assertRefused(r, "只读评审")
 
     def test_评审时可以写评审记录(self):
         self.repo.advance_to("review-impl")
         self.repo.write("docs/reviews/W1-impl.md", "# 评审意见\n无硬编码。\n")
-        r = self.repo.run("handoff", "approve", "详见 docs/reviews/W1-impl.md", role="tester")
+        r = self.repo.run("handoff", "approve", "详见 docs/reviews/W1-impl.md", *EVIDENCE, role="tester")
         self.assertAccepted(r)
 
 
@@ -55,7 +55,7 @@ class TestDeletionGuard(PairTestCase):
 
     def _到达带有已完成测试的_spec(self):
         self.repo.advance_to("review-test")
-        self.repo.run("handoff", "approve", "覆盖够", role="dev")
+        self.repo.run("handoff", "approve", "覆盖够", *EVIDENCE, role="dev")
         self.repo.run("claim", "W2", role="tester")
 
     def test_删除已有测试被拒绝(self):

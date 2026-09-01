@@ -5,7 +5,7 @@
 违规测试也能全绿,但完全没用。
 """
 
-from harness import PairTestCase
+from harness import EVIDENCE, PairTestCase, with_loc
 
 
 class TestUnicodeAndSpecialChars(PairTestCase):
@@ -53,10 +53,10 @@ class TestFullCycle(PairTestCase):
         self.assertAccepted(self.repo.run("handoff", "实现 W1", role="dev"))
         self.assertEqual(self.repo.state()["phase"], "review-impl")
 
-        self.assertAccepted(self.repo.run("handoff", "approve", "无硬编码", role="tester"))
+        self.assertAccepted(self.repo.run("handoff", "approve", "无硬编码", *EVIDENCE, role="tester"))
         self.assertEqual(self.repo.state()["phase"], "review-test")
 
-        self.assertAccepted(self.repo.run("handoff", "approve", "只断言契约", role="dev"))
+        self.assertAccepted(self.repo.run("handoff", "approve", "只断言契约", *EVIDENCE, role="dev"))
 
         st = self.repo.state()
         self.assertEqual(st["phase"], "idle")
@@ -73,8 +73,8 @@ class TestFullCycle(PairTestCase):
             self.repo.run("handoff", "%s 用例" % item, role="tester")
             self.repo.write("src/%s" % item)
             self.repo.run("handoff", "实现 %s" % item, role="dev")
-            self.repo.run("handoff", "approve", "实现没问题", role="tester")
-            self.repo.run("handoff", "approve", "测试没问题", role="dev")
+            self.repo.run("handoff", "approve", "实现没问题", *EVIDENCE, role="tester")
+            self.repo.run("handoff", "approve", "测试没问题", *EVIDENCE, role="dev")
 
         self.assertEqual(self.repo.state()["completed_items"], ["W1", "W2"])
 

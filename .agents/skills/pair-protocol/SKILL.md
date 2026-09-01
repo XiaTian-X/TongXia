@@ -29,7 +29,9 @@ python3 .agents/skills/pair-protocol/scripts/pair.py status
 如果它说不是你的回合:跑 `pair.py inbox` 看对方做了什么,向人类报告在等谁,
 然后**停下**。不要抢跑。
 
-## 五条命令
+## 结对回合用到的五条命令
+
+(还有一条 `init` 属于接入阶段,由人类或第三方 agent 跑一次,不归你,见 INSTALL.md。)
 
 | 命令 | 用途 |
 |---|---|
@@ -82,8 +84,8 @@ dev 写 `authenticate() -> Session`,两边各自都"对",合起来是废的。
 | 类型 | 阶段序列 | 红绿纪律 |
 |---|---|---|
 | `feature` / `bug` | spec → impl → review-impl → review-test | spec 必须 RED,impl 必须 GREEN |
-| `cover`(补测试) | spec → review-test | 全程 GREEN,但必须真的新增了测试 |
-| `refactor`(重构) | impl → review-impl | 全程 GREEN |
+| `cover`(补测试) | spec → review-test | 全程 GREEN,必须新增测试 + 交出特征测试记录 |
+| `refactor`(重构) | impl → review-impl | 全程 GREEN,PLAN 里必须声明 `保护测试` |
 
 ```
 spec (tester)  →  impl (dev)  →  review-impl (tester)  →  review-test (dev)
@@ -116,10 +118,14 @@ PLAN 里的工作项全部完成后,协议停止轮转并报告项目结束。
    都算作弊,评审时必须被打回。
 4. **tester 只断言 `docs/CONTRACT.md` 里的可观测行为。** 禁止断言私有方法名、
    内部调用次数、日志内容——那会把测试变成变更探测器。
+   **唯一例外是 `cover` 回合**:它可以断言观察到的行为,代价是必须交出
+   `## 行为来源` 和 `## 我冻结了哪些可疑行为` 两节笔记。
 5. **tester 一回合只提一个(或一组紧密相关的)失败用例。** 不要一次砸一堆。
-6. **评审回合是只读的。** 只能写 `docs/reviews/`。夹带任何代码改动都会被拒绝。
-   裁决必须具体,禁止 "看起来不错" "LGTM" 这类空话——**你的价值就在于挑刺;
-   互相点头等于这个项目白做。**
+6. **评审回合是只读的,而且裁决必须带证据。** 只能写 `docs/reviews/`,夹带任何
+   代码改动都会被拒绝。通过要交出检查清单
+   (`approve "摘要" --checked "查了什么" --uncovered "还没覆盖什么"`),
+   打回要指到 `路径:行号`。两条都由 `handoff` 强制。
+   **你的价值就在于挑刺;互相点头等于这个项目白做。**
 7. **删除测试要显式声明。** `handoff "说明" --allow-deletion "理由"`,
    理由会写进提交记录,对方评审时必然看到。这不是放行,是强制留痕。
 8. **不许碰 `.pair/state.json`。** 协议状态由脚本维护,手工修改它等于伪造
@@ -152,8 +158,8 @@ PLAN 里的工作项全部完成后,协议停止轮转并报告项目结束。
 2. 同一工作项**第二次**被打回 —— 来回两次说明是真实分歧,不是笔误。
 3. 契约在这个工作项期间被改过 —— 那是重新推导代价最高的事。
 4. 工作项完成、而它的笔记还有内容 —— 要么晋升成决策,要么
-   `handoff approve "…" --no-decision "为什么没有"`。笔记随工作项作废,
-   这是它变成长期资产的唯一时机。
+   `handoff approve "…" --checked "…" --uncovered "…" --no-decision "为什么没有"`。
+   笔记随工作项作废,这是它变成长期资产的唯一时机。
 
 判例见 [references/rules.md](references/rules.md) 规则 10。
 
@@ -164,3 +170,13 @@ PLAN 里的工作项全部完成后,协议停止轮转并报告项目结束。
 
 实现到一半发现接口设计有问题是正常的,**不要硬着头皮实现一个错的契约**,
 走 [references/rules.md](references/rules.md) 里的契约变更流程。
+
+契约的每个小节都带一行 `- 依据:`,记的是这一节凭什么可信。`人类定稿` 和
+`考古观察@<sha>` 可以拿来写断言,`已有文档(待核实)` 不行 —— 存量项目的老文档
+常常是过时的,照它写断言会让整条链每一步都合规、结果却是错的。
+
+## 接入的是一个已经存在的项目?
+
+代码结构固定、文档只有零散几份、老套件可能是红的 —— 这些都有专门的处理方式:
+契约方向倒转、`cover` → 人类定稿 → `refactor` 的节奏、`scope` 范围收缩、
+门禁套件收窄。见 [references/brownfield.md](references/brownfield.md)。

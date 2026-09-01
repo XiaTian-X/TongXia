@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 .pair/.last-test.log
 .pair/whoami
+.DS_Store
+.pair/.last-full-test.log

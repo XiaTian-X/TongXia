@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """红绿不变量、评审裁决强制、死锁闸、工作项认领。"""
 
-from harness import PairTestCase
+from harness import EVIDENCE, PairTestCase, with_loc
 
 
 class TestRedGreen(PairTestCase):
@@ -9,7 +9,7 @@ class TestRedGreen(PairTestCase):
     def test_spec_阶段绿着交接被拒绝(self):
         # 完成 W1 后回到 spec,此时 tests/W1 与 src/W1 配对,整体是绿的。
         self.repo.advance_to("review-test")
-        self.repo.run("handoff", "approve", "覆盖够", role="dev")
+        self.repo.run("handoff", "approve", "覆盖够", *EVIDENCE, role="dev")
         self.repo.run("claim", "W2", role="tester")
         r = self.repo.run("handoff", "我没写新用例", role="tester")
         self.assertRefused(r, "必须是 RED")
@@ -37,22 +37,22 @@ class TestDeadlockGate(PairTestCase):
 
     def test_同一工作项打回三次触发死锁闸(self):
         self.repo.advance_to("review-impl")
-        self.assertAccepted(self.repo.run("handoff", "changes", "问题一", role="tester"))
+        self.assertAccepted(self.repo.run("handoff", "changes", with_loc("问题一"), role="tester"))
         self.assertAccepted(self.repo.run("handoff", "修好了", role="dev"))
         self.repo.append_decision("W1")     # 第二次打回必须留下结论
-        self.assertAccepted(self.repo.run("handoff", "changes", "问题二", role="tester"))
+        self.assertAccepted(self.repo.run("handoff", "changes", with_loc("问题二"), role="tester"))
         self.assertAccepted(self.repo.run("handoff", "又修好了", role="dev"))
-        r = self.repo.run("handoff", "changes", "问题三", role="tester")
+        r = self.repo.run("handoff", "changes", with_loc("问题三"), role="tester")
         self.assertRefused(r, "打回", "交给人类")
 
     def test_打回计数绑定到工作项(self):
         self.repo.advance_to("review-impl")
-        self.repo.run("handoff", "changes", "问题一", role="tester")
+        self.repo.run("handoff", "changes", with_loc("问题一"), role="tester")
         self.assertEqual(self.repo.state()["changes_count"], 1)
         # 完成本项后重新认领,计数应归零
         self.repo.run("handoff", "修好了", role="dev")
-        self.repo.run("handoff", "approve", "这次没问题", role="tester")
-        self.repo.run("handoff", "approve", "测试也没问题", role="dev")
+        self.repo.run("handoff", "approve", "这次没问题", *EVIDENCE, role="tester")
+        self.repo.run("handoff", "approve", "测试也没问题", *EVIDENCE, role="dev")
         self.repo.run("claim", "W2", role="tester")
         self.assertEqual(self.repo.state()["changes_count"], 0)
 
@@ -79,6 +79,6 @@ class TestClaim(PairTestCase):
 
     def test_不能重复认领已完成的工作项(self):
         self.repo.advance_to("review-test")
-        self.repo.run("handoff", "approve", "覆盖够", role="dev")
+        self.repo.run("handoff", "approve", "覆盖够", *EVIDENCE, role="dev")
         r = self.repo.run("claim", "W1", role="tester")
         self.assertRefused(r, "已经完成")

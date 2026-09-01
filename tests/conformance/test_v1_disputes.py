@@ -6,7 +6,7 @@
 (红绿不变量拦)。唯一出路是照着错误断言写实现 —— 协议在逼出错误代码。
 """
 
-from harness import PairRepo, PairTestCase
+from harness import EVIDENCE, PairRepo, PairTestCase, with_loc
 
 OBJECTION = """# 对 tests/W1 的异议
 
@@ -21,13 +21,13 @@ class TestImplDispute(PairTestCase):
 
     def test_不能用_approve(self):
         self.repo.advance_to("impl")
-        r = self.repo.run("handoff", "approve", "随便", role="dev")
+        r = self.repo.run("handoff", "approve", "随便", *EVIDENCE, role="dev")
         self.assertRefused(r, "approve 只用于评审阶段")
 
     def test_异议必须写进_reviews(self):
         """对方看不到你的对话,不写下来等于没提。"""
         self.repo.advance_to("impl")
-        r = self.repo.run("handoff", "changes", "这条测试不对", role="dev")
+        r = self.repo.run("handoff", "changes", with_loc("这条测试不对"), role="dev")
         self.assertRefused(r, "没有把它写下来")
 
     def test_异议必须附理由(self):
@@ -39,7 +39,7 @@ class TestImplDispute(PairTestCase):
         """核心:红绿不变量对异议路径豁免,否则 dev 永远出不去。"""
         self.repo.advance_to("impl")
         self.repo.write("docs/reviews/W1-dispute.md", OBJECTION)
-        r = self.repo.run("handoff", "changes", "测试与契约矛盾", role="dev")
+        r = self.repo.run("handoff", "changes", with_loc("测试与契约矛盾"), role="dev")
         self.assertAccepted(r)
         self.assertEqual(self.repo.state()["phase"], "spec",
                          "异议应当把回合退回 tester")
@@ -47,7 +47,7 @@ class TestImplDispute(PairTestCase):
     def test_异议的提交前缀是_dispute(self):
         self.repo.advance_to("impl")
         self.repo.write("docs/reviews/W1-dispute.md", OBJECTION)
-        self.repo.run("handoff", "changes", "测试与契约矛盾", role="dev")
+        self.repo.run("handoff", "changes", with_loc("测试与契约矛盾"), role="dev")
         self.assertTrue(self.repo.head_subject().startswith("dispute:"),
                         "实际提交:%s" % self.repo.head_subject())
 
@@ -55,13 +55,13 @@ class TestImplDispute(PairTestCase):
         self.repo.advance_to("impl")
         self.repo.write("docs/reviews/W1-dispute.md", OBJECTION)
         self.repo.write("tests/W1", "我自己改了")
-        r = self.repo.run("handoff", "changes", "顺手把测试改了", role="dev")
+        r = self.repo.run("handoff", "changes", with_loc("顺手把测试改了"), role="dev")
         self.assertRefused(r, "越界")
 
     def test_打回后_tester_修正再走通(self):
         self.repo.advance_to("impl")
         self.repo.write("docs/reviews/W1-dispute.md", OBJECTION)
-        self.repo.run("handoff", "changes", "测试与契约矛盾", role="dev")
+        self.repo.run("handoff", "changes", with_loc("测试与契约矛盾"), role="dev")
 
         self.repo.write("tests/W1", "按异议修正后的用例")
         self.assertAccepted(self.repo.run("handoff", "按异议修正", role="tester"))
@@ -72,8 +72,50 @@ class TestImplDispute(PairTestCase):
     def test_异议计入打回次数(self):
         self.repo.advance_to("impl")
         self.repo.write("docs/reviews/W1-dispute.md", OBJECTION)
-        self.repo.run("handoff", "changes", "测试与契约矛盾", role="dev")
+        self.repo.run("handoff", "changes", with_loc("测试与契约矛盾"), role="dev")
         self.assertEqual(self.repo.state()["changes_count"], 1)
+
+
+class TestPostDisputeSpec(PairTestCase):
+    """异议从 impl 打回 spec 时,dev 的实现已经随那次交接提交落地了。
+    tester 按异议改完测试之后套件往往整体就是绿的 —— 拿 spec 的 RED 要求卡它,
+    等于逼它再造一条假的失败用例。"""
+
+    def _打回到_spec(self):
+        self.repo.advance_to("impl")
+        self.repo.write("src/W1")               # dev 的实现,会随异议一起提交
+        self.repo.write("docs/reviews/W1-dispute.md", "这条测试与契约矛盾。")
+        r = self.repo.run("handoff", "changes",
+                          with_loc("tests/W1 的断言与契约冲突"), role="dev")
+        self.assertAccepted(r)
+        self.assertEqual(self.repo.state()["phase"], "spec")
+
+    def test_修完测试后绿着交接也放行(self):
+        self._打回到_spec()
+        self.repo.write("tests/W1", "按异议改写后的断言")
+        self.assertAccepted(self.repo.run("handoff", "按异议改写了断言", role="tester"))
+
+    def test_空转一轮被拒绝(self):
+        """回归:豁免的本意是"让 tester 能把测试改对",不是让它一个测试都不改
+        就把问题原样推回去 —— feature 的 spec 本来就没有"必须动测试"这条检查,
+        两者一叠加就成了免费的一轮。"""
+        self._打回到_spec()
+        self.repo.write("docs/notes/W1.md", "我先不改测试,占个位。")
+        r = self.repo.run("handoff", "这一回合我没动测试", role="tester")
+        self.assertRefused(r, "没有改动任何测试", "空转")
+
+    def test_豁免只管紧接着的那一回合(self):
+        """再下一轮 spec 必须重新受红绿约束,否则这就成了永久后门。"""
+        self._打回到_spec()
+        self.repo.write("tests/W1", "改写")
+        self.repo.run("handoff", "按异议改写", role="tester")
+        self.repo.run("handoff", "approve", "实现没问题", *EVIDENCE, role="tester")
+        self.repo.run("handoff", "approve", "测试没问题", *EVIDENCE, role="dev")
+        self.repo.run("claim", "W2", role="tester")
+        self.repo.write("tests/W2")
+        self.repo.write("src/W2")               # 越界,但先看红绿:这会让它是绿的
+        r = self.repo.run("handoff", "绿着交接", role="tester")
+        self.assertRefused(r)
 
 
 class TestDeadlockTrace(PairTestCase):
@@ -81,12 +123,12 @@ class TestDeadlockTrace(PairTestCase):
 
     def _打回三次(self):
         self.repo.advance_to("review-impl")
-        self.repo.run("handoff", "changes", "问题一", role="tester")
+        self.repo.run("handoff", "changes", with_loc("问题一"), role="tester")
         self.repo.run("handoff", "修好了", role="dev")
         self.repo.append_decision("W1")     # 第二次打回必须留下结论
-        self.repo.run("handoff", "changes", "问题二", role="tester")
+        self.repo.run("handoff", "changes", with_loc("问题二"), role="tester")
         self.repo.run("handoff", "又修好了", role="dev")
-        return self.repo.run("handoff", "changes", "问题三", role="tester")
+        return self.repo.run("handoff", "changes", with_loc("问题三"), role="tester")
 
     def test_触发后被记进状态(self):
         self.assertRefused(self._打回三次(), "打回")
@@ -102,7 +144,7 @@ class TestDeadlockTrace(PairTestCase):
         """硬锁死会让项目卡住,需要人去改冻结文件才能解开。
         带理由的 approve 是合理收敛 —— 它进提交记录,人类看得见。"""
         self._打回三次()
-        r = self.repo.run("handoff", "approve", "分歧记录在案,接受当前实现",
+        r = self.repo.run("handoff", "approve", "分歧记录在案,接受当前实现", *EVIDENCE,
                           role="tester")
         self.assertAccepted(r)
 

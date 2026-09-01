@@ -44,9 +44,13 @@ CONTRACT_TEMPLATE = """# 接口契约
 
 ## W1
 
+- 依据: 人类定稿
+
 **行为** tests/W1 存在时 src/W1 必须存在。
 
 ## W2
+
+- 依据: 人类定稿
 
 **行为** tests/W2 存在时 src/W2 必须存在。
 """
@@ -66,6 +70,34 @@ ARCHAEOLOGY_NOTE = """## 现状考古
 拆分之后异常的抛出时机从解析时挪到了格式化时,如果有调用方在中间捕获过,
 行为会变。测试没有覆盖到这条路径。
 """
+
+# --- 评审证据 ---------------------------------------------------------
+# approve 必须交出检查清单,changes 必须指到 `路径:行号`。用例里大量出现,
+# 抽成常量,免得每处都重写一遍。
+EVIDENCE = ("--checked", "查过 src/W1 无针对测试输入的特判",
+            "--uncovered", "超长输入,下轮补")
+
+# 始终存在的被引用位置。用 CONTRACT 是因为它在任何阶段都已被提交,
+# 用例不必关心此刻哪些源文件已经生成。
+LOC = "docs/CONTRACT.md:3"
+
+
+def with_loc(reason, loc=LOC):
+    """给打回理由补一处位置引用。"""
+    return "%s,见 %s" % (reason, loc)
+
+
+COVER_NOTE = """## 行为来源
+
+读了实现并在本地跑了一遍:空输入返回空字符串而不抛错。契约里没有这一条,
+所以这次断言的依据是这次观察本身,不是任何文档。
+
+## 我冻结了哪些可疑行为
+
+空输入返回空字符串看着像遗漏 —— 更像该抛 ValueError。但现有调用方依赖它,
+我照原样固化了。如果这其实是缺陷,应当另开一个 [bug] 工作项来修。
+"""
+
 
 CONFIG = {
     "test_cmd": TEST_CMD,
@@ -194,6 +226,10 @@ class PairRepo:
         """refactor 的考古记录。三个小节,每节要够长。"""
         self.write("docs/notes/%s.md" % item, ARCHAEOLOGY_NOTE)
 
+    def write_cover_note(self, item="C1"):
+        """cover 的特征测试记录。两个小节,每节要够长。"""
+        self.write("docs/notes/%s.md" % item, COVER_NOTE)
+
     def append_decision(self, item="W1", title="改用毫秒时间戳做排序键",
                         reason="ISO 字符串跨时区排序和真实先后不一致,验收标准直接依赖排序",
                         rejected="存 ISO 再解析后排序 —— 每次读都要解析,失败没有兜底",
@@ -240,7 +276,8 @@ class PairRepo:
         assert r.code == 0, r
         if phase == "review-impl":
             return
-        r = self.run("handoff", "approve", "查过无硬编码", role="tester")
+        r = self.run("handoff", "approve", "查过无硬编码", *EVIDENCE,
+                     role="tester")
         assert r.code == 0, r
         if phase == "review-test":
             return

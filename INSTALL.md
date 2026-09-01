@@ -93,6 +93,67 @@ dev 跑一次 `npm install` 改了 lockfile 就被判越界是不合理的。把
 
 代价是两个角色都能悄悄改它们且不留痕。只放真正的副产物。
 
+## 现有项目接入
+
+代码结构固定、只有零散文档、老套件可能是红的 —— 这一节讲怎么处理。
+协议层面的纪律(契约依据、cover 的特征测试记录、refactor 的安全网)见
+[`references/brownfield.md`](.agents/skills/pair-protocol/references/brownfield.md)。
+
+### 两类容易漏配的文件
+
+`init` 的探测只切分测试与实现,但现有项目里必然还有这两类:
+
+**测试夹具 → 归 tester。** `testdata/`、`fixtures/`、`conftest.py`、mock。
+不写进去,tester 加第一个 fixture 就被判越界:
+
+```json
+"roles": {
+  "tester": ["tests", "**/testdata/**", "conftest.py"],
+  "dev":    ["src", "pom.xml", "!**/testdata/**"]
+}
+```
+
+**构建/依赖文件 → 归 dev,不要丢进 `ignore_paths`。** `pom.xml`、`package.json`、
+`requirements.txt`。加一个依赖是需要被对方在评审时看见的**实质决策**,
+而 `ignore_paths` 会让它完全无痕。`ignore_paths` 只放真正的副产物
+(`target/`、`dist/`、lockfile)。
+
+### 范围:切一条缝,不接全仓库
+
+```json
+"scope": ["src/*/java/com/acme/billing/**"]
+```
+
+范围外的改动一律被拒。存量项目最危险的不是结构不合适,是**蔓延** ——
+改一个计费 bug,顺手动了三个公共工具类。有了 `scope`,"要不要扩大范围"
+变成人类的显式决定。评审目录与记忆层永远豁免。
+
+### 老套件红着,或者慢得没法每回合跑
+
+**门禁套件可以收窄,但它必须是绿的:**
+
+```json
+"test_cmd":      "pytest tests/billing",
+"full_test_cmd": "pytest"
+```
+
+`test_cmd` 是门禁,红绿不变量全押在它身上;`full_test_cmd` 只在工作项完成时
+跑一次,红了不阻断但退出码是 2、要求 agent 报告而不是宣布"完成"。
+
+在 `docs/reviews/baseline.md` 写明放弃了哪些用例、为什么。
+**这不是把"绿"放宽,是缩小它的范围并留痕。**
+
+### 已有的 CLAUDE.md / AGENTS.md 会被合并,不会被覆盖
+
+`init` 把协议激活段落插到文件**开头**,原内容原样保留在后面,
+用 `<!-- pair-protocol:begin -->` / `<!-- pair-protocol:end -->` 标记。
+重跑 `init` 就地更新,不重复插入;人类把整块挪走之后也仍然认得。
+
+### PLAN 不是从零规划
+
+现有项目通常已经有 issue tracker、TODO、需求列表 —— 不是白纸,是**粒度不对**。
+从既有清单里挑本轮范围内的,重切成"一个回合写三五个用例就覆盖完"。
+
 ## 写规划和契约
 
 `docs/PLAN.md` 的工作项格式**必须**是这一行形态,`claim` 靠它识别:
@@ -118,6 +179,17 @@ dev 跑一次 `npm install` 改了 lockfile 就被判越界是不合理的。把
 "密码哈希用 bcrypt,cost=12"才是一个工作项。
 
 `docs/CONTRACT.md` 是承重墙,别偷懒。**没写进契约的东西,tester 不许断言。**
+
+每个小节还要写一行 `- 依据:`,记的是这一节凭什么可信:
+
+| 值 | tester 能据此断言吗 |
+|---|---|
+| `人类定稿` | ✅ 新项目照骨架写,默认就是这个 |
+| `考古观察@<sha>` | ✅ agent 读过代码、跑过代码之后写下来的现状 |
+| `已有文档 <路径>(待核实)` | ❌ 只是线索 |
+
+老文档过时是存量项目的头号病症,而照它写断言会让整条链每一步都合规、
+结果却是错的。不可断言的小节只能由 `[cover]` 工作项建立事实,再由人类定稿。
 
 ## 记忆层的路径
 
@@ -145,7 +217,7 @@ dev 跑一次 `npm install` 改了 lockfile 就被判越界是不合理的。把
 
 ## 启动两个 agent
 
-### 拓扑 A:同目录(两个 CLI harness)
+### 拓扑 A:同目录(两个 CLI harness)—— 推荐的起步配置
 
 两边写路径不相交,可以共用一个工作目录。用环境变量分配角色:
 
@@ -153,6 +225,10 @@ dev 跑一次 `npm install` 改了 lockfile 就被判越界是不合理的。把
 PAIR_ROLE=tester <agent A 的命令>    # 终端 1
 PAIR_ROLE=dev    <agent B 的命令>    # 终端 2
 ```
+
+**A 和 B 可以是同一个工具、同一个模型。** 分工本身(一次只干一件事、
+产物所有权独立)就有收益,这一点有实证;两端换成不同厂商能多拿到多少,
+目前没有证据。先用同一个工具开两个终端把流程跑顺,再考虑混搭。
 
 ### 拓扑 B:分离工作副本(GUI / 云端 harness)
 

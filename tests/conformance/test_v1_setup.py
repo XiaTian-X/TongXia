@@ -41,6 +41,55 @@ class TestInit(unittest.TestCase):
         self.assertTrue(repo.exists(".pair/config.json"))
         self.assertTrue(repo.exists(".pair/state.json"))
 
+    def test_已有入口文件被合并而不是跳过(self):
+        """现有项目本来就有 CLAUDE.md。曾经这里是"存在即跳过" ——
+        于是接入"成功"了,agent 却从不知道自己在结对项目里。"""
+        files = dict(PY_PROJECT)
+        files["CLAUDE.md"] = "# 我自己的项目说明\n\n请遵守本仓库的既有约定。\n"
+        repo = self._repo(files)
+        r = repo.run("init")
+        self.assertEqual(r.code, 0, r)
+        text = repo.read("CLAUDE.md")
+        self.assertIn("我自己的项目说明", text, "原内容必须原样保留")
+        self.assertIn("<!-- pair-protocol:begin -->", text)
+        self.assertLess(text.index("<!-- pair-protocol:begin -->"),
+                        text.index("我自己的项目说明"),
+                        "激活段落要在开头 —— 埋在三百行末尾的指令等于没有")
+
+    def test_重跑_init_不重复插入(self):
+        files = dict(PY_PROJECT)
+        files["CLAUDE.md"] = "# 我自己的项目说明\n"
+        repo = self._repo(files)
+        repo.run("init")
+        first = repo.read("CLAUDE.md")
+        repo.run("init")
+        self.assertEqual(repo.read("CLAUDE.md"), first)
+        self.assertEqual(first.count("<!-- pair-protocol:begin -->"), 1)
+
+    def test_人类把标记块挪走后仍能就地更新(self):
+        files = dict(PY_PROJECT)
+        files["CLAUDE.md"] = "# 我自己的项目说明\n"
+        repo = self._repo(files)
+        repo.run("init")
+        text = repo.read("CLAUDE.md")
+        i = text.index("<!-- pair-protocol:begin -->")
+        j = text.index("<!-- pair-protocol:end -->") + len("<!-- pair-protocol:end -->")
+        moved = text[:i] + text[j:] + "\n" + text[i:j] + "\n"
+        (repo.dir / "CLAUDE.md").write_text(moved, encoding="utf-8")
+        repo.run("init")
+        after = repo.read("CLAUDE.md")
+        self.assertEqual(after.count("<!-- pair-protocol:begin -->"), 1,
+                         "挪走之后重跑不该再插一份")
+
+    def test_忽略_Python_字节码(self):
+        """协议自己每回合都跑测试。生成的 .pyc 落在**对方**的路径下,
+        不忽略就会让两个角色互相把对方卡在越界上 —— 与目标项目的语言无关。"""
+        repo = self._repo(PY_PROJECT)
+        repo.run("init")
+        gi = repo.read(".gitignore")
+        self.assertIn("__pycache__/", gi)
+        self.assertIn("*.pyc", gi)
+
     def test_铺设各家入口文件(self):
         repo = self._repo(PY_PROJECT)
         repo.run("init")
@@ -120,6 +169,25 @@ class TestVerifySetup(PairTestCase):
         self.assertAccepted(r)
         self.assertTrue(self.repo.state()["setup_verified"])
         self.assertAccepted(self.repo.run("claim", "W1", role="tester"))
+
+    def test_不把工作区里的代码一并提交进基线(self):
+        """曾经这里是 git add -A。开工前就存在的实现会让 spec 的 RED 要求失效
+        —— 测试一上来就是绿的,协议再也抓不到"没写新用例"。"""
+        self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
+        self.repo.write("src/偷跑的实现", "本该由 dev 在 impl 回合写")
+        r = self.repo.run("verify-setup", role="dev")
+        self.assertAccepted(r)
+        self.assertIn("未提交的代码改动", r.text)
+        self.assertIn("偷跑的实现", r.text)
+        tracked = self.repo.git("ls-files").stdout.decode("utf-8")
+        self.assertNotIn("偷跑的实现", tracked,
+                         "verify-setup 不该把角色路径下的改动提交进基线")
+
+    def test_契约审查结论本身会被提交(self):
+        self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
+        self.assertAccepted(self.repo.run("verify-setup", role="dev"))
+        tracked = self.repo.git("ls-files").stdout.decode("utf-8")
+        self.assertIn("setup-verification.md", tracked)
 
     def test_未校验时不能认领(self):
         r = self.repo.run("claim", "W1", role="tester")

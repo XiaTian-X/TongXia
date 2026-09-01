@@ -7,11 +7,12 @@
 断言 pair.py 拦得住;同时断言 status 真的把该读的东西读出来了。
 """
 
-from harness import PairTestCase, PairRepo, PLAN_TEMPLATE, CONTRACT_TEMPLATE
+from harness import CONTRACT_TEMPLATE, EVIDENCE, PLAN_TEMPLATE, PairRepo, PairTestCase, with_loc
 
 REFACTOR_PLAN = PLAN_TEMPLATE + """- [ ] **R1** [refactor] — 重构 W1
   - 验收标准:行为不变
   - 对应契约:`docs/CONTRACT.md` → W1
+  - 保护测试: tests
 """
 
 LONG_NOTE = ("这一项踩了两个坑,都不在任何文档里:一是缓存键漏了租户维度,"
@@ -32,27 +33,27 @@ class TestAppendOnly(PairTestCase):
         text = self.repo.read("docs/DECISIONS.md")
         self.repo.write("docs/DECISIONS.md",
                         text.replace("ISO 字符串", "其实无所谓"))
-        r = self.repo.run("handoff", "approve", "实现没问题", role="tester")
+        r = self.repo.run("handoff", "approve", "实现没问题", *EVIDENCE, role="tester")
         self.assertRefused(r, "追加式", "伪造共识")
 
     def test_删掉已有条目被拒绝(self):
         self._已提交一条决策()
         self.repo.write("docs/DECISIONS.md", "# 决策记录\n")
-        r = self.repo.run("handoff", "approve", "实现没问题", role="tester")
+        r = self.repo.run("handoff", "approve", "实现没问题", *EVIDENCE, role="tester")
         self.assertRefused(r, "追加式")
 
     def test_纯追加放行(self):
         self._已提交一条决策()
         self.repo.append_decision("W1", title="评审时补充的第二条结论")
         self.assertAccepted(
-            self.repo.run("handoff", "approve", "实现没问题", role="tester"))
+            self.repo.run("handoff", "approve", "实现没问题", *EVIDENCE, role="tester"))
 
     def test_同一工作项可以追加第二条(self):
         """靠偏移量判定新条目,不靠 id 去重 —— 否则第二条会被当成旧的。"""
         self._已提交一条决策()
         before = len(self.repo.read("docs/DECISIONS.md"))
         self.repo.append_decision("W1", title="第二条")
-        self.repo.run("handoff", "approve", "没问题", role="tester")
+        self.repo.run("handoff", "approve", "没问题", *EVIDENCE, role="tester")
         self.assertGreater(len(self.repo.read("docs/DECISIONS.md")), before)
 
 
@@ -97,7 +98,7 @@ class TestArchaeology(PairTestCase):
 
     def _认领重构(self):
         self.repo.advance_to("review-test")
-        self.repo.run("handoff", "approve", "覆盖够", role="dev")
+        self.repo.run("handoff", "approve", "覆盖够", *EVIDENCE, role="dev")
         self.repo.set_plan(REFACTOR_PLAN)
         self.assertAccepted(self.repo.run("claim", "R1", role="tester"))
         self.repo.write("src/W1", "重构后")
@@ -133,12 +134,12 @@ class TestRebound(PairTestCase):
     def _到第二次打回(self):
         self.repo.advance_to("review-impl")
         self.assertAccepted(
-            self.repo.run("handoff", "changes", "问题一", role="tester"))
+            self.repo.run("handoff", "changes", with_loc("问题一"), role="tester"))
         self.assertAccepted(self.repo.run("handoff", "改好了", role="dev"))
 
     def test_第二次打回不留结论被拒绝(self):
         self._到第二次打回()
-        r = self.repo.run("handoff", "changes", "问题二", role="tester")
+        r = self.repo.run("handoff", "changes", with_loc("问题二"), role="tester")
         self.assertRefused(r, "第 2 次打回")
         self.assertEqual(self.repo.state()["phase"], "review-impl",
                          "被拒绝的交接不应推进阶段")
@@ -147,12 +148,12 @@ class TestRebound(PairTestCase):
         self._到第二次打回()
         self.repo.append_decision("W1")
         self.assertAccepted(
-            self.repo.run("handoff", "changes", "问题二", role="tester"))
+            self.repo.run("handoff", "changes", with_loc("问题二"), role="tester"))
 
     def test_第一次打回不强制(self):
         self.repo.advance_to("review-impl")
         self.assertAccepted(
-            self.repo.run("handoff", "changes", "问题一", role="tester"))
+            self.repo.run("handoff", "changes", with_loc("问题一"), role="tester"))
 
 
 class TestPromotion(PairTestCase):
@@ -166,7 +167,7 @@ class TestPromotion(PairTestCase):
 
     def test_笔记没处理不许完成(self):
         self._到完成前一步()
-        r = self.repo.run("handoff", "approve", "测试没问题", role="dev")
+        r = self.repo.run("handoff", "approve", "测试没问题", *EVIDENCE, role="dev")
         self.assertRefused(r, "笔记还没被处理", "--no-decision")
         self.assertEqual(self.repo.state()["phase"], "review-test")
 
@@ -174,13 +175,13 @@ class TestPromotion(PairTestCase):
         self._到完成前一步()
         self.repo.append_decision("W1")
         self.assertAccepted(
-            self.repo.run("handoff", "approve", "测试没问题", role="dev"))
+            self.repo.run("handoff", "approve", "测试没问题", *EVIDENCE, role="dev"))
         self.assertEqual(self.repo.state()["phase"], "idle")
 
     def test_显式声明没有可沉淀的也放行并留痕(self):
         self._到完成前一步()
         self.assertAccepted(self.repo.run(
-            "handoff", "approve", "测试没问题",
+            "handoff", "approve", "测试没问题", *EVIDENCE,
             "--no-decision", "只是随手记的调试过程,没有结论", role="dev"))
         body = self.repo.git("log", "-1", "--format=%b").stdout.decode("utf-8")
         self.assertIn("未留决策(已声明)", body)
@@ -189,12 +190,12 @@ class TestPromotion(PairTestCase):
     def test_没写笔记就没有这道门(self):
         self._到完成前一步(note=None)
         self.assertAccepted(
-            self.repo.run("handoff", "approve", "测试没问题", role="dev"))
+            self.repo.run("handoff", "approve", "测试没问题", *EVIDENCE, role="dev"))
 
     def test_一句话的笔记不触发(self):
         self._到完成前一步(note="随手记一句")
         self.assertAccepted(
-            self.repo.run("handoff", "approve", "测试没问题", role="dev"))
+            self.repo.run("handoff", "approve", "测试没问题", *EVIDENCE, role="dev"))
 
 
 class TestContractChange(PairTestCase):
@@ -208,19 +209,19 @@ class TestContractChange(PairTestCase):
 
     def test_契约变过就必须留记录(self):
         self._工作项期间人类改了契约()
-        r = self.repo.run("handoff", "approve", "测试没问题", role="dev")
+        r = self.repo.run("handoff", "approve", "测试没问题", *EVIDENCE, role="dev")
         self.assertRefused(r, "被改过", "没有对应记录")
 
     def test_留了记录就放行(self):
         self._工作项期间人类改了契约()
         self.repo.append_decision("W1", title="契约放宽为允许空输入")
         self.assertAccepted(
-            self.repo.run("handoff", "approve", "测试没问题", role="dev"))
+            self.repo.run("handoff", "approve", "测试没问题", *EVIDENCE, role="dev"))
 
     def test_契约没变时不打扰(self):
         self.repo.advance_to("review-test")
         self.assertAccepted(
-            self.repo.run("handoff", "approve", "测试没问题", role="dev"))
+            self.repo.run("handoff", "approve", "测试没问题", *EVIDENCE, role="dev"))
 
 
 class TestRecall(PairTestCase):
@@ -270,7 +271,7 @@ class TestRecall(PairTestCase):
         filler = "\n".join("- 无关记录 %d" % i for i in range(12))
         self.repo.write("docs/notes/W1.md", "- 重试逻辑会破坏幂等性\n" + filler)
         self.repo.run("handoff", "实现 W1", role="dev")
-        self.repo.run("handoff", "changes", "有个边界没处理", role="tester")
+        self.repo.run("handoff", "changes", with_loc("有个边界没处理"), role="tester")
 
         # 第三回合:只往末尾追加一行。HEAD 的 diff 里只有这一行。
         self.repo.write("docs/notes/W1.md",
@@ -290,21 +291,21 @@ class TestBoundaryNotWeakened(PairTestCase):
         """异议举证认的是 shared_paths。记忆层若并进去,这条防护就废了。"""
         self.repo.advance_to("impl")
         self.repo.write("docs/notes/W1.md", "我觉得这条测试和契约矛盾")
-        r = self.repo.run("handoff", "changes", "测试写错了", role="dev")
+        r = self.repo.run("handoff", "changes", with_loc("测试写错了"), role="dev")
         self.assertRefused(r, "没有把它写下来")
 
     def test_评审回合仍然不能改代码(self):
         self.repo.advance_to("review-impl")
         self.repo.write("docs/notes/W1.md", "评审时的随手记")
         self.repo.write("src/偷改", "夹带私货")
-        r = self.repo.run("handoff", "changes", "有问题", role="tester")
+        r = self.repo.run("handoff", "changes", with_loc("有问题"), role="tester")
         self.assertRefused(r, "越界")
 
     def test_评审回合可以写笔记(self):
         self.repo.advance_to("review-impl")
         self.repo.write("docs/notes/W1.md", "评审时发现的:边界情况没覆盖")
         self.assertAccepted(
-            self.repo.run("handoff", "approve", "实现本身没问题", role="tester"))
+            self.repo.run("handoff", "approve", "实现本身没问题", *EVIDENCE, role="tester"))
 
 
 class TestMemoryOff(PairTestCase):
@@ -319,7 +320,7 @@ class TestMemoryOff(PairTestCase):
         # 断言的是门禁不再触发,不是边界被放宽。
         self.repo.delete("docs/notes/W1.md")
         self.assertAccepted(
-            self.repo.run("handoff", "approve", "测试没问题", role="dev"))
+            self.repo.run("handoff", "approve", "测试没问题", *EVIDENCE, role="dev"))
 
 
 class TestSetupChecksMemoryPaths(PairTestCase):

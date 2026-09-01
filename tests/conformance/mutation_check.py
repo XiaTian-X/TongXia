@@ -10,6 +10,7 @@
 每次改动 pair.py 的强制逻辑后都应该跑一遍。新增防护时,
 在 MUTATIONS 里补上对应的变异点。
 """
+import os
 import re
 import shutil
 import subprocess
@@ -91,12 +92,28 @@ MUTATIONS = [
      '    if False:\n        die("还没有认领工作项'),
 
     ("拆掉 ignore_paths",
-     '        if path == TESTLOG_REL or matches_any(path, cfg["ignore_paths"]):',
-     "        if path == TESTLOG_REL:"),
+     '        if path in PROTOCOL_LOGS or matches_any(path, cfg["ignore_paths"]):',
+     "        if path in PROTOCOL_LOGS:"),
+
+    ("拆掉协议日志的边界豁免",
+     "        if path in PROTOCOL_LOGS or matches_any",
+     "        if False or matches_any"),
+
+    ("拆掉异议后必须改测试",
+     '    if state.get("after_dispute") and phase == "spec" and verdict is None:',
+     "    if False:"),
+
+    ("拆掉契约小节重名检测",
+     "        if name in out:\n            dupes.add(name)",
+     "        if False:\n            dupes.add(name)"),
+
+    ("拆掉 frontmatter 保位",
+     "    c_fm, c_body = _split_frontmatter(content)",
+     "    c_fm, c_body = \"\", content"),
 
     ("拆掉契约覆盖度检查",
-     '            if not refs:\n                bad("工作项',
-     '            if False:\n                bad("工作项'),
+     '                bad("工作项 \'%s\' 没有指向契约。在它下面加一行:\\n"',
+     '                pass  # bad("工作项 \'%s\' 没有指向契约。在它下面加一行:\\n"'),
 
     # --- 评审反馈轮新增的防护 -------------------------------------------
     ("拆掉异议必须写下来",
@@ -104,8 +121,12 @@ MUTATIONS = [
      "        if False:"),
 
     ("拆掉异议的红绿豁免",
-     '    expect = None if is_dispute else flow["expect"].get(phase)',
-     '    expect = flow["expect"].get(phase)'),
+     "    expect = (None if (is_dispute or after_dispute_fix)",
+     "    expect = (flow[\"expect\"].get(phase) if (is_dispute or after_dispute_fix)"),
+
+    ("拆掉异议后 spec 回合的豁免",
+     '    after_dispute_fix = state.get("after_dispute") and phase == "spec"',
+     "    after_dispute_fix = False"),
 
     ("拆掉契约审查门禁",
      "    if len(text) < MIN_SETUP_REPORT_CHARS:",
@@ -139,6 +160,38 @@ MUTATIONS = [
     ("拆掉 refactor 考古强制",
      '    if state["item_type"] == "refactor" and phase == "impl" and verdict is None:',
      "    if False:"),
+
+    ("拆掉 cover 特征测试记录强制",
+     '    if state["item_type"] == "cover" and phase == "spec" and verdict is None:',
+     "    if False:"),
+
+    ("拆掉 claim 时的契约小节存在性检查",
+     "            if anchor_name not in sections:",
+     "            if False:"),
+
+    ("拆掉契约依据的可断言检查",
+     "            if not ok:\n                return (\"拒绝认领 —— 契约小节「%s」的依据",
+     "            if False:\n                return (\"拒绝认领 —— 契约小节「%s」的依据"),
+
+    ("拆掉契约依据必填",
+     '                bad("契约小节 \'%s\' 没写 `依据`。在小节里加一行:\\n"',
+     '                pass  # bad("契约小节 \'%s\' 没写 `依据`。在小节里加一行:\\n"'),
+
+    ("拆掉 refactor 保护测试强制",
+     "        refs = PROTECT_REF_RE.findall(block)\n        if not refs:\n            return (",
+     "        refs = PROTECT_REF_RE.findall(block)\n        if False:\n            return ("),
+
+    ("拆掉 scope 边界",
+     '        if cfg["scope"] and not matches_any(path, exempt_from_scope) \\',
+     '        if False and not matches_any(path, exempt_from_scope) \\'),
+
+    ("拆掉入口文件合并",
+     '        how = merge_entry(root, rel, content)',
+     '        how = None if (root / rel).exists() else merge_entry(root, rel, content)'),
+
+    ("拆掉全量套件上报",
+     "    return 2 if full_failed else 0",
+     "    return 0"),
 
     ("拆掉第二次打回强制",
      '    if verdict == "changes" and state["changes_count"] + 1 == 2 and not mine:',
@@ -177,6 +230,27 @@ MUTATIONS = [
      '        if matches_any(cfg["notes_dir"], cfg["shared_paths"]) or \\',
      '        if False and matches_any(cfg["notes_dir"], cfg["shared_paths"]) or \\'),
 
+    # --- 评审证据 -------------------------------------------------------
+    ("拆掉 approve 检查清单强制",
+     "        if missing:\n            return (\"拒绝交接 —— approve 必须交出检查清单",
+     "        if False:\n            return (\"拒绝交接 —— approve 必须交出检查清单"),
+
+    ("拆掉 changes 位置引用强制",
+     "    if not refs:\n        return (\"拒绝交接 —— 打回必须具体到位置",
+     "    if False:\n        return (\"拒绝交接 —— 打回必须具体到位置"),
+
+    ("拆掉引用路径真实性检查",
+     "    if not real:\n        return (\"拒绝交接 —— 你引用的位置指向不存在的文件",
+     "    if False:\n        return (\"拒绝交接 —— 你引用的位置指向不存在的文件"),
+
+    ("拆掉评审证据门禁本身",
+     "    refusal = check_review_evidence(root, cfg, phase, verdict, entries, message, args)",
+     "    refusal = None"),
+
+    ("拆掉 verify-setup 的提交范围",
+     '    to_add = [STATE_REL, SETUP_REPORT_REL] + [',
+     '    to_add = ["-A"] + [] + ['),
+
     ("拆掉死锁留痕",
      '            hit = "%s x%d" % (item or "?", changes_n)',
      '            hit = None; state["deadlock_hits"] = []; hit = ""'),
@@ -186,10 +260,13 @@ FAIL_RE = re.compile(r"^(?:FAIL|ERROR): (\S+)", re.M)
 
 
 def run_suite(root):
+    # 告诉一致性测试:现在跑的是被故意改坏的 pair.py。变异点匹配检查在这种
+    # 情况下必然失败,会让每个变异都显得"被抓到",掩盖真正存活的变异。
+    env = dict(os.environ, PAIR_MUTATION_RUN="1")
     proc = subprocess.run(
         ["python3", "-m", "unittest", "discover",
          "-s", "tests/conformance", "-t", "tests/conformance"],
-        cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     text = proc.stdout.decode("utf-8", "replace")
     return proc.returncode, sorted(set(FAIL_RE.findall(text)))
 

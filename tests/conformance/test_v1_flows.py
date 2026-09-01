@@ -5,7 +5,7 @@ v0 只有"先红后绿"一种纪律,导致已完成项目的两个主要场景�
 补测试(为已有正确行为写的测试直接是绿的)和重构(全程绿,没有 RED 阶段)。
 """
 
-from harness import PairTestCase
+from harness import EVIDENCE, PairTestCase, with_loc
 
 COVER_PLAN = """# 规划
 
@@ -21,6 +21,7 @@ REFACTOR_PLAN = """# 规划
 
 - [ ] **R1** [refactor] — 重构实现
   - 对应契约:`docs/CONTRACT.md` → W1
+  - 保护测试: tests
 """
 
 BAD_TYPE_PLAN = """# 规划
@@ -42,7 +43,7 @@ class TestIdlePhase(PairTestCase):
 
     def test_工作项完成后回到_idle(self):
         self.repo.advance_to("review-test")
-        self.repo.run("handoff", "approve", "覆盖够", role="dev")
+        self.repo.run("handoff", "approve", "覆盖够", *EVIDENCE, role="dev")
         st = self.repo.state()
         self.assertEqual(st["phase"], "idle")
         self.assertIsNone(st["item_type"])
@@ -54,9 +55,12 @@ class TestCoverFlow(PairTestCase):
     def _claim(self):
         # 先让 tests/ 与 src/ 配平,基线才是绿的
         self.repo.advance_to("review-test")
-        self.repo.run("handoff", "approve", "覆盖够", role="dev")
+        self.repo.run("handoff", "approve", "覆盖够", *EVIDENCE, role="dev")
         self.repo.set_plan(COVER_PLAN)
         self.assertAccepted(self.repo.run("claim", "C1", role="tester"))
+        # cover 的 spec 回合必须交出特征测试记录,否则交接一律被拒。
+        # 这里先写好,让各用例能测到它们各自要测的那条不变量。
+        self.repo.write_cover_note("C1")
 
     def test_起始阶段是_spec_且类型被记录(self):
         self._claim()
@@ -97,7 +101,10 @@ class TestCoverFlow(PairTestCase):
         self._claim()
         self.repo.write("tests/W1", "追加断言")
         self.repo.run("handoff", "补断言", role="tester")
-        r = self.repo.run("handoff", "approve", "这条断言确实能发现回归", role="dev")
+        # 特征测试记录本身就是笔记,所以完成时必然撞上"晋升还是声明"那道门
+        r = self.repo.run("handoff", "approve", "这条断言确实能发现回归", *EVIDENCE,
+                          "--no-decision", "冻结的可疑行为已在笔记里,暂不升级为决策",
+                          role="dev")
         self.assertAccepted(r)
         st = self.repo.state()
         self.assertEqual(st["phase"], "idle")
@@ -110,7 +117,7 @@ class TestRefactorFlow(PairTestCase):
 
     def _claim(self):
         self.repo.advance_to("review-test")
-        self.repo.run("handoff", "approve", "覆盖够", role="dev")
+        self.repo.run("handoff", "approve", "覆盖够", *EVIDENCE, role="dev")
         self.repo.set_plan(REFACTOR_PLAN)
         self.assertAccepted(self.repo.run("claim", "R1", role="tester"))
         # refactor 的 impl 回合必须交出考古记录,否则交接一律被拒。
@@ -125,7 +132,7 @@ class TestRefactorFlow(PairTestCase):
 
     def test_认领后提示轮到_dev(self):
         self.repo.advance_to("review-test")
-        self.repo.run("handoff", "approve", "覆盖够", role="dev")
+        self.repo.run("handoff", "approve", "覆盖够", *EVIDENCE, role="dev")
         self.repo.set_plan(REFACTOR_PLAN)
         r = self.repo.run("claim", "R1", role="tester")
         self.assertIn("轮到 dev", r.text)
@@ -152,7 +159,7 @@ class TestRefactorFlow(PairTestCase):
         # refactor 一定有考古记录,所以完成时必然撞上晋升 gate:
         # 要么把结论沉淀成决策,要么显式声明没有。
         self.repo.append_decision("R1", title="拆分后异常抛出时机的变化记录在案")
-        r = self.repo.run("handoff", "approve", "行为未变,测试仍全绿", role="tester")
+        r = self.repo.run("handoff", "approve", "行为未变,测试仍全绿", *EVIDENCE, role="tester")
         self.assertAccepted(r)
         self.assertEqual(self.repo.state()["phase"], "idle")
         self.assertIn("- [x] **R1**", self.repo.read("docs/PLAN.md"))
@@ -174,5 +181,5 @@ class TestItemType(PairTestCase):
 
     def test_勾选时保留类型标记(self):
         self.repo.advance_to("review-test")
-        self.repo.run("handoff", "approve", "覆盖够", role="dev")
+        self.repo.run("handoff", "approve", "覆盖够", *EVIDENCE, role="dev")
         self.assertIn("- [x] **W1** [feature]", self.repo.read("docs/PLAN.md"))

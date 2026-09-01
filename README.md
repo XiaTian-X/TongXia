@@ -50,6 +50,15 @@ agent 擅长的,也比传递对话记录省得多。`pair.py inbox` 就是收件
 | 存量项目提覆盖率 | `cover` | ✅ 跳过 impl,dev 只评审"这测试能否发现回归" |
 | 存量项目还技术债 | `refactor` | ✅ 跳过 spec,tester 只评审"行为有没有变" |
 
+**两端不必是两个不同的工具或模型。** 同一个 CLI、同一个模型开两个终端就成立,
+**这也是上手成本最低的起步配置**。分工本身就有收益 —— aider 的 architect/editor
+实验里,Claude 3.5 Sonnet 自己配自己也从 77.4% 提升到 80.5%。
+
+证据的边界值得说清楚:aider 的 architect/editor 是**同一回合内的流水线**,
+两个角色不互相评审、也没有独立的产物所有权。所以那条实证支持得起"分工的收益
+同模型也成立",支持不起"对抗性评审的收益同模型也拿得到"。后者目前没有证据,
+它正是打回率这个指标要测的东西(见 [improvements.md](docs/improvements.md) 的 P1-1)。
+
 布局上支持目录切分(`tests/` + `src/`)和同目录布局(Go 的 `*_test.go`、
 JS 的 `*.test.ts`,靠 glob 负模式切分)。**Rust 的文件内单元测试不支持** ——
 `#[cfg(test)] mod tests` 和实现在同一个文件里,目录切分物理上不成立。
@@ -81,6 +90,23 @@ CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交�
 | `pair.py claim <ID>` | tester | 认领工作项 |
 | `pair.py handoff …` | 双方 | 每回合结尾。`changes` 用于评审打回和测试异议 |
 | `pair.py inbox` | 双方 | 看对方做了什么 |
+| `pair.py report` | **人类** | 打回率等健康度指标。接近 0 = 互相点头 |
+
+## 文档
+
+完整文档在 [`docs/`](docs/),索引见 [docs/README.md](docs/README.md)。
+
+| | |
+|---|---|
+| [设计理念](docs/design-philosophy.md) | 九条第一性原理,以及每条的代价 |
+| [架构](docs/architecture.md) | 三层结构、回合数据流、**强制力分布表** |
+| [协议规格](docs/protocol-spec.md) | 状态机、13 条不变量、配置与状态 schema |
+| [命令参考](docs/command-reference.md) | 七条命令的参数、前置条件、退出码 |
+| [同类工作调研](docs/prior-art.md) | the-pair / TDD Guard / AgentCoder / Adversarial Review / Spec Kit / BMAD …… |
+| [决策记录](docs/design-decisions.md) | 17 条 ADR,含被否掉的方案 |
+| [改进提案](docs/improvements.md) | 从调研里提炼的路线图,以及明确不做的清单 |
+| [故障排查](docs/troubleshooting.md) | 报错怎么办,以及那些不报错但更危险的现象 |
+| [贡献指南](docs/contributing.md) | 单一真源纪律、新增防护的五步 |
 
 ## 开发
 
