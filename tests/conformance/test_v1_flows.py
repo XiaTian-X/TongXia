@@ -136,11 +136,11 @@ class TestRefactorFlow(PairTestCase):
 
     def test_重构弄红被拒绝(self):
         self._claim()
-        self.repo.write("src/R1")       # 多出无对应测试的文件不影响
-        self.repo.run("handoff", "重构", role="dev")
-        # 让它真的变红:删掉 src/W1 的对应关系
-        st = self.repo.state()
-        self.assertEqual(st["phase"], "review-impl")
+        self.repo.delete("src/W1")      # 重构把行为改坏了 -> 测试变红
+        r = self.repo.run("handoff", "重构时删掉了 W1", role="dev")
+        self.assertRefused(r, "必须是 GREEN")
+        self.assertEqual(self.repo.state()["phase"], "impl",
+                         "被拒绝的交接不应推进阶段")
 
     def test_tester_评审通过后完成(self):
         self._claim()

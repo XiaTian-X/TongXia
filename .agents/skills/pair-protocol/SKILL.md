@@ -62,12 +62,15 @@ python3 .agents/skills/pair-protocol/scripts/pair.py status
 python3 .agents/skills/pair-protocol/scripts/pair.py verify-setup
 ```
 
-它检查配置自洽、基线全绿、PLAN 格式、契约覆盖度。通过之前不能 `claim`。
+它检查配置自洽、基线全绿、PLAN 格式、契约覆盖度。
 
-**通过之后还有一件只有你能做的事:通读契约,把你认为有歧义的条款写进
-`docs/reviews/setup-verification.md`。** 脚本能查格式,查不了歧义 —— 而契约
-歧义是这套机制唯一会致命的失败模式:tester 测 `login() -> token`、dev 写
-`authenticate() -> Session`,两边各自都"对",合起来是废的。
+**它还要求一件只有你能做的事:通读契约,把你认为有歧义的条款写进
+`docs/reviews/setup-verification.md`。** 交出这份结论之前校验不会通过,
+也不能 `claim` —— 脚本查不了歧义,所以它至少强制你交出一份结论。
+
+契约歧义是这套机制唯一会致命的失败模式:tester 测 `login() -> token`、
+dev 写 `authenticate() -> Session`,两边各自都"对",合起来是废的。
+没有歧义就明确写"无歧义"并说明逐条核对了什么 —— 空泛的一句"看过了"不算。
 
 ## 回合循环
 
@@ -105,6 +108,8 @@ PLAN 里的工作项全部完成后,协议停止轮转并报告项目结束。
 1. **不许碰对方的目录。** 认为对方写错了 → 写进 `docs/reviews/`,
    用 `handoff changes` 打回,由对方自己改。
 2. **dev 不许改或删测试。** 一条都不行。测试是规格,不是障碍。
+   认为测试写错了,走异议流程:把理由写进 `docs/reviews/`,然后
+   `handoff changes "..."`,回合退回 tester。**不要照着错误的断言写实现。**
 3. **dev 不许为通过测试而硬编码。** 针对测试输入特判、返回写死的期望值,
    都算作弊,评审时必须被打回。
 4. **tester 只断言 `docs/CONTRACT.md` 里的可观测行为。** 禁止断言私有方法名、

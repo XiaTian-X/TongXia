@@ -97,6 +97,31 @@ MUTATIONS = [
     ("拆掉契约覆盖度检查",
      '            if not refs:\n                bad("工作项',
      '            if False:\n                bad("工作项'),
+
+    # --- 评审反馈轮新增的防护 -------------------------------------------
+    ("拆掉异议必须写下来",
+     "        if not written:",
+     "        if False:"),
+
+    ("拆掉异议的红绿豁免",
+     '    expect = None if is_dispute else flow["expect"].get(phase)',
+     '    expect = flow["expect"].get(phase)'),
+
+    ("拆掉契约审查门禁",
+     "    if len(text) < MIN_SETUP_REPORT_CHARS:",
+     "    if False:"),
+
+    ("拆掉 sync push 失败上报",
+     '    push_failed = cfg.get("sync") and git("push", cwd=root, check=False) is None',
+     '    push_failed = bool(cfg.get("sync")) and False'),
+
+    ("拆掉 sync pull 失败上报",
+     '        if git("pull", "--rebase", cwd=root, check=False) is None:',
+     "        if False:"),
+
+    ("拆掉死锁留痕",
+     '            hit = "%s x%d" % (item or "?", changes_n)',
+     '            hit = None; state["deadlock_hits"] = []; hit = ""'),
 ]
 
 FAIL_RE = re.compile(r"^(?:FAIL|ERROR): (\S+)", re.M)

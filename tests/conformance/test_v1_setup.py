@@ -99,8 +99,23 @@ class TestVerifySetup(PairTestCase):
 
     config = {"require_setup_verification": True}
 
-    def test_通过后置位并允许认领(self):
+    REPORT = '# 契约审查\\n\\n逐条核对了 slugify 与 truncate 的返回值、错误条件和边界情况,未发现歧义。W1 的空串行为在契约里写明抛 ValueError,断言可以直接照写。逐条核对了 slugify 与 truncate 的返回值、错误条件和边界情况,未发现歧义。W1 的空串行为在契约里写明抛 ValueError,断言可以直接照写。'
+
+    def test_没交契约审查结论时不放行(self):
+        """脚本查不了歧义,但可以强制\"你必须交出一份结论\" ——
+        否则这道最关键的门禁会退化成一句可以无视的建议。"""
+        r = self.repo.run("verify-setup", role="dev")
+        self.assertRefused(r, "尚未交出契约审查结论")
         self.assertFalse(self.repo.state()["setup_verified"])
+
+    def test_敷衍的结论不算数(self):
+        self.repo.write("docs/reviews/setup-verification.md", "看过了没问题\n")
+        r = self.repo.run("verify-setup", role="dev")
+        self.assertRefused(r, "过短")
+
+    def test_交了结论后通过并允许认领(self):
+        self.assertFalse(self.repo.state()["setup_verified"])
+        self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
         r = self.repo.run("verify-setup", role="dev")
         self.assertAccepted(r)
         self.assertTrue(self.repo.state()["setup_verified"])
@@ -115,7 +130,7 @@ class TestVerifySetup(PairTestCase):
         self.assertAccepted(r)
         self.assertIn("尚未通过开工前校验", r.text)
 
-    def test_要求_agent_亲自读契约找歧义(self):
+    def test_未交结论时给出明确指引(self):
         r = self.repo.run("verify-setup", role="dev")
         self.assertIn("歧义", r.text)
         self.assertIn("setup-verification.md", r.text)
@@ -156,6 +171,9 @@ class TestVerifySetup(PairTestCase):
         self.assertRefused(r, "没有合法工作项")
 
     def test_可以配置关闭门禁(self):
-        # 默认 harness 配置就是关闭的,直接认领应当成功
-        repo_cls = type(self)
-        self.assertTrue(repo_cls.config["require_setup_verification"])
+        from harness import PairRepo
+        repo = PairRepo({"require_setup_verification": False})
+        self.addCleanup(repo.cleanup)
+        self.assertFalse(repo.state()["setup_verified"])
+        r = repo.run("claim", "W1", role="tester")
+        self.assertEqual(r.code, 0, "门禁关闭时应当能直接认领。\n%r" % r)

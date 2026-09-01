@@ -144,8 +144,9 @@ echo tester > .pair/whoami        # 或者:git switch -c pair/tester
 
 ### 开工顺序
 
-1. 让**还没动手的那一方**跑 `pair.py verify-setup`,并按它的要求通读契约、
-   把歧义写进 `docs/reviews/setup-verification.md`
+1. 让**还没动手的那一方**跑 `pair.py verify-setup`。它会要求通读契约并把歧义
+   写进 `docs/reviews/setup-verification.md` —— **交出这份结论之前校验不通过,
+   也不能认领工作项**
 2. 人类看这份歧义报告,定稿契约
 3. 在任意一个 agent 那里说"继续"。不该它动的那个会自己停下 —— 回合状态在
    `.pair/state.json` 里,不在对话里,所以你不用记现在轮到谁

@@ -37,6 +37,10 @@ PHASE_OWNER = {
 }
 REVIEW_PHASES = ("review-impl", "review-test")
 
+# 允许用 `handoff changes` 提出异议、但不是评审回合的阶段。
+# dev 在 impl 阶段发现测试与契约矛盾时用它打回,由 tester 修测试。
+DISPUTE_PHASES = ("impl",)
+
 # 工作项类型 -> 流程。DONE 表示工作项完成,回到 idle。
 #
 # 阶段序列与红绿不变量按类型分开:补测试(cover)和重构(refactor)天然
@@ -46,6 +50,9 @@ FEATURE_FLOW = {
     "transitions": {
         ("spec", None): "impl",
         ("impl", None): "review-impl",
+        # dev 拿到一条写错的测试时的唯一出路。没有它,dev 三条路全堵死
+        # (不能改测试、不能打回、不能红着交接),只能照错误断言写实现。
+        ("impl", "changes"): "spec",
         ("review-impl", "approve"): "review-test",
         ("review-impl", "changes"): "impl",
         ("review-test", "approve"): "DONE",
@@ -97,6 +104,8 @@ CONFIG_REL = ".pair/config.json"
 TESTLOG_REL = ".pair/.last-test.log"
 WHOAMI_REL = ".pair/whoami"
 SETUP_REPORT_REL = "docs/reviews/setup-verification.md"
+# 契约审查结论的最小长度。门槛不高,但足以挡住空文件和一句话敷衍。
+MIN_SETUP_REPORT_CHARS = 120
 
 DEFAULT_STATE = {
     "round": 0,
@@ -107,6 +116,7 @@ DEFAULT_STATE = {
     "changes_count": 0,
     "completed_items": [],
     "setup_verified": False,
+    "deadlock_hits": [],
 }
 
 # `- [ ] **W1** [bug] — 标题`,类型可省略(缺省 feature)
@@ -497,7 +507,10 @@ def _brief_vars(cfg, state, phase):
 
 def cmd_status(root, cfg, args):
     if cfg.get("sync"):
-        git("pull", "--rebase", cwd=root, check=False)
+        if git("pull", "--rebase", cwd=root, check=False) is None:
+            die("git pull --rebase 失败,无法确认你看到的是最新状态。\n"
+                "sync 模式下两个 agent 各有一份工作副本,拉不下来就可能在陈旧的\n"
+                "回合上动手。请把这个情况告诉人类,不要继续。")
 
     me, source = resolve_role(root)
     state = load_state(root)
@@ -520,6 +533,8 @@ def cmd_status(root, cfg, args):
     print(" 测试状态 : %s   (详见 %s)" % ("GREEN" if green else "RED", TESTLOG_REL))
     print(" 可写路径 : %s" % " ".join(writable_paths(cfg, phase)))
     print(" 已完成项 : %d" % len(state["completed_items"]))
+    if state["deadlock_hits"]:
+        print(" 曾触发死锁闸: %s" % "、".join(state["deadlock_hits"]))
     print("=" * 52)
 
     if tampered:
@@ -666,10 +681,21 @@ def cmd_handoff(root, cfg, args):
         message = " ".join(args.words[1:]).strip()
         if not message:
             die("裁决必须附理由。禁止空手通过。")
+    elif args.words and args.words[0] == "changes" and phase in DISPUTE_PHASES:
+        verdict = "changes"
+        message = " ".join(args.words[1:]).strip()
+        if not message:
+            die("提出异议必须附理由:\n"
+                "  python3 %s handoff changes \"这条测试哪里和契约矛盾\"" % PROG_HINT)
+    elif args.words and args.words[0] == "approve":
+        die("approve 只用于评审阶段,当前是 %s 阶段。" % phase)
     else:
         message = " ".join(args.words).strip()
         if not message:
             die("请附一句话说明:python3 %s handoff \"你这回合做了什么\"" % PROG_HINT)
+
+    # 异议必须落到纸面:对方看不到你的对话,只能看到 docs/reviews/ 里的文件。
+    is_dispute = verdict == "changes" and phase in DISPUTE_PHASES
 
     if (phase, verdict) not in flow["transitions"]:
         die("工作项类型 [%s] 的流程里没有 %s 阶段的这个走向。状态可能已损坏。"
@@ -721,9 +747,21 @@ def cmd_handoff(root, cfg, args):
                 "cover 类型全程是绿的,红绿不变量抓不到空手交接,所以这条单独检查。"
                 % (state["item_type"], " ".join(test_paths)))
 
+    # --- 异议必须落到纸面 -------------------------------------------------
+    if is_dispute:
+        written = [p for xy, p in entries
+                   if "D" not in xy and matches_any(p, cfg["shared_paths"])]
+        if not written:
+            die("拒绝交接 —— 你提出了异议,但没有把它写下来。\n\n"
+                "对方看不到你的对话,唯一的通信渠道是 %s 里的文件。\n"
+                "写清楚:哪条测试、和契约的哪一条矛盾、你认为应该改成什么。\n"
+                "然后重新执行本命令。" % " ".join(cfg["shared_paths"]))
+
     # --- 红绿不变量(按工作项类型) ---------------------------------------
+    # 异议路径豁免:dev 正是因为测试写错、弄不绿才打回的,拿红绿卡他等于
+    # 逼他照着错误的断言写实现。
     green = run_tests(root, cfg)
-    expect = flow["expect"].get(phase)
+    expect = None if is_dispute else flow["expect"].get(phase)
     if expect == "RED" and green:
         die("%s 阶段结束时测试必须是 RED,现在是 GREEN。\n"
             "你要么没写新用例,要么写了个本来就能通过的用例。\n"
@@ -745,6 +783,12 @@ def cmd_handoff(root, cfg, args):
         changes_n += 1
         if changes_n >= DEADLOCK_LIMIT:
             state["changes_count"] = changes_n
+            # 留痕:die 之后状态里若没有记录,人类事后翻不到曾经卡过。
+            # 不硬锁 approve —— 打回三次后一方说"我接受"是合理的收敛,
+            # 而且它带理由、进提交记录、人类看得见。
+            hit = "%s x%d" % (item or "?", changes_n)
+            if hit not in state["deadlock_hits"]:
+                state["deadlock_hits"].append(hit)
             save_state(root, state)
             git("add", "--", STATE_REL, cwd=root, check=False)
             git("commit", "-q", "-m",
@@ -774,7 +818,8 @@ def cmd_handoff(root, cfg, args):
     save_state(root, state)
 
     # --- 提交 -------------------------------------------------------------
-    prefix = COMMIT_PREFIX[phase] + ("/" + verdict if verdict else "")
+    prefix = ("dispute" if is_dispute
+              else COMMIT_PREFIX[phase] + ("/" + verdict if verdict else ""))
     body = "role=%s phase=%s -> %s item=%s type=%s" % (
         me, phase, next_phase, item or "none", state["item_type"] or
         (flow is FEATURE_FLOW and "feature" or "?"))
@@ -785,8 +830,7 @@ def cmd_handoff(root, cfg, args):
     git("add", "-A", cwd=root)
     git("commit", "-q", "-m", "%s: %s" % (prefix, message), "-m", body, cwd=root)
 
-    if cfg.get("sync"):
-        git("push", cwd=root, check=False)
+    push_failed = cfg.get("sync") and git("push", cwd=root, check=False) is None
 
     print()
     print("[结对协议] 已交接。")
@@ -795,6 +839,16 @@ def cmd_handoff(root, cfg, args):
     if finished_item:
         print("  工作项「%s」已完成并双向通过。" % finished_item)
     print()
+    if push_failed:
+        # 提交已经落在本地,但对方拉不到 —— 通信只走 git,所以这等于没交接。
+        print("!" * 60)
+        print("推送失败。提交只在你本地,对方看不到。")
+        print("**不要告诉人类\"已交接\"** —— 请报告推送失败,让人类处理\n"
+              "(网络、权限,或对方推了新提交需要先 pull)。")
+        print("!" * 60)
+        print()
+        return 2
+
     if plan_all_done(root, cfg):
         print(">>> %s 里的工作项已全部完成。项目结束。<<<" % cfg["plan_file"])
         print("请向人类报告完成,不要继续轮转。")
@@ -1207,18 +1261,21 @@ def cmd_verify_setup(root, cfg, args):
         restore_state(root)
         die("你修改了 %s,已还原。请重新执行 verify-setup。" % STATE_REL)
 
-    state["setup_verified"] = True
-    save_state(root, state)
-    git("add", "--", STATE_REL, cwd=root)
-    git("commit", "-q", "-m", "chore(pair): 通过开工前校验", cwd=root)
+    print()
+    print("  脚本能查的都通过了%s。"
+          % ("（有 %d 条警告）" % len(warns) if warns else ""))
 
-    print()
-    print("  全部检查通过%s。" % ("（有 %d 条警告）" % len(warns) if warns else ""))
-    print()
-    print("=" * 60)
-    print(" 脚本的部分做完了。**还有一件只有你能做的事:**")
-    print("=" * 60)
-    print("""
+    # --- 契约歧义审查:这一步不能只靠 prose 要求 ---------------------------
+    # 脚本查不了歧义,但可以强制"你必须交出一份审查结论"。没有它就不放行 ——
+    # 否则这道最关键的门禁会退化成一句可以无视的建议。
+    report = root / SETUP_REPORT_REL
+    text = report.read_text(encoding="utf-8").strip() if report.exists() else ""
+    if len(text) < MIN_SETUP_REPORT_CHARS:
+        print()
+        print("=" * 60)
+        print(" 还差最后一步 —— 只有你能做的那一步。")
+        print("=" * 60)
+        print("""
  通读 %s,把你认为**有歧义的条款**写进
  %s。
 
@@ -1232,9 +1289,25 @@ def cmd_verify_setup(root, cfg, args):
    - 边界情况(空、超长、null、并发)是否写明?没写明的,tester 不许假设
    - 有没有哪句话可以有两种合理解读?
 
- 有歧义就写下来,交给人类在开工前定稿。没有就明确写"无歧义"并说明你
- 逐条核对过哪些。这一步做扎实,后面能省掉大量返工。
+ 有歧义就写下来,交给人类在开工前定稿。没有就明确写"无歧义",并说明你
+ 逐条核对过哪些 —— 空泛的一句"看过了没问题"不算。
+
+ 写完后重新执行 verify-setup。在交出这份结论之前,校验不会通过,
+ 也不能认领工作项。
 """ % (cfg["contract_file"], SETUP_REPORT_REL))
+        die("尚未交出契约审查结论(%s 缺失或过短,至少 %d 字)。\n"
+            "这是本步骤存在的主要理由,不能跳过。"
+            % (SETUP_REPORT_REL, MIN_SETUP_REPORT_CHARS))
+
+    state["setup_verified"] = True
+    save_state(root, state)
+    git("add", "-A", cwd=root)
+    git("commit", "-q", "-m", "chore(pair): 通过开工前校验,含契约审查结论", cwd=root)
+
+    print()
+    print("  契约审查结论已收到(%s,%d 字)。" % (SETUP_REPORT_REL, len(text)))
+    print("  开工前校验全部通过,现在可以认领工作项了。")
+    print()
     return 0
 
 
