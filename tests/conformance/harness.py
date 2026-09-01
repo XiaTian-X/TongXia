@@ -51,6 +51,22 @@ CONTRACT_TEMPLATE = """# 接口契约
 **行为** tests/W2 存在时 src/W2 必须存在。
 """
 
+ARCHAEOLOGY_NOTE = """## 现状考古
+
+这个函数原本把解析和格式化揉在一起,是因为早期调用方依赖它同时返回两种形态,
+那个调用方现在已经删了,但形状留了下来。
+
+## 我保留了哪些契约外行为
+
+输入为空时返回空字符串而不是抛错。契约里没写这条,但现有调用方依赖它,
+改成抛错会让上游多出一处它没准备好的异常路径,所以原样保留。
+
+## 我不确定的地方
+
+拆分之后异常的抛出时机从解析时挪到了格式化时,如果有调用方在中间捕获过,
+行为会变。测试没有覆盖到这条路径。
+"""
+
 CONFIG = {
     "test_cmd": TEST_CMD,
     "roles": {"tester": ["tests"], "dev": ["src"]},
@@ -84,7 +100,7 @@ def install_protocol(target: Path, config=None):
         "setup_verified": False,
     }, indent=2), encoding="utf-8")
 
-    for d in ("src", "tests", "docs/reviews"):
+    for d in ("src", "tests", "docs/reviews", "docs/notes"):
         (target / d).mkdir(parents=True, exist_ok=True)
         (target / d / ".gitkeep").write_text("", encoding="utf-8")
     (target / "docs" / "PLAN.md").write_text(PLAN_TEMPLATE, encoding="utf-8")
@@ -172,6 +188,24 @@ class PairRepo:
         st = self.state()
         st.update(kw)
         self.write(".pair/state.json", json.dumps(st, indent=2))
+
+    # --- 记忆层(扮演 agent 写笔记与决策)-------------------------------
+    def write_archaeology(self, item="R1"):
+        """refactor 的考古记录。三个小节,每节要够长。"""
+        self.write("docs/notes/%s.md" % item, ARCHAEOLOGY_NOTE)
+
+    def append_decision(self, item="W1", title="改用毫秒时间戳做排序键",
+                        reason="ISO 字符串跨时区排序和真实先后不一致,验收标准直接依赖排序",
+                        rejected="存 ISO 再解析后排序 —— 每次读都要解析,失败没有兜底",
+                        paths=None):
+        """往决策记录追加一条合规条目。追加式,绝不改动已有内容。"""
+        rel = "docs/DECISIONS.md"
+        old = self.read(rel) if self.exists(rel) else ""
+        if paths is None:
+            paths = "`src/%s`, `tests/%s`" % (item, item)
+        entry = ("\n## %s — %s\n\n- 理由: %s\n- 已否决: %s\n- 影响路径: %s\n"
+                 % (item, title, reason, rejected, paths))
+        self.write(rel, old + entry)
 
     def set_plan(self, text, contract=None):
         """以人类身份改写 PLAN/CONTRACT 并提交(agent 不能做这件事)。"""

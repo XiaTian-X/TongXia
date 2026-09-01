@@ -113,6 +113,9 @@ class TestRefactorFlow(PairTestCase):
         self.repo.run("handoff", "approve", "覆盖够", role="dev")
         self.repo.set_plan(REFACTOR_PLAN)
         self.assertAccepted(self.repo.run("claim", "R1", role="tester"))
+        # refactor 的 impl 回合必须交出考古记录,否则交接一律被拒。
+        # 这里先写好,让各用例能测到它们各自要测的那条不变量。
+        self.repo.write_archaeology("R1")
 
     def test_起始阶段是_impl(self):
         self._claim()
@@ -146,6 +149,9 @@ class TestRefactorFlow(PairTestCase):
         self._claim()
         self.repo.write("src/W1", "重构后")
         self.repo.run("handoff", "重构 W1", role="dev")
+        # refactor 一定有考古记录,所以完成时必然撞上晋升 gate:
+        # 要么把结论沉淀成决策,要么显式声明没有。
+        self.repo.append_decision("R1", title="拆分后异常抛出时机的变化记录在案")
         r = self.repo.run("handoff", "approve", "行为未变,测试仍全绿", role="tester")
         self.assertAccepted(r)
         self.assertEqual(self.repo.state()["phase"], "idle")

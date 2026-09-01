@@ -119,6 +119,64 @@ MUTATIONS = [
      '        if git("pull", "--rebase", cwd=root, check=False) is None:',
      "        if False:"),
 
+    # --- 记忆层 ---------------------------------------------------------
+    ("拆掉决策追加式校验",
+     "    if old and not _read(root / dfile).startswith(old):",
+     "    if False:"),
+
+    ("拆掉决策字段校验",
+     "    for name in DECISION_FIELDS:\n        if not fields.get(name):",
+     "    for name in ():\n        if not fields.get(name):"),
+
+    ("拆掉决策长度上限",
+     "    if size > MAX_DECISION_CHARS:",
+     "    if False:"),
+
+    ("拆掉解析不出条目的检查",
+     "    if added and not fresh:",
+     "    if False:"),
+
+    ("拆掉 refactor 考古强制",
+     '    if state["item_type"] == "refactor" and phase == "impl" and verdict is None:',
+     "    if False:"),
+
+    ("拆掉第二次打回强制",
+     '    if verdict == "changes" and state["changes_count"] + 1 == 2 and not mine:',
+     "    if False:"),
+
+    ("拆掉契约变更强制",
+     '        if (state.get("contract_sha") and cur_sha\n'
+     '                and cur_sha != state["contract_sha"] and not mine):',
+     "        if False:"),
+
+    ("拆掉完成时的晋升 gate",
+     "        if len(note) >= MIN_NOTE_PROMOTE_CHARS and not mine and not args.no_decision:",
+     "        if False:"),
+
+    ("拆掉 status 记忆召回",
+     "    mem = memory_brief(root, cfg, state, phase)",
+     '    mem = ""'),
+
+    ("拆掉 inbox 散文内容",
+     "    for rel in changed:\n        text = _read(root / rel).strip()",
+     "    for rel in []:\n        text = _read(root / rel).strip()"),
+
+    ("拆掉记忆层与共享路径的隔离",
+     '                   if "D" not in xy and matches_any(p, cfg["shared_paths"])]',
+     '                   if "D" not in xy and matches_any(p, writable_paths(cfg, phase))]'),
+
+    ("拆掉记忆层落在角色路径下的检查",
+     '            for r in ROLES:\n                if matches_any(target, cfg["roles"][r]):',
+     '            for r in ():\n                if matches_any(target, cfg["roles"][r]):'),
+
+    ("拆掉记忆层落在冻结路径下的检查",
+     '            if hit:\n                bad("%s(%s)落在冻结路径 %s 之下',
+     '            if False:\n                bad("%s(%s)落在冻结路径 %s 之下'),
+
+    ("拆掉记忆层落在共享路径下的检查",
+     '        if matches_any(cfg["notes_dir"], cfg["shared_paths"]) or \\',
+     '        if False and matches_any(cfg["notes_dir"], cfg["shared_paths"]) or \\'),
+
     ("拆掉死锁留痕",
      '            hit = "%s x%d" % (item or "?", changes_n)',
      '            hit = None; state["deadlock_hits"] = []; hit = ""'),

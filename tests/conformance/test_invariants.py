@@ -39,6 +39,7 @@ class TestDeadlockGate(PairTestCase):
         self.repo.advance_to("review-impl")
         self.assertAccepted(self.repo.run("handoff", "changes", "问题一", role="tester"))
         self.assertAccepted(self.repo.run("handoff", "修好了", role="dev"))
+        self.repo.append_decision("W1")     # 第二次打回必须留下结论
         self.assertAccepted(self.repo.run("handoff", "changes", "问题二", role="tester"))
         self.assertAccepted(self.repo.run("handoff", "又修好了", role="dev"))
         r = self.repo.run("handoff", "changes", "问题三", role="tester")

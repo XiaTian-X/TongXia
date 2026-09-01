@@ -107,6 +107,30 @@ SETUP_REPORT_REL = "docs/reviews/setup-verification.md"
 # 契约审查结论的最小长度。门槛不高,但足以挡住空文件和一句话敷衍。
 MIN_SETUP_REPORT_CHARS = 120
 
+# --- 记忆层 -----------------------------------------------------------
+# 两个 agent 不共享对话,也不共享各自厂商的记忆。项目知识只能沉在仓库里,
+# 并且必须在**固定时刻**被重新读出来 —— 存了没人读等于没存。
+#
+#   docs/notes/<ID>.md   工作项级,随手写,记负空间(试过什么没成/否掉了什么)
+#   docs/DECISIONS.md    项目级,追加式,记结论与裁决
+#
+# 召回点是 status:它是协议强制的第一条命令,也是唯一能跨 harness 保证的时机。
+
+# 单条决策的长度上限。这条不是洁癖 —— 决策记录会被注入到此后每一次 status,
+# 长了就没人读,然后整套机制退化成又一份没人看的文档。
+MAX_DECISION_CHARS = 1500
+# 注入上限,防止记忆层反过来吃掉上下文
+MAX_NOTE_INJECT_CHARS = 3000
+MAX_DECISION_INJECT_CHARS = 2000
+MAX_DECISION_INJECT_ENTRIES = 5
+# refactor 考古记录每个小节的正文下限
+MIN_NOTE_SECTION_CHARS = 40
+# 笔记超过这个长度,工作项完成时触发"要不要晋升成决策"的强制选择
+MIN_NOTE_PROMOTE_CHARS = 80
+
+ARCHAEOLOGY_SECTIONS = ("现状考古", "我保留了哪些契约外行为", "我不确定的地方")
+DECISION_FIELDS = ("理由", "已否决", "影响路径")
+
 DEFAULT_STATE = {
     "round": 0,
     "phase": "idle",
@@ -117,6 +141,10 @@ DEFAULT_STATE = {
     "completed_items": [],
     "setup_verified": False,
     "deadlock_hits": [],
+    # claim 时记下契约的 blob sha。工作项完成时若它变了,说明这轮发生过
+    # 契约变更 —— 那是最值得留下理由的时刻。老状态里没有这个键,取默认
+    # None,检查自动跳过,存量仓库零成本升级。
+    "contract_sha": None,
 }
 
 # `- [ ] **W1** [bug] — 标题`,类型可省略(缺省 feature)
@@ -175,6 +203,9 @@ def load_config(root, required=True):
     cfg.setdefault("contract_file", "docs/CONTRACT.md")
     cfg.setdefault("sync", False)
     cfg.setdefault("require_setup_verification", True)
+    cfg.setdefault("notes_dir", "docs/notes")
+    cfg.setdefault("decisions_file", "docs/DECISIONS.md")
+    cfg.setdefault("memory", True)
     if STATE_REL not in cfg["frozen_paths"]:
         cfg["frozen_paths"].append(STATE_REL)
     return cfg
@@ -346,8 +377,15 @@ def tracked_files(root):
 
 
 def writable_paths(cfg, phase):
-    """按角色 + 阶段计算可写路径。评审阶段只读:仅允许写评审记录。"""
+    """按角色 + 阶段计算可写路径。评审阶段只读:仅允许写评审记录与记忆层。
+
+    记忆层的路径**不能**并进 shared_paths —— 异议举证检查(见 handoff)靠
+    "本回合是否写了 shared_paths 下的文件"来判断异议有没有落到纸面,把随手
+    写的笔记算进去,那条防护就被静默削掉了。
+    """
     shared = list(cfg["shared_paths"])
+    if memory_on(cfg):
+        shared = shared + [cfg["notes_dir"], cfg["decisions_file"]]
     if phase in REVIEW_PHASES or phase == "idle":
         return shared
     return list(cfg["roles"][PHASE_OWNER[phase]]) + shared
@@ -421,6 +459,292 @@ def flow_of(item_type):
 
 
 # --------------------------------------------------------------------------
+# 记忆层 —— 笔记(工作项级)与决策记录(项目级)
+# --------------------------------------------------------------------------
+
+# `## W1 — 一句话结论`。分隔符宽容一点:全角破折号、半角连字符都收。
+DECISION_HEAD_RE = re.compile(
+    r"^##[ \t]+(?P<id>\S+)[ \t]*[—–-]{1,2}[ \t]*(?P<title>.+?)[ \t]*$", re.M)
+_FIELD_LINE_RE = re.compile(
+    r"^\s*[-*]\s*(理由|已否决|影响路径)\s*[::]\s*(.*)$")
+
+DECISION_FORMAT_HINT = """条目格式(四个字段缺一不可):
+
+  ## <工作项ID> — <一句话结论>
+
+  - 理由: <为什么是这个结论,具体到会导致什么错误行为>
+  - 已否决: <考虑过但放弃的方案和放弃原因 —— 这是本文件最值钱的字段>
+  - 影响路径: `src/foo.py`, `tests/test_foo.py`
+
+`影响路径` 是检索键:今后谁要动这些路径,status 会自动把这条结论摆到他面前。
+故意没有"分析"字段 —— 只共享事实和裁决,不共享推理过程。"""
+
+
+def memory_on(cfg):
+    return bool(cfg.get("memory", True))
+
+
+def _read(p):
+    try:
+        return p.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
+def _clip_tail(text, limit):
+    """保留尾部 —— 笔记是往后追加的,新的更相关。"""
+    if len(text) <= limit:
+        return text
+    return "…（前文已截断,完整内容见文件）\n" + text[-limit:]
+
+
+def notes_path(root, cfg, item):
+    return root / cfg["notes_dir"] / ("%s.md" % item)
+
+
+def blob_sha(root, path):
+    out = git("rev-parse", "HEAD:%s" % path, cwd=root, check=False)
+    return out.strip() if out else None
+
+
+def decisions_at_head(root, cfg):
+    """决策记录在上一次提交时的样子。追加式校验的基准。"""
+    return git("show", "HEAD:%s" % cfg["decisions_file"],
+               cwd=root, check=False) or ""
+
+
+def parse_decisions(text):
+    """[(id, title, body, start, end)]"""
+    heads = list(DECISION_HEAD_RE.finditer(text))
+    out = []
+    for i, m in enumerate(heads):
+        end = heads[i + 1].start() if i + 1 < len(heads) else len(text)
+        out.append((m.group("id").strip(), m.group("title").strip(),
+                    text[m.end():end], m.start(), end))
+    return out
+
+
+def parse_decision_fields(body):
+    fields, cur = {}, None
+    for line in body.splitlines():
+        m = _FIELD_LINE_RE.match(line)
+        if m:
+            cur = m.group(1)
+            fields[cur] = m.group(2).strip()
+        elif cur and line.strip() and not line.lstrip().startswith("#"):
+            fields[cur] = (fields[cur] + " " + line.strip()).strip()
+        elif not line.strip():
+            cur = None
+    return fields
+
+
+def decision_paths(body):
+    raw = parse_decision_fields(body).get("影响路径") or ""
+    return [t.strip().strip("`,,、") for t in re.split(r"[\s,,、]+", raw)
+            if t.strip().strip("`,,、")]
+
+
+def validate_decision(title, body):
+    problems = []
+    if not title:
+        problems.append("标题里没有结论。`## <ID> — <一句话结论>` 的结论部分不能空")
+    fields = parse_decision_fields(body)
+    for name in DECISION_FIELDS:
+        if not fields.get(name):
+            problems.append("缺少 `- %s:` 字段,或它是空的" % name)
+    size = len(title) + len(body)
+    if size > MAX_DECISION_CHARS:
+        problems.append(
+            "条目 %d 字符,超过上限 %d。这条结论此后每一次 status 都会被读一遍,"
+            "长了就没人读 —— 压缩到结论和理由本身,过程不要写进来"
+            % (size, MAX_DECISION_CHARS))
+    return problems
+
+
+def new_decision_entries(root, cfg):
+    """本回合新追加的条目。靠"偏移量在旧内容之后"判定,所以同一工作项
+    追加第二条也算新的 —— 用 id 去重会漏掉那种情况。"""
+    old = decisions_at_head(root, cfg)
+    cur = _read(root / cfg["decisions_file"])
+    return [e for e in parse_decisions(cur) if e[3] >= len(old)]
+
+
+def missing_archaeology(root, cfg, item):
+    """refactor 的考古记录缺了什么。脚本判不了内容,但能强制交出结构。"""
+    text = _read(notes_path(root, cfg, item))
+    missing = []
+    for name in ARCHAEOLOGY_SECTIONS:
+        m = re.search(r"^#{2,}\s*%s\s*$" % re.escape(name), text, re.M)
+        if not m:
+            missing.append("缺少小节 `## %s`" % name)
+            continue
+        rest = text[m.end():]
+        nxt = re.search(r"^#{1,6}\s", rest, re.M)
+        body = (rest[:nxt.start()] if nxt else rest).strip()
+        if len(body) < MIN_NOTE_SECTION_CHARS:
+            missing.append("小节 `## %s` 正文只有 %d 字,不足 %d"
+                           % (name, len(body), MIN_NOTE_SECTION_CHARS))
+    return missing
+
+
+# 阶段 -> 本阶段"被生产或被评审的东西"属于谁。决策记录按这个求交集召回:
+# review-impl 是 tester 在看 dev 的代码,相关的是 dev 的路径。
+PHASE_SUBJECT = {
+    "spec": "tester", "review-test": "tester",
+    "impl": "dev", "review-impl": "dev",
+}
+
+
+def subject_paths(cfg, phase):
+    role = PHASE_SUBJECT.get(phase)
+    if role is None:
+        return list(cfg["roles"]["tester"]) + list(cfg["roles"]["dev"])
+    return list(cfg["roles"][role])
+
+
+def relevant_decisions(root, cfg, state, phase):
+    """与本回合相关的决策:同一工作项的,或影响路径落在本阶段主体上的。
+
+    纯路径求交,不做语义检索 —— 这套协议连 LLM 的红绿判断都不信,
+    更不该把召回押在检索命中率上。
+    """
+    entries = parse_decisions(_read(root / cfg["decisions_file"]))
+    subj = subject_paths(cfg, phase)
+    picked = []
+    for eid, title, body, _, _ in entries:
+        if eid == state["item"] or any(matches_any(p, subj)
+                                       for p in decision_paths(body)):
+            picked.append((eid, title, body))
+    return picked[-MAX_DECISION_INJECT_ENTRIES:]
+
+
+def memory_brief(root, cfg, state, phase):
+    """status 注入的记忆块。这是整套机制里唯一的召回时机。"""
+    if not memory_on(cfg):
+        return ""
+    out = []
+    item = state["item"]
+    if item:
+        note = _read(notes_path(root, cfg, item)).strip()
+        rel = "%s/%s.md" % (cfg["notes_dir"], item)
+        if note:
+            out.append("--- 本工作项笔记 (%s) ---" % rel)
+            out.append(_clip_tail(note, MAX_NOTE_INJECT_CHARS))
+        else:
+            out.append("--- 本工作项还没有笔记 (%s) ---" % rel)
+            out.append("发现了什么就随手写进去:试过什么没成、否掉了什么、"
+                       "哪里拿不准。\n对方看不到你的推导过程,不写下来就是重新推一遍。")
+    picked = relevant_decisions(root, cfg, state, phase)
+    if picked:
+        body = []
+        for eid, title, text in picked:
+            body.append("## %s — %s%s" % (eid, title, text.rstrip()))
+        joined = "\n".join(body)
+        if len(joined) > MAX_DECISION_INJECT_CHARS:
+            joined = joined[:MAX_DECISION_INJECT_CHARS] + \
+                "\n…（已截断,完整内容见 %s）" % cfg["decisions_file"]
+        out.append("--- 相关决策 (%s) ---" % cfg["decisions_file"])
+        out.append(joined)
+    return "\n".join(out)
+
+
+def check_memory(root, cfg, state, phase, verdict, target, args):
+    """记忆层门禁。返回拒绝理由;None 表示放行。"""
+    if not memory_on(cfg):
+        return None
+    item = state["item"]
+    dfile = cfg["decisions_file"]
+
+    # --- 追加式:能往后加,不能改历史 -----------------------------------
+    old = decisions_at_head(root, cfg)
+    if old and not _read(root / dfile).startswith(old):
+        return ("拒绝交接 —— 你改动了 %s 里已经写下的内容。\n\n"
+                "决策记录是追加式的。已有条目是双方共识的凭据,改它等于伪造共识,\n"
+                "和手工改 %s 同级。\n\n"
+                "要推翻旧结论,**追加**一条新条目说明为什么推翻,不要动旧的。"
+                % (dfile, STATE_REL))
+
+    fresh = new_decision_entries(root, cfg)
+
+    # --- 写了东西却没构成条目 -------------------------------------------
+    # 最坏的结果不是被拒绝,是写下去却没人认得 —— agent 以为自己记录了,
+    # 而 status 永远召回不到它。宁可在这里吵一次。
+    added = _read(root / dfile)[len(old):].strip()
+    if added and not fresh:
+        return ("拒绝交接 —— 你往 %s 写了内容,但它不构成一条决策条目,\n"
+                "解析不出来的东西 status 永远召回不到,等于没写。\n\n"
+                "(如果这只是 init 刚铺下的骨架,让人类先把它提交进去。)\n\n%s"
+                % (dfile, DECISION_FORMAT_HINT))
+
+    # --- 新条目必须结构完整、足够短 -------------------------------------
+    for eid, title, body, _, _ in fresh:
+        problems = validate_decision(title, body)
+        if problems:
+            return ("拒绝交接 —— %s 里的新条目「%s」不合格:\n  - %s\n\n%s"
+                    % (dfile, eid or "(无ID)", "\n  - ".join(problems),
+                       DECISION_FORMAT_HINT))
+
+    mine = [e for e in fresh if e[0] == item]
+
+    # --- refactor 的考古记录 --------------------------------------------
+    # 重构回合里 tester 要判断的是"行为有没有被悄悄改掉",而测试全程是绿的,
+    # 契约写的是目标不是现状 —— 它手上本来什么都没有。做过考古的是 dev,
+    # 所以由 dev 在交接时把考古结论交出来。
+    if state["item_type"] == "refactor" and phase == "impl" and verdict is None:
+        miss = missing_archaeology(root, cfg, item)
+        if miss:
+            return ("拒绝交接 —— [refactor] 的实现回合必须交出考古记录。\n\n"
+                    "%s 还缺:\n  - %s\n\n"
+                    "需要三个小节,每节正文至少 %d 字:\n"
+                    "  ## 现状考古\n"
+                    "      这段代码为什么长成现在这样。你读代码时发现的、"
+                    "但任何文档里都没写的事。\n"
+                    "  ## 我保留了哪些契约外行为\n"
+                    "      测试没覆盖、契约没写明,但你判断必须保住的行为。\n"
+                    "  ## 我不确定的地方\n"
+                    "      你拿不准会不会改变行为的地方。写下来,让对方重点看这里。\n\n"
+                    "对方全程看的是绿色的测试 —— 你不写,它就只能凭 diff 猜。"
+                    % ("%s/%s.md" % (cfg["notes_dir"], item),
+                       "\n  - ".join(miss), MIN_NOTE_SECTION_CHARS))
+
+    # --- 第二次打回:分歧是真的,留下结论 --------------------------------
+    # 只卡第二次:第一次可能只是笔误,第三次有死锁闸接管并交给人类,
+    # 在那里再要一份文档只是噪音。
+    if verdict == "changes" and state["changes_count"] + 1 == 2 and not mine:
+        return ("拒绝交接 —— 「%s」这是第 %d 次打回,必须在 %s 里留下一条结论。\n\n"
+                "来回两次说明这不是笔误,是真实分歧。不写下来,第三次打回会撞上\n"
+                "死锁闸,而人类到时候翻不到你们到底在争什么。\n\n"
+                "%s"
+                % (item, state["changes_count"] + 1, dfile,
+                   DECISION_FORMAT_HINT))
+
+    if target == "DONE":
+        # --- 契约在本工作项期间被改过 -----------------------------------
+        cur_sha = blob_sha(root, cfg["contract_file"])
+        if (state.get("contract_sha") and cur_sha
+                and cur_sha != state["contract_sha"] and not mine):
+            return ("拒绝交接 —— %s 在这个工作项期间被改过,但 %s 里没有对应记录。\n\n"
+                    "契约变更是重新推导代价最高的事:今后每个新回合都会拿改过的\n"
+                    "契约当作理所当然,而改它的理由谁都看不到了。\n\n"
+                    "追加一条 `## %s — …`,写清楚原来是什么、为什么不行、改成了什么。\n\n"
+                    "%s" % (cfg["contract_file"], dfile, item,
+                            DECISION_FORMAT_HINT))
+
+        # --- 晋升 gate:笔记要随工作项一起沉底,给它一次留下的机会 -------
+        note = _read(notes_path(root, cfg, item)).strip()
+        if len(note) >= MIN_NOTE_PROMOTE_CHARS and not mine and not args.no_decision:
+            return ("拒绝交接 —— 工作项「%s」要完成了,但它的笔记还没被处理。\n\n"
+                    "笔记是工作项级的:这一项关掉之后,没有任何回合会再读到它。\n"
+                    "现在是它变成长期资产的唯一时机。二选一:\n\n"
+                    "  1. 有值得留下的结论 —— 追加一条 `## %s — …` 到 %s\n"
+                    "  2. 确实没有 —— 显式声明:\n"
+                    "       python3 %s handoff approve \"理由\" --no-decision \"为什么没有\"\n\n"
+                    "声明会进提交记录,人类看得见。这不是放行,是强制留痕。\n\n"
+                    "%s" % (item, item, dfile, PROG_HINT, DECISION_FORMAT_HINT))
+    return None
+
+
+# --------------------------------------------------------------------------
 # status
 # --------------------------------------------------------------------------
 
@@ -437,7 +761,7 @@ PHASE_BRIEF = {
     - 只能写:%(paths)s
     - 只断言契约里的可观测行为,禁止断言私有方法名/调用次数
     - 不许删除已有测试。确需删除要显式带 --allow-deletion "理由"
-%(redgreen)s
+%(redgreen)s%(notes)s
   完成后: python3 %(prog)s handoff "一句话说明这个用例在验证什么\"""",
 
     "impl": """  写实现。
@@ -447,7 +771,7 @@ PHASE_BRIEF = {
     - 禁止修改或删除任何测试。认为测试写错了 -> 写异议到 docs/reviews/,
       用 handoff changes "理由" 打回,由测试方修
     - 禁止针对测试输入硬编码返回值来蒙混过关
-%(redgreen)s
+%(redgreen)s%(notes)s
   完成后: python3 %(prog)s handoff "一句话说明你怎么实现的\"""",
 
     "review-impl": """  审查对方的实现。跑 inbox 看 diff。
@@ -493,12 +817,24 @@ def _brief_vars(cfg, state, phase):
         rg = "    - 交接前测试必须 GREEN。\n"
     else:
         rg = ""
+    if not memory_on(cfg):
+        notes = ""
+    elif state["item_type"] == "refactor" and phase == "impl":
+        notes = ("    - **本项是 refactor,交接前必须交出考古记录**:%s/%s.md,\n"
+                 "      三个小节 —— 现状考古 / 我保留了哪些契约外行为 / 我不确定的地方。\n"
+                 "      对方全程看的是绿色的测试,你不写它就只能凭 diff 猜。\n"
+                 % (cfg["notes_dir"], state["item"]))
+    else:
+        notes = ("    - 发现什么就随手记进 %s/%s.md:试过什么没成、否掉了什么、\n"
+                 "      哪里拿不准。记负空间,不用复述 diff。\n"
+                 % (cfg["notes_dir"], state["item"] or "<ID>"))
     return {
         "plan": cfg["plan_file"],
         "contract": cfg["contract_file"],
         "paths": " ".join(writable_paths(cfg, phase)),
         "prog": PROG_HINT,
         "redgreen": rg,
+        "notes": notes,
         "cover_hint": ("这条测试真的能发现回归吗(cover 类型的核心问题)"
                        if state["item_type"] == "cover"
                        else "用例是否真的对应 PLAN 里的工作项"),
@@ -570,6 +906,16 @@ def cmd_status(root, cfg, args):
     print()
     print(PHASE_BRIEF[phase] % _brief_vars(cfg, state, phase))
     print()
+
+    # 记忆层召回。status 是协议强制的第一条命令,也是唯一能跨 harness
+    # 保证一定被执行的时刻 —— 存了没人读等于没存,所以召回挂在这里。
+    mem = memory_brief(root, cfg, state, phase)
+    if mem:
+        print("=" * 52)
+        print(" 你不在场时留下的东西")
+        print("=" * 52)
+        print(mem)
+        print()
     return 0
 
 
@@ -617,6 +963,8 @@ def cmd_claim(root, cfg, args):
     state["item_type"] = item_type
     state["changes_count"] = 0          # 打回计数绑定到工作项
     state["phase"] = flow_of(item_type)["start"]
+    # 记下契约此刻的样子。完成时若变了,说明这轮发生过契约变更。
+    state["contract_sha"] = blob_sha(root, cfg["contract_file"])
     save_state(root, state)
 
     # 认领是协议事件,立即提交:留痕,并让状态文件回到"干净",
@@ -700,6 +1048,7 @@ def cmd_handoff(root, cfg, args):
     if (phase, verdict) not in flow["transitions"]:
         die("工作项类型 [%s] 的流程里没有 %s 阶段的这个走向。状态可能已损坏。"
             % (state["item_type"], phase))
+    target = flow["transitions"][(phase, verdict)]
 
     entries = changed_entries(root)
 
@@ -757,6 +1106,12 @@ def cmd_handoff(root, cfg, args):
                 "写清楚:哪条测试、和契约的哪一条矛盾、你认为应该改成什么。\n"
                 "然后重新执行本命令。" % " ".join(cfg["shared_paths"]))
 
+    # --- 记忆层门禁 -------------------------------------------------------
+    # 放在跑测试之前:纸面上的问题不值得先花一遍测试时间。
+    refusal = check_memory(root, cfg, state, phase, verdict, target, args)
+    if refusal:
+        die(refusal)
+
     # --- 红绿不变量(按工作项类型) ---------------------------------------
     # 异议路径豁免:dev 正是因为测试写错、弄不绿才打回的,拿红绿卡他等于
     # 逼他照着错误的断言写实现。
@@ -798,7 +1153,6 @@ def cmd_handoff(root, cfg, args):
                 "请把双方分歧写清楚,交给人类裁决。不要继续来回。" % changes_n)
 
     # --- 翻转回合 ---------------------------------------------------------
-    target = flow["transitions"][(phase, verdict)]
     finished_item = None
     if target == "DONE":
         finished_item = item
@@ -809,6 +1163,7 @@ def cmd_handoff(root, cfg, args):
         state["item"] = None
         state["item_type"] = None
         state["changes_count"] = 0
+        state["contract_sha"] = None
         next_phase = "idle"
     else:
         next_phase = target
@@ -826,6 +1181,8 @@ def cmd_handoff(root, cfg, args):
     if args.allow_deletion:
         body += "\n删除测试(已声明): %s\n  %s" % (args.allow_deletion,
                                                  "\n  ".join(deleted))
+    if args.no_decision:
+        body += "\n未留决策(已声明): %s" % args.no_decision
 
     git("add", "-A", cwd=root)
     git("commit", "-q", "-m", "%s: %s" % (prefix, message), "-m", body, cwd=root)
@@ -876,13 +1233,41 @@ def cmd_inbox(root, cfg, args):
     diff = git("show", "--format=", "HEAD", cwd=root, check=False)
     print(diff.rstrip() if diff else "")
     print()
-    print("=== 评审记录 =====================================")
+    # 上一回合写给你的散文。只列文件名是不够的 —— 没人会主动去 cat 它,
+    # 而对方看不到你的对话,这些文件就是它唯一能对你说话的地方。
+    print("=== 对方这一回合写给你的 =========================")
+    prose_paths = list(cfg["shared_paths"])
+    if memory_on(cfg):
+        prose_paths += [cfg["notes_dir"], cfg["decisions_file"]]
+    changed = [p for p in ((git("show", "--name-only", "--format=", "HEAD",
+                                cwd=root, check=False) or "").split("\n"))
+               if p.strip() and matches_any(p.strip(), prose_paths)]
+    changed = [p.strip() for p in changed]
+    if not changed:
+        print("(这一回合没有动过散文文件)")
+    budget = 4000
+    for rel in changed:
+        text = _read(root / rel).strip()
+        if not text:
+            continue
+        if budget <= 0:
+            print("\n… 其余文件略,直接读:%s" % " ".join(changed))
+            break
+        print()
+        print("--- %s ---" % rel)
+        print(text[:budget] + ("\n…（已截断,完整内容见文件）"
+                               if len(text) > budget else ""))
+        budget -= len(text)
+    print()
+    print("=== 全部散文记录(文件清单)=======================")
     found = []
-    for shared in cfg["shared_paths"]:
+    for shared in prose_paths:
         d = root / shared
         if d.is_dir():
             found += sorted(str(p.relative_to(root)) for p in d.rglob("*")
                             if p.is_file() and not p.name.startswith("."))
+        elif (root / shared).is_file():
+            found.append(shared)
     print("\n".join(found) if found else "(空)")
     return 0
 
@@ -1009,6 +1394,35 @@ CONTRACT_SKELETON = """# 接口契约（冻结 — agent 只读，变更需双�
 <!-- 空输入、超长输入、并发、null。没在这里写明的边界,tester 不能凭空假设。 -->
 """
 
+DECISIONS_SKELETON = """# 决策记录（追加式 — 只能往后加，不能改已有条目）
+
+> 两个 agent 不共享对话，也不共享各自厂商的记忆。这份文件是它们唯一
+> 累积起来的共同结论，`pair.py status` 会在相关回合把它读给双方听。
+>
+> **只记事实和裁决，不记推理过程。** 共享推理会让两边想到一块去，而互相
+> 点头正是这套机制要防的事 —— 所以下面故意没有"分析"字段。
+>
+> 强制写入的时刻只有三个:同一工作项第二次被打回、契约在工作项期间被改过、
+> 工作项完成时笔记里还有没沉淀的东西。其余时候想写就写。
+>
+> 格式如下，四个字段缺一不可，单条不得超过 1500 字符（超了 handoff 会拒绝
+> —— 这条结论此后每次 status 都会被读一遍，长了就没人读）:
+
+    ## W1 — 用毫秒时间戳而不是 ISO 字符串做排序键
+
+    - 理由: ISO 字符串在跨时区输入下排序结果和真实先后不一致，
+      W1 的验收标准直接依赖排序
+    - 已否决: 存 ISO 再解析后排序 —— 每次读都要解析，且解析失败没有兜底路径
+    - 影响路径: `src/timeline.py`, `tests/test_timeline.py`
+
+`影响路径` 是检索键:今后谁要动这些路径，`status` 会自动把这条结论摆到他面前。
+所以路径要写准，写全。
+
+---
+
+"""
+
+
 GITIGNORE_LINES = [".pair/.last-test.log", ".pair/whoami"]
 
 
@@ -1100,11 +1514,16 @@ def cmd_init(root, cfg, args):
         "contract_file": "docs/CONTRACT.md",
         "sync": False,
         "require_setup_verification": True,
+        "notes_dir": "docs/notes",
+        "decisions_file": "docs/DECISIONS.md",
+        "memory": True,
     }, ensure_ascii=False, indent=2) + "\n")
     put(STATE_REL, json.dumps(DEFAULT_STATE, indent=2) + "\n")
     put("docs/PLAN.md", PLAN_SKELETON)
     put("docs/CONTRACT.md", CONTRACT_SKELETON)
     put("docs/reviews/.gitkeep", "")
+    put("docs/notes/.gitkeep", "")
+    put("docs/DECISIONS.md", DECISIONS_SKELETON)
     for rel, content in ENTRY_FILES.items():
         put(rel, content)
 
@@ -1236,6 +1655,26 @@ def cmd_verify_setup(root, cfg, args):
                     % (item_id, anchor, cfg["contract_file"],
                        "、".join(sorted(headings)) or "(无)"))
 
+    # --- 记忆层路径自洽 ---------------------------------------------------
+    if memory_on(cfg):
+        for label, target in (("notes_dir", cfg["notes_dir"]),
+                              ("decisions_file", cfg["decisions_file"])):
+            for r in ROLES:
+                if matches_any(target, cfg["roles"][r]):
+                    bad("%s(%s)落在 roles.%s 之下 —— 记忆层必须两个角色都能写,"
+                        "\n      被角色路径圈进去就变成单方私有的了"
+                        % (label, target, r))
+            hit = next((f for f in cfg["frozen_paths"]
+                        if path_matches(target, f)), None)
+            if hit:
+                bad("%s(%s)落在冻结路径 %s 之下 —— agent 永远写不了它"
+                    % (label, target, hit))
+        if matches_any(cfg["notes_dir"], cfg["shared_paths"]) or \
+                matches_any(cfg["decisions_file"], cfg["shared_paths"]):
+            bad("记忆层路径落在 shared_paths 之下。这会让"
+                "\n      「异议必须写下来」那条检查被随手写的笔记满足,"
+                "\n      等于静默削掉一条现有防护。请把它们配成互不包含的路径。")
+
     # --- 入口文件与技能 ---------------------------------------------------
     if not (root / ".agents/skills/pair-protocol/SKILL.md").exists():
         bad("找不到 .agents/skills/pair-protocol/SKILL.md")
@@ -1329,6 +1768,8 @@ def main(argv=None):
     p_ho.add_argument("words", nargs="*")
     p_ho.add_argument("--allow-deletion", metavar="理由", default=None,
                       help="显式声明本次删除了测试,并给出理由")
+    p_ho.add_argument("--no-decision", metavar="理由", default=None,
+                      help="显式声明本工作项的笔记没有值得沉淀成决策的内容")
 
     p_in = sub.add_parser("inbox", help="对方上一回合做了什么")
     p_in.add_argument("count", nargs="?", type=int, default=1)

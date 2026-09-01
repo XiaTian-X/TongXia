@@ -6,5 +6,7 @@
   "last_actor": null,
   "changes_count": 0,
   "completed_items": [],
-  "setup_verified": false
+  "setup_verified": false,
+  "deadlock_hits": [],
+  "contract_sha": null
 }

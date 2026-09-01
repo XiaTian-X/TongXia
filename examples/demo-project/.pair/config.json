@@ -23,5 +23,8 @@
   "plan_file": "docs/PLAN.md",
   "contract_file": "docs/CONTRACT.md",
   "sync": false,
-  "require_setup_verification": true
+  "require_setup_verification": true,
+  "notes_dir": "docs/notes",
+  "decisions_file": "docs/DECISIONS.md",
+  "memory": true
 }

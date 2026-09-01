@@ -119,6 +119,30 @@ dev 跑一次 `npm install` 改了 lockfile 就被判越界是不合理的。把
 
 `docs/CONTRACT.md` 是承重墙,别偷懒。**没写进契约的东西,tester 不许断言。**
 
+## 记忆层的路径
+
+`init` 会铺好 `docs/notes/` 和 `docs/DECISIONS.md`,并在 `config.json` 里写上:
+
+```json
+"notes_dir": "docs/notes",
+"decisions_file": "docs/DECISIONS.md",
+"memory": true
+```
+
+两个 agent 每一回合都是新来的:看不到彼此的对话,也不共享各自工具的记忆。
+笔记记工作项级的负空间(试过什么没成、否掉了什么),决策记录记项目级的结论,
+`status` 在轮到谁时把相干的部分读给谁听。详见 SKILL.md 的「记忆」一节。
+
+改路径时有两条硬约束,`verify-setup` 会替你查:
+
+- **不能落在 `roles` 之下** —— 记忆层必须两个角色都能写,被角色路径圈进去
+  就变成单方私有的了
+- **不能落在 `shared_paths` 之下** —— 「提了异议必须写下来」那条检查认的是
+  `shared_paths` 下的文件,笔记若也算数,那条防护会被随手写的笔记满足
+
+**存量项目可以先关掉**:`"memory": false`,四个强制时刻全部失效,`status`
+也不再注入。等主流程跑顺了再打开。
+
 ## 启动两个 agent
 
 ### 拓扑 A:同目录(两个 CLI harness)
