@@ -940,8 +940,11 @@ def _brief_vars(cfg, state, phase):
 def render_brief(me, state, green):
     """回合简报的正文。格式由契约逐字节钉死,见 docs/pair-run/CONTRACT.md。"""
     item = state["item"]
-    if item and state["item_type"]:
-        item = "%s [%s]" % (item, state["item_type"])
+    if item:
+        # 类型为空时按 feature 算 —— flow_of(None) 就是这么解释的,协议其余
+        # 部分一律跟着它走。不这样写,v0 迁移过来的状态(没有 item_type 这个键)
+        # 会写出裸 ID,而契约只给了 `<ID> [<类型>]` 和 `(无)` 两种形态。
+        item = "%s [%s]" % (item, state["item_type"] or "feature")
     return "".join(
         line + "\n" for line in [
             "# 回合简报",
