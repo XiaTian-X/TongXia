@@ -24,7 +24,7 @@
 
 ```bash
 # 1. 一致性测试:扮演作弊的 agent,断言 pair.py 拦得住
-python3 -m unittest discover -s tests/conformance -t tests/conformance
+python3 tests/conformance/run.py
 
 # 2. 变异检查:逐个拆掉防护,确认每一条都有测试能发现它消失
 python3 tests/conformance/mutation_check.py
@@ -33,6 +33,66 @@ python3 tests/conformance/mutation_check.py
 **改动强制逻辑后两个都要跑。** 只跑第一个是不够的 ——
 一个恒真的测试集比没有测试更危险,它会让人以为强制力还在,
 而执行层可能已经什么都不拦了。
+
+### run.py:并行 + 改了什么测什么
+
+测试本身不慢,慢在**每个用例都要起真的 git 仓库、真的 `pair.py` 子进程**。
+`run.py` 把用例轮转分片到多个进程里跑。8 核机器上全量从约 135 秒降到约 35 秒 ——
+**下面这些秒数都是 8 核实测,换机器会变**,别把它们当承诺。
+
+```bash
+python3 tests/conformance/run.py --changed   # 按 git diff 选测试模块
+python3 tests/conformance/run.py memory      # 模块名模糊匹配
+python3 tests/conformance/run.py -j1         # 串行,调试时输出不交错
+python3 tests/conformance/run.py --list      # 只列出会跑哪些
+```
+
+`--changed` 的取舍写在 `CHANGED_RULES` 里,原则是**保守优先**:没有匹配规则的
+改动一律跑全量。**改了 `pair.py` 也一律跑全量** —— 不是做不到更细,是做细了
+不安全:守卫之间有顺序依赖,靠路径猜覆盖面会漏。真正需要细粒度选择的是变异
+检查,那里用的是缓存,见下。
+
+### mutation_check.py:缓存
+
+一个变异只要**有任何一个测试**抓到它就算过关。所以第一次跑完全量之后,
+把"谁抓到了它"记进 `tests/conformance/mutation-cache.json`,之后先只跑那一个。
+57 个变异点的变异阶段从十几分钟降到约 20 秒(整条命令约 55 秒,差的是基线)。
+
+```bash
+python3 tests/conformance/mutation_check.py --full      # 忽略缓存,全部重跑
+python3 tests/conformance/mutation_check.py --only 死锁  # 只跑名字含"死锁"的
+python3 tests/conformance/mutation_check.py --slice 1/6  # 分片(CI 或分次建缓存)
+```
+
+**缓存只影响快慢,不影响结论。** 子集没抓到会回退跑全量再下结论;缓存失效
+(测试改名、防护挪位)会自动走回退路径重建。缓存文件**要提交**。
+
+每个变异点只记**一个**抓手。回退路径用的是 `failfast`,遇到第一个失败就停,
+本来也只拿得到一个;而且 `loaded` 要求"请求了几个就跑了几个",多记几个不但没有
+冗余作用,反而让失效更频繁。所以它不是一份"每条防护由哪些测试守着"的完整清单,
+只是"至少有这一个守着"。
+
+新增一个变异点时不用手工填缓存,第一次跑会自己补上(那一个约 2 分钟)。
+
+**缓存里还存着一份基线指纹**(`pair.py` + 全部测试代码的哈希)。快路径的前提是
+"基线是绿的" —— 只有基线绿,才能把"这些测试失败了"归因到变异上。`--no-baseline`
+恰好关掉了那个前提,所以它只在指纹与上次跑绿时一致的情况下才敢走快路径;对不上
+就自动退回全量,并在输出里说明。没有这道闸,一个正改到一半、某个测试本来就红着的
+工作区能在一秒内报"全部被抓到"。
+
+#### 这里有两个坑,已经用测试封住了
+
+改这块之前先读 `test_mutation_tooling.py`,它测的是**变异检查自己失效的方式**:
+
+1. **变异运行必须设 `PAIR_MUTATION_RUN=1`。** 否则 `test_docs_consistency`
+   里的"变异点仍能匹配到源码"会因为源码被改坏而失败,于是**每个变异都显得
+   被抓到了**,真正存活的变异被掩盖。
+2. **缓存里必须存完整的 `module.Class.method`,而且要验证它们真的跑起来了。**
+   `unittest` 对认不出的 id 会报 `_FailedTest` 并非零退出 —— 这和"抓到了变异"
+   在退出码上一模一样。不识别这一点,一份过期缓存就能让 57 个变异全部假装通过。
+
+两个坑是同一类:**让一个本该有拦截力的检查变成恒真的,而且看着是绿的。**
+这正是这个项目最在意的失败模式,所以它们自己也必须被测住。
 
 起一个可跑的样板项目:
 

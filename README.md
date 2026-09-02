@@ -111,7 +111,9 @@ CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交�
 ## 开发
 
 ```bash
-python3 -m unittest discover -s tests/conformance -t tests/conformance
+python3 tests/conformance/run.py              # 全量,并行(8 核约 35 秒)
+python3 tests/conformance/run.py --changed    # 只跑与本次改动相关的
+python3 tests/conformance/run.py memory       # 只跑某几组
 ```
 
 一致性测试**扮演作弊的 agent**——抢回合、篡改状态、越界写、评审夹带私货、
@@ -120,7 +122,7 @@ python3 -m unittest discover -s tests/conformance -t tests/conformance
 但全绿本身证明不了什么,一个恒真的测试集比没有测试更危险。所以还有变异检查:
 
 ```bash
-python3 tests/conformance/mutation_check.py
+python3 tests/conformance/mutation_check.py   # 约 55 秒(含它自己跑的基线)
 ```
 
 它逐个拆掉 `pair.py` 里的防护,确认每一条都有测试能发现它消失了。

@@ -388,8 +388,9 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 断言 `pair.py` 拦得住。
 
 ```bash
-python3 -m unittest discover -s tests/conformance -t tests/conformance
-python3 tests/conformance/mutation_check.py
+python3 tests/conformance/run.py              # 全量,并行
+python3 tests/conformance/run.py --changed    # 只跑与本次改动相关的
+python3 tests/conformance/mutation_check.py   # 变异检查
 ```
 
 **全绿本身证明不了什么。** 变异检查逐个拆掉 `pair.py` 里的防护,

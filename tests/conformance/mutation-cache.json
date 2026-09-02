@@ -1,0 +1,223 @@
+{
+  "baseline": "efc6dc58654ebfc0",
+  "catchers": {
+    "拆掉 PLAN 全完成的终止检查": [
+      "test_positive.TestFullCycle.test_全部完成后停止轮转"
+    ],
+    "拆掉 approve 检查清单强制": [
+      "test_v1_review_evidence.TestApproveNeedsChecklist.test_只给一半也被拒绝",
+      "test_v1_review_evidence.TestApproveNeedsChecklist.test_空字符串不算数",
+      "test_v1_review_evidence.TestApproveNeedsChecklist.test_空手通过被拒绝"
+    ],
+    "拆掉 changes 位置引用强制": [
+      "test_v1_review_evidence.TestChangesNeedsLocation.test_异议路径同样要带位置",
+      "test_v1_review_evidence.TestChangesNeedsLocation.test_没有位置引用被拒绝"
+    ],
+    "拆掉 claim 时的契约小节存在性检查": [
+      "test_v1_brownfield.TestContractProvenance.test_契约小节被改名后_claim_也拦得住"
+    ],
+    "拆掉 cover 新增测试检查": [
+      "test_v1_flows.TestCoverFlow.test_没新增测试就交接被拒绝"
+    ],
+    "拆掉 cover 特征测试记录强制": [
+      "test_v1_brownfield.TestCoverNotes.test_只写一半也不算",
+      "test_v1_brownfield.TestCoverNotes.test_没交特征测试记录不许交接"
+    ],
+    "拆掉 frontmatter 保位": [
+      "test_v1_brownfield.TestEntryFileMerge.test_frontmatter_留在第一个字节"
+    ],
+    "拆掉 glob 负模式": [
+      "test_v1_layouts.TestGoColocatedLayout.test_dev_的负模式排除了测试文件"
+    ],
+    "拆掉 idle 阶段交接拦截": [
+      "test_invariants.TestClaim.test_未认领工作项就交接被拒绝",
+      "test_v1_flows.TestIdlePhase.test_idle_时不能交接"
+    ],
+    "拆掉 ignore_paths": [
+      "test_v1_layouts.TestIgnorePaths.test_glob_形式的忽略路径生效",
+      "test_v1_layouts.TestIgnorePaths.test_lockfile_改动不被判越界",
+      "test_v1_layouts.TestIgnorePaths.test_忽略目录下的文件生效"
+    ],
+    "拆掉 impl 阶段红绿检查": [
+      "test_invariants.TestRedGreen.test_impl_阶段红着交接被拒绝",
+      "test_v1_flows.TestCoverFlow.test_新测试变红时提示改成_bug_类型",
+      "test_v1_flows.TestRefactorFlow.test_重构弄红被拒绝"
+    ],
+    "拆掉 inbox 散文内容": [
+      "test_v1_memory.TestRecall.test_inbox_读的是整份文件而不只是这次的_diff"
+    ],
+    "拆掉 init 基线检查": [
+      "test_v1_cli.TestBootstrap.test_基线不绿时整体失败",
+      "test_v1_setup.TestInit.test_基线不绿时不留下任何残骸",
+      "test_v1_setup.TestInit.test_基线不绿时拒绝接入"
+    ],
+    "拆掉 refactor 保护测试强制": [
+      "test_v1_brownfield.TestRefactorNeedsSafetyNet.test_没声明保护测试就不许认领"
+    ],
+    "拆掉 refactor 考古强制": [
+      "test_v1_memory.TestArchaeology.test_小节太短不算数",
+      "test_v1_memory.TestArchaeology.test_没有考古记录不许交接"
+    ],
+    "拆掉 scope 边界": [
+      "test_v1_brownfield.TestScope.test_范围外的改动被拒"
+    ],
+    "拆掉 spec 阶段红绿检查": [
+      "test_invariants.TestRedGreen.test_spec_阶段绿着交接被拒绝"
+    ],
+    "拆掉 status 记忆召回": [
+      "test_v1_memory.TestRecall.test_status_始终召回同工作项的决策",
+      "test_v1_memory.TestRecall.test_status_把本工作项笔记读出来",
+      "test_v1_memory.TestRecall.test_status_按影响路径召回决策"
+    ],
+    "拆掉 sync pull 失败上报": [
+      "test_v1_disputes.TestSyncFailures.test_pull_失败时停下"
+    ],
+    "拆掉 sync push 失败上报": [
+      "test_v1_disputes.TestSyncFailures.test_push_失败时不报告已交接"
+    ],
+    "拆掉 verify-setup 基线检查": [
+      "test_v1_setup.TestVerifySetup.test_基线不绿时校验失败"
+    ],
+    "拆掉 verify-setup 的提交范围": [
+      "test_v1_brownfield.TestContractProvenance.test_开工前只警告不阻断",
+      "test_v1_brownfield.TestRefactorNeedsSafetyNet.test_对应契约不在最后一行也能被解析",
+      "test_v1_setup.TestVerifySetup.test_不把工作区里的代码一并提交进基线",
+      "test_v1_setup.TestVerifySetup.test_交了结论后通过并允许认领"
+    ],
+    "拆掉 verify-setup 门禁": [
+      "test_v1_setup.TestVerifySetup.test_未校验时不能认领"
+    ],
+    "拆掉入口文件合并": [
+      "test_v1_brownfield.TestEntryFileMerge.test_不改写别人已有的_frontmatter",
+      "test_v1_brownfield.TestEntryFileMerge.test_已有内容保留且协议段落在最前",
+      "test_v1_setup.TestInit.test_人类把标记块挪走后仍能就地更新",
+      "test_v1_setup.TestInit.test_已有入口文件被合并而不是跳过"
+    ],
+    "拆掉全量套件上报": [
+      "test_v1_brownfield.TestFullSuiteReport.test_全量套件红时退出码是_2"
+    ],
+    "拆掉写权限边界": [
+      "test_boundaries.TestReviewIsReadOnly.test_评审时不能改实现",
+      "test_boundaries.TestReviewIsReadOnly.test_评审时不能改测试",
+      "test_boundaries.TestRoleBoundaries.test_dev_不能写_tests",
+      "test_boundaries.TestRoleBoundaries.test_tester_不能写_src"
+    ],
+    "拆掉决策字段校验": [
+      "test_v1_memory.TestDecisionShape.test_缺字段被拒绝"
+    ],
+    "拆掉决策追加式校验": [
+      "test_v1_memory.TestAppendOnly.test_删掉已有条目被拒绝",
+      "test_v1_memory.TestAppendOnly.test_改动已有条目被拒绝"
+    ],
+    "拆掉决策长度上限": [
+      "test_v1_memory.TestDecisionShape.test_过长被拒绝"
+    ],
+    "拆掉协议日志的边界豁免": [
+      "test_v1_brownfield.TestFullSuiteReport.test_全量套件日志不会卡死下一回合"
+    ],
+    "拆掉回合归属检查": [
+      "test_turn_and_state.TestTurnOwnership.test_不是自己的回合不能交接"
+    ],
+    "拆掉契约依据必填": [
+      "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝",
+      "test_boundaries.TestDeletionGuard.test_声明的删除理由会进提交记录",
+      "test_boundaries.TestDeletionGuard.test_显式声明后允许删除",
+      "test_boundaries.TestReviewIsReadOnly.test_评审时不能改实现"
+    ],
+    "拆掉契约依据的可断言检查": [
+      "test_v1_brownfield.TestContractProvenance.test_待核实的规格不能开_feature"
+    ],
+    "拆掉契约变更强制": [
+      "test_v1_memory.TestContractChange.test_契约变过就必须留记录"
+    ],
+    "拆掉契约审查门禁": [
+      "test_v1_setup.TestVerifySetup.test_敷衍的结论不算数",
+      "test_v1_setup.TestVerifySetup.test_未交结论时给出明确指引",
+      "test_v1_setup.TestVerifySetup.test_没交契约审查结论时不放行"
+    ],
+    "拆掉契约小节重名检测": [
+      "test_v1_brownfield.TestContractSectionParsing.test_重名小节被当成歧义拦下"
+    ],
+    "拆掉契约覆盖度检查": [
+      "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝",
+      "test_boundaries.TestDeletionGuard.test_声明的删除理由会进提交记录",
+      "test_boundaries.TestDeletionGuard.test_显式声明后允许删除",
+      "test_boundaries.TestReviewIsReadOnly.test_评审时不能改实现"
+    ],
+    "拆掉完成时的晋升 gate": [
+      "test_v1_memory.TestPromotion.test_笔记没处理不许完成"
+    ],
+    "拆掉异议后 spec 回合的豁免": [
+      "test_v1_disputes.TestPostDisputeSpec.test_修完测试后绿着交接也放行"
+    ],
+    "拆掉异议后必须改测试": [
+      "test_v1_disputes.TestPostDisputeSpec.test_空转一轮被拒绝"
+    ],
+    "拆掉异议必须写下来": [
+      "test_v1_disputes.TestImplDispute.test_异议必须写进_reviews",
+      "test_v1_memory.TestBoundaryNotWeakened.test_笔记不能冒充异议举证"
+    ],
+    "拆掉异议的红绿豁免": [
+      "test_v1_disputes.TestImplDispute.test_写了异议就能红着打回",
+      "test_v1_disputes.TestImplDispute.test_异议的提交前缀是_dispute",
+      "test_v1_disputes.TestImplDispute.test_异议计入打回次数",
+      "test_v1_disputes.TestImplDispute.test_打回后_tester_修正再走通"
+    ],
+    "拆掉引用路径真实性检查": [
+      "test_v1_review_evidence.TestChangesNeedsLocation.test_引用不存在的文件被拒绝",
+      "test_v1_review_evidence.TestChangesNeedsLocation.test_碰巧像位置的数字不算"
+    ],
+    "拆掉死锁留痕": [
+      "test_v1_disputes.TestDeadlockTrace.test_status_显示曾经触发过",
+      "test_v1_disputes.TestDeadlockTrace.test_触发后被记进状态"
+    ],
+    "拆掉死锁闸": [
+      "test_invariants.TestDeadlockGate.test_同一工作项打回三次触发死锁闸",
+      "test_v1_disputes.TestDeadlockTrace.test_status_显示曾经触发过",
+      "test_v1_disputes.TestDeadlockTrace.test_仍允许带理由的_approve_收敛",
+      "test_v1_disputes.TestDeadlockTrace.test_触发后被记进状态"
+    ],
+    "拆掉测试删除防护": [
+      "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝"
+    ],
+    "拆掉状态篡改检测": [
+      "test_turn_and_state.TestStateTamper.test_status_会警告状态被篡改",
+      "test_turn_and_state.TestStateTamper.test_篡改后状态被自动还原",
+      "test_turn_and_state.TestStateTamper.test_篡改状态抢回合被拒绝"
+    ],
+    "拆掉第二次打回强制": [
+      "test_v1_memory.TestRebound.test_第二次打回不留结论被拒绝"
+    ],
+    "拆掉角色重叠检测": [
+      "test_v1_setup.TestVerifySetup.test_角色边界重叠被报出"
+    ],
+    "拆掉解析不出条目的检查": [
+      "test_v1_memory.TestDecisionShape.test_解析不出条目的写入被拒绝"
+    ],
+    "拆掉记忆层与共享路径的隔离": [
+      "test_v1_memory.TestBoundaryNotWeakened.test_笔记不能冒充异议举证"
+    ],
+    "拆掉记忆层落在共享路径下的检查": [
+      "test_v1_memory.TestSetupChecksMemoryPaths.test_笔记目录落在共享路径下被拒"
+    ],
+    "拆掉记忆层落在冻结路径下的检查": [
+      "test_v1_memory.TestSetupChecksMemoryPaths.test_决策文件落在冻结路径下被拒"
+    ],
+    "拆掉记忆层落在角色路径下的检查": [
+      "test_v1_memory.TestSetupChecksMemoryPaths.test_笔记目录落在角色路径下被拒"
+    ],
+    "拆掉评审只读": [
+      "test_boundaries.TestReviewIsReadOnly.test_评审时不能改实现",
+      "test_boundaries.TestReviewIsReadOnly.test_评审时不能改测试"
+    ],
+    "拆掉评审理由强制": [
+      "test_invariants.TestReviewVerdict.test_空手_approve_被拒绝"
+    ],
+    "拆掉评审证据门禁本身": [
+      "test_v1_review_evidence.TestApproveNeedsChecklist.test_只给一半也被拒绝",
+      "test_v1_review_evidence.TestApproveNeedsChecklist.test_空字符串不算数",
+      "test_v1_review_evidence.TestApproveNeedsChecklist.test_空手通过被拒绝",
+      "test_v1_review_evidence.TestChangesNeedsLocation.test_异议路径同样要带位置"
+    ]
+  }
+}

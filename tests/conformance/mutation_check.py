@@ -5,17 +5,35 @@
 一个恒真的测试集比没有测试更危险 —— 它会让人以为强制力还在,
 而实际上执行层可能已经什么都不拦了。
 
-    python3 tests/conformance/mutation_check.py
+    python3 tests/conformance/mutation_check.py            # 并行 + 走缓存
+    python3 tests/conformance/mutation_check.py --full     # 每个变异都跑全量
+    python3 tests/conformance/mutation_check.py --only 死锁 # 只跑名字含"死锁"的
 
 每次改动 pair.py 的强制逻辑后都应该跑一遍。新增防护时,
 在 MUTATIONS 里补上对应的变异点。
+
+## 为什么不用每次都跑全套
+
+一个变异只要**有任何一个测试**抓到它就算过关。所以第一次跑全量之后,
+把"谁抓到了它"记进 mutation-cache.json,之后先只跑那几个 —— 抓到就直接过。
+
+这不会放松判定:子集没抓到时会**回退跑全量**再下结论。缓存只影响快慢,
+不影响结论,而且缓存失效(测试改名、防护挪位)会自动走回退路径重建。
+
+快路径成立的前提是**基线全绿**,所以缓存里还存着一份基线指纹;`--no-baseline`
+只在指纹对得上时才敢用快路径,否则自动退回全量。
 """
+import argparse
+import hashlib
+import json
 import os
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -256,61 +274,274 @@ MUTATIONS = [
      '            hit = None; state["deadlock_hits"] = []; hit = ""'),
 ]
 
-FAIL_RE = re.compile(r"^(?:FAIL|ERROR): (\S+)", re.M)
+# unittest 的失败行有两种形态:
+#   3.10-  FAIL: test_x (module.Class)
+#   3.11+  FAIL: test_x (module.Class.test_x)
+# 只抓方法名是不够的 —— 缓存要能被 `python -m unittest <id>` 重新认出来,
+# 必须存完整的 module.Class.method。
+FAIL_RE = re.compile(r"^(?:FAIL|ERROR): (\w+) \(([\w.]+)\)", re.M)
 
 
-def run_suite(root):
-    # 告诉一致性测试:现在跑的是被故意改坏的 pair.py。变异点匹配检查在这种
-    # 情况下必然失败,会让每个变异都显得"被抓到",掩盖真正存活的变异。
+def _ids(text):
+    out = set()
+    for method, path in FAIL_RE.findall(text):
+        out.add(path if path.endswith("." + method) else path + "." + method)
+    return sorted(out)
+
+# 变异点 -> 抓到它的测试 id。由全量运行产出,之后当快路径用。
+CACHE_REL = "tests/conformance/mutation-cache.json"
+
+# 每个变异点缓存**一个**抓手就够了,原因有两条:
+#   1. 回退跑的是 failfast,遇到第一个失败就停,本来也只拿得到一个;
+#   2. 更关键的是,`loaded` 要求"请求了几个就跑了几个" —— 只要缓存里有一个 id
+#      失效,整组就判失效并回退。多存几个不但没有冗余作用,还会让失效更频繁。
+# 想让缓存同时充当"每条防护由哪些测试守着"的资产,得先去掉回退路径的 failfast
+# 并放宽 loaded,那是另一笔账,现在不做。
+MAX_CACHED = 1
+
+# 快路径("只跑缓存里那几个测试,失败就算抓到")成立的前提是**基线是绿的** ——
+# 只有基线全绿,才能把"这些测试失败了"归因到变异上。
+#
+# 所以基线跑绿时把当时的指纹记进缓存;`--no-baseline` 只有在指纹对得上时才敢
+# 走快路径。否则(比如你正改到一半、某个测试本来就红着)快路径会在 0.8 秒内
+# 报"全部被抓到" —— 一个看着是绿的、其实什么都没验的检查,正是这个项目最怕的东西。
+BASELINE_KEY = "baseline"
+CATCHERS_KEY = "catchers"
+
+
+def fingerprint(files=None):
+    """能让基线由绿转红的东西:执行层 + 全部测试代码。"""
+    h = hashlib.sha256()
+    if files is None:
+        files = ([REPO / PAIR_REL]
+                 + sorted((REPO / "tests" / "conformance").glob("*.py")))
+    for f in files:
+        h.update(f.name.encode("utf-8"))
+        h.update(f.read_bytes())
+    return h.hexdigest()[:16]
+
+
+def run_suite(root, ids=None, failfast=False):
+    """跑一遍测试。ids 为 None 时跑全量,否则只跑这些测试 id。
+
+    failfast 只给全量回退用。**绝不能给缓存快路径用** —— 快路径靠
+    "请求了几个就跑了几个"判断缓存有没有失效,提前中断会让它误判成失效,
+    然后每次都白白回退跑全量。
+
+    告诉一致性测试:现在跑的是被故意改坏的 pair.py。变异点匹配检查在这种
+    情况下必然失败,会让每个变异都显得"被抓到",掩盖真正存活的变异。
+    """
     env = dict(os.environ, PAIR_MUTATION_RUN="1")
-    proc = subprocess.run(
-        ["python3", "-m", "unittest", "discover",
-         "-s", "tests/conformance", "-t", "tests/conformance"],
-        cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if ids:
+        cmd = [sys.executable, "-m", "unittest", "-q"] + list(ids)
+        cwd = Path(root) / "tests" / "conformance"
+    else:
+        # 注意:discover 是子命令,-q/-f 只能跟在 discover **后面**,
+        # 放前面会被主解析器吞掉然后报 unrecognized arguments。
+        cmd = [sys.executable, "-m", "unittest", "discover"]
+        if failfast:
+            # 一个变异只要有任何一个测试抓到就算过关,没必要跑完剩下的 200 个。
+            cmd.append("-f")
+        cmd += ["-s", "tests/conformance", "-t", "tests/conformance"]
+        cwd = Path(root)
+    proc = subprocess.run(cmd, cwd=str(cwd), env=env,
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     text = proc.stdout.decode("utf-8", "replace")
-    return proc.returncode, sorted(set(FAIL_RE.findall(text)))
+    fails = _ids(text)
+
+    # 缓存里的测试可能已经改名或被删。unittest 对认不出的 id 会报
+    # _FailedTest 并非零退出 —— 那看起来和"抓到了变异"一模一样。
+    # 不识别这一点,一份过期的缓存就能让每个变异都假装通过,
+    # 而整套变异检查会变成恒真的。
+    ran = re.search(r"^Ran (\d+) test", text, re.M)
+    loaded = ("_FailedTest" not in text
+              and not (ids and (not ran or int(ran.group(1)) != len(ids))))
+    return proc.returncode, fails, loaded
 
 
-def main():
-    print("=== 基线(未变异)===")
-    rc, fails = run_suite(REPO)
-    if rc != 0:
-        print("基线就没全绿,先修好再做变异测试:\n%s" % "\n".join(fails))
-        return 1
-    print("基线全绿\n")
+def baseline_verified(no_baseline, cached_fp, current_fp):
+    """快路径能不能用 —— 也就是"基线是绿的"这个前提还成不成立。
 
-    survivors = []
-    for name, old, new in MUTATIONS:
-        tmp = Path(tempfile.mkdtemp(prefix="mutate-"))
+    跑过基线就是直接证据;`--no-baseline` 只能靠指纹间接证明"树没变过,
+    所以上次那次绿仍然作数"。抽成纯函数是为了能被测住:它是这套缓存机制里
+    唯一一处"判断错了就会让整个检查变成恒真"的地方。
+    """
+    if not no_baseline:
+        return True
+    return bool(cached_fp) and cached_fp == current_fp
+
+
+def load_cache(path=None):
+    """返回 (基线指纹, {变异点: [测试 id]})。文件不存在或损坏时当空缓存。"""
+    p = Path(path) if path else REPO / CACHE_REL
+    if not p.exists():
+        return "", {}
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except ValueError:
+        return "", {}
+    if not isinstance(data, dict):
+        return "", {}
+    if CATCHERS_KEY in data:
+        return data.get(BASELINE_KEY, ""), data.get(CATCHERS_KEY, {})
+    # 旧的扁平格式:没有基线指纹,所以快路径一律不放行,直到跑过一次基线。
+    return "", data
+
+
+def save_cache(baseline, catchers):
+    (REPO / CACHE_REL).write_text(
+        json.dumps({BASELINE_KEY: baseline, CATCHERS_KEY: catchers},
+                   ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8")
+
+
+def check_one(job):
+    """在隔离副本里应用一个变异并判定它有没有被抓到。
+
+    返回 (name, status, fails, note)。status: caught / survived / unmatched
+    """
+    name, old, new, cached = job
+    tmp = Path(tempfile.mkdtemp(prefix="mutate-"))
+    try:
         dst = tmp / "repo"
         shutil.copytree(REPO, dst, symlinks=True,
-                        ignore=shutil.ignore_patterns(".git"))
+                        ignore=shutil.ignore_patterns(
+                            ".git", "__pycache__", "*.pyc", ".DS_Store"))
         p = dst / PAIR_REL
         src = p.read_text(encoding="utf-8")
         if old not in src:
-            print("!! %-24s 变异点没匹配到,变异脚本需要更新" % name)
-            survivors.append(name)
-            shutil.rmtree(tmp, ignore_errors=True)
-            continue
+            return (name, "unmatched", [], "变异点没匹配到,变异脚本需要更新")
         p.write_text(src.replace(old, new, 1), encoding="utf-8")
 
-        rc, fails = run_suite(dst)
-        if rc == 0:
-            print("!! %-24s 存活 —— 没有任何测试发现防护消失了" % name)
-            survivors.append(name)
-        else:
-            print("OK %-24s 被 %d 个测试抓到: %s"
-                  % (name, len(fails), ", ".join(f.split(".")[-1] for f in fails[:3])
-                     + (" …" if len(fails) > 3 else "")))
+        # 快路径:只跑上次抓到它的那几个测试。
+        # 只有"这些测试确实都跑起来了、并且失败了"才算数。
+        if cached:
+            rc, fails, loaded = run_suite(dst, cached)
+            if rc != 0 and loaded:
+                return (name, "caught", fails, "缓存命中")
+
+        # 回退:跑全量再下结论。用 failfast —— 找到一个抓手就够了。
+        rc, fails, _ = run_suite(dst, failfast=True)
+        if rc != 0:
+            return (name, "caught", fails,
+                    "缓存已失效,重建" if cached else "首次全量")
+        return (name, "survived", [], "全量也没抓到")
+    finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
-    print()
-    if survivors:
-        print("存活的变异(说明这些防护没有被测试覆盖):")
-        for s in survivors:
-            print("  - %s" % s)
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(prog="mutation_check.py",
+                                 description="逐个拆掉防护,确认测试抓得到")
+    ap.add_argument("--full", action="store_true",
+                    help="忽略缓存,每个变异都跑全量")
+    ap.add_argument("--only", metavar="子串",
+                    help="只跑名字包含该子串的变异点")
+    ap.add_argument("-j", "--jobs", type=int, default=os.cpu_count() or 4,
+                    help="并行进程数(默认=核数)")
+    ap.add_argument("--slice", metavar="k/n",
+                    help="只跑第 k 片(共 n 片),用于 CI 分片或分次建缓存")
+    ap.add_argument("--no-baseline", action="store_true",
+                    help="跳过基线检查(只在你刚跑过基线时用)")
+    args = ap.parse_args(argv)
+
+    muts = [m for m in MUTATIONS if not args.only or args.only in m[0]]
+    if args.slice:
+        try:
+            k, n = (int(x) for x in args.slice.split("/"))
+            assert 1 <= k <= n
+        except (ValueError, AssertionError):
+            ap.error("--slice 格式是 k/n,且 1 <= k <= n,例如 2/4")
+        muts = muts[k - 1::n]
+        print("[分片 %d/%d] 本片 %d 个变异点\n" % (k, n, len(muts)))
+    if not muts:
+        print("没有匹配 '%s' 的变异点。" % args.only)
         return 1
-    print("全部 %d 个变异都被测试抓到。测试集确实有拦截力。" % len(MUTATIONS))
+
+    fp = fingerprint()
+    if args.no_baseline:
+        # 没跑基线,就只能靠"上次跑绿时的指纹还对得上"来确认前提仍然成立。
+        verified = baseline_verified(True, load_cache()[0], fp)
+        print("(已跳过基线检查%s)\n"
+              % ("" if verified else ";指纹与上次跑绿时不一致,快路径已停用"))
+    else:
+        if run_baseline(args.jobs) != 0:
+            return 1
+        verified = True
+    return run_mutations(muts, args, fp, verified)
+
+
+def run_baseline(jobs):
+    print("=== 基线(未变异)===")
+    t0 = time.time()
+    # 基线走并行运行器 —— 它是每次调用都要付的固定成本,没必要串行等 30 秒。
+    # 这里**不设** PAIR_MUTATION_RUN:基线跑的是未变异的代码,
+    # "变异点仍能匹配到源码"那条检查正该在这里一次性拦住陈旧的 MUTATIONS。
+    # 设了它,一个挪了位的变异点会变成后面 57 次"没匹配到"的噪音。
+    env = dict(os.environ)
+    env.pop("PAIR_MUTATION_RUN", None)
+    base = subprocess.run(
+        [sys.executable, str(REPO / "tests/conformance/run.py"),
+         "-j", str(jobs)], cwd=str(REPO), env=env,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if base.returncode != 0:
+        print("基线就没全绿,先修好再做变异测试:\n%s"
+              % base.stdout.decode("utf-8", "replace"))
+        return 1
+    print("基线全绿 (%.1fs)\n" % (time.time() - t0))
+    save_cache(fingerprint(), load_cache()[1])
+    return 0
+
+
+def run_mutations(muts, args, fp, verified):
+    cached_fp, cache = load_cache()
+    # 快路径只在两个条件都成立时才用:基线这次跑绿了(或指纹证明它还是绿的),
+    # 而且没有 --full。前者是"失败可以归因到变异"这条推理的全部依据。
+    fast = verified and not args.full
+    if not fast and cache:
+        print("(不走缓存快路径:%s)\n"
+              % ("--full" if args.full else "基线未经验证"))
+    jobs = [(n, o, w, cache.get(n, []) if fast else []) for n, o, w in muts]
+
+    t0 = time.time()
+    results = []
+    workers = max(1, min(args.jobs, len(jobs)))
+    with ProcessPoolExecutor(max_workers=workers) as ex:
+        for r in ex.map(check_one, jobs):
+            name, status, f, note = r
+            results.append(r)
+            if status == "caught":
+                print("OK %-26s %-16s %d 个测试: %s"
+                      % (name, note, len(f),
+                         ", ".join(x.split(".")[-1] for x in f[:3])
+                         + (" …" if len(f) > 3 else "")))
+            elif status == "survived":
+                print("!! %-26s 存活 —— 没有任何测试发现防护消失了" % name)
+            else:
+                print("!! %-26s %s" % (name, note))
+            sys.stdout.flush()
+    elapsed = time.time() - t0
+
+    # 只有全量得来的结论才配写进缓存 —— 快路径命中说明缓存已经是对的。
+    # 同样,只有基线经过验证的这一轮,结论才配被记下来当以后的快路径依据。
+    fresh = dict(cache)
+    for name, status, f, note in results:
+        if status == "caught" and note != "缓存命中":
+            fresh[name] = f[:MAX_CACHED]
+    if verified and (fresh != cache or cached_fp != fp):
+        save_cache(fp, fresh)
+
+    bad = [r for r in results if r[1] != "caught"]
+    print()
+    print("%d 个变异 / %d 进程 / %.1fs" % (len(results), workers, elapsed))
+    if bad:
+        print("\n有问题的变异点:")
+        for name, status, _, note in bad:
+            print("  - %s(%s)" % (name, note))
+        print("\n存活 = 这条防护没有被任何测试覆盖,补一个用例;"
+              "\n没匹配到 = 源码挪位了,更新 MUTATIONS 里的字符串。")
+        return 1
+    print("全部被测试抓到。测试集确实有拦截力。")
     return 0
 
 
