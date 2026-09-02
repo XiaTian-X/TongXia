@@ -308,6 +308,41 @@ class TestContractSectionParsing(PairTestCase):
         r = self.repo.run("claim", "W1", role="tester")
         self.assertRefused(r, "没写 `依据`")
 
+    def test_代码块里的标题不算小节(self):
+        """契约里放 markdown 示例是正常的 —— 格式类规格本来就该用示例锚定。
+        示例里的 `# 标题` 不是契约的小节,不剔掉的话一份带示例的契约会被
+        误判成"小节重名",而且偏移量错位会让 `依据` 也读错。"""
+        contract = """# 契约
+
+## W1
+
+- 依据: 人类定稿
+
+**行为** 输出必须与下面这份示例逐字节一致:
+
+```
+# W1
+
+- 字段: 值
+```
+
+## W2
+
+- 依据: 人类定稿
+
+**行为** 同样贴一份示例:
+
+```
+# W1
+```
+"""
+        self.repo.set_plan(PLAN_TEMPLATE, contract)
+        self.repo.write("docs/reviews/setup-verification.md", "逐条核对过契约。" * 20)
+        r = self.repo.run("verify-setup", role="dev")
+        self.assertNotIn("多个标题都叫", r.text)
+        self.assertAccepted(r)
+        self.assertAccepted(self.repo.run("claim", "W1", role="tester"))
+
     def test_重名小节被当成歧义拦下(self):
         """回归:字典按标题建键,后者覆盖前者 —— 顺序反过来就是错误放行。"""
         self.repo.set_plan(

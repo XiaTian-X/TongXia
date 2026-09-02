@@ -1,5 +1,5 @@
 {
-  "baseline": "efc6dc58654ebfc0",
+  "baseline": "41bc931843e3af4d",
   "catchers": {
     "拆掉 PLAN 全完成的终止检查": [
       "test_positive.TestFullCycle.test_全部完成后停止轮转"

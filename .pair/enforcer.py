@@ -2120,6 +2120,21 @@ HEADING_RE = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.M)
 _LEVELLED_HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.M)
 
 
+_FENCE_RE = re.compile(r"^([ \t]*)(```+|~~~+).*?^\1\2[^\n]*$", re.M | re.S)
+
+
+def _blank_fenced_blocks(text):
+    """把 ``` 围栏里的内容换成等量空行。
+
+    契约里放 markdown 示例是完全正常的事(格式类规格就该用示例锚定),
+    而示例里的 `# 标题` 不是契约的小节。不剔掉它们,一份带示例的契约会被
+    判成"小节重名",而且偏移量还会错位 —— 所以用等量空行替换而不是删除。
+    """
+    def blank(m):
+        return "\n" * m.group(0).count("\n")
+    return _FENCE_RE.sub(blank, text)
+
+
 def contract_sections(text):
     """返回 ({小节名: 自身正文}, {重名的小节名})。
 
@@ -2130,6 +2145,7 @@ def contract_sections(text):
     `##` 下各出现一次时后者会覆盖前者,于是工作项读到的是另一节的依据 ——
     顺序反过来就是错误放行。歧义不能靠"取第一个"糊过去,要让人类改标题。
     """
+    text = _blank_fenced_blocks(text)
     heads = list(_LEVELLED_HEADING_RE.finditer(text))
     out, dupes = {}, set()
     for i, m in enumerate(heads):
