@@ -1,9 +1,9 @@
 {
   "round": 0,
-  "phase": "impl",
+  "phase": "review-impl",
   "item": "W1",
   "item_type": "feature",
-  "last_actor": "tester",
+  "last_actor": "dev",
   "changes_count": 2,
   "completed_items": [],
   "setup_verified": true,
