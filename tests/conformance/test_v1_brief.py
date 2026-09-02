@@ -102,6 +102,25 @@ class TestBriefHeader(PairTestCase):
         self.assertAccepted(self.repo.run("status", role="tester"))
         self.assertEqual(self._lines()[3], "- 工作项: W1 [feature]")
 
+    def test_不是自己回合时不写(self):
+        """这是这批断言里唯一的**否定式**断言,也是唯一能钉住 `if me == owner`
+        那个守卫的东西。上面六条全是"轮到自己时……" —— 把实现改成"每次 status
+        都写",它们照样全绿。"""
+        self.repo.advance_to("impl")                 # 轮到 dev
+        self.assertAccepted(self.repo.run("status", role="tester"))
+        self.assertFalse(
+            self.repo.exists(BRIEF),
+            "不是自己回合却写了简报 —— 人类会读到一份不属于当前回合的状态")
+
+    def test_不是自己回合时也不清空已有的(self):
+        """上一次的简报要留着给人类看。"不写"和"清空"是两件事。"""
+        self.repo.advance_to("impl")
+        self.assertAccepted(self.repo.run("status", role="dev"))
+        before = self.repo.read(BRIEF)
+        self.assertAccepted(self.repo.run("status", role="tester"))
+        self.assertEqual(self.repo.read(BRIEF), before,
+                         "不是自己回合时把上一份简报清掉了")
+
     def test_写过简报之后交接不被拒(self):
         """简报落在 .pair/ 下,而 .pair 是冻结路径。不处理的话,写出来的
         第一份简报就会让下一次 handoff 判越界,而且 agent 删不干净 ——

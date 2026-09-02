@@ -939,7 +939,14 @@ def _brief_vars(cfg, state, phase):
 
 
 def render_brief(me, state, green):
-    """回合简报的正文。格式由契约逐字节钉死,见 docs/pair-run/CONTRACT.md。"""
+    """回合简报的正文。
+
+    标题行 + 空行 + 四个 `- 字段: 值`(半角冒号加一个空格),末尾一个换行。
+    字段顺序固定:角色 / 工作项 / 阶段 / 测试。工作项为空时写 `(无)`,
+    类型为空时按 feature 算。测试只有 GREEN / RED 两个取值。
+
+    格式是逐字节钉死的 —— 它是给人类事后对质用的凭据,不是终端输出的副本。
+    """
     item = state["item"]
     if item:
         # 类型为空时按 feature 算 —— flow_of(None) 就是这么解释的,协议其余
