@@ -1,0 +1,13 @@
+{
+  "round": 0,
+  "phase": "idle",
+  "item": null,
+  "item_type": null,
+  "last_actor": null,
+  "changes_count": 0,
+  "completed_items": [],
+  "setup_verified": false,
+  "deadlock_hits": [],
+  "contract_sha": null,
+  "after_dispute": false
+}
