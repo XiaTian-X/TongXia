@@ -1,2 +1,5 @@
 .pair/.last-test.log
 .pair/whoami
+.pair/.last-full-test.log
+__pycache__/
+*.pyc

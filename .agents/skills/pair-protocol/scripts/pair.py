@@ -1627,6 +1627,45 @@ def cmd_inbox(root, cfg, args):
 
 
 # --------------------------------------------------------------------------
+# whose-turn
+# --------------------------------------------------------------------------
+
+def cmd_whose_turn(root, cfg, args):
+    """一行机器可读的输出:接下来该谁,或者为什么该停。
+
+    存在的理由是**让驱动器里没有协议逻辑**。自动驱动两个 agent 时,
+    "现在轮到谁""要不要停下来交给人类"都是协议判断 —— 让驱动脚本自己去读
+    state.json 猜,它就成了协议的第二个实现,而防漂移正是这个项目从头到尾
+    在做的事。所以判断留在这里,驱动器只认这一行输出。
+
+    **不跑测试。** 它会被循环调用,而 status 已经负责跑测试了。
+
+    输出:
+        turn tester | turn dev        接下来轮到谁
+        stop <理由>                   该停下来交给人类
+    退出码始终 0 —— 它是查询,不是门禁。
+    """
+    state = load_state(root)
+
+    if cfg["require_setup_verification"] and not state["setup_verified"]:
+        print("stop 尚未通过开工前校验,需要结对的一方先跑 verify-setup")
+        return 0
+    if plan_all_done(root, cfg):
+        print("stop %s 里的工作项已全部完成" % cfg["plan_file"])
+        return 0
+    if state["changes_count"] >= DEADLOCK_LIMIT:
+        print("stop 工作项 %s 已被打回 %d 次,协议要求交给人类裁决"
+              % (state["item"], state["changes_count"]))
+        return 0
+    if state_is_tampered(root):
+        print("stop %s 被改动过,先跑 status 确认真实状态" % STATE_REL)
+        return 0
+
+    print("turn %s" % PHASE_OWNER[state["phase"]])
+    return 0
+
+
+# --------------------------------------------------------------------------
 # report
 # --------------------------------------------------------------------------
 
@@ -2520,6 +2559,7 @@ def main(argv=None):
     p_ho.add_argument("--uncovered", metavar="内容", default=None,
                       help="approve 必填:你知道还没被覆盖到的是什么(没有就写\"无\")")
 
+    sub.add_parser("whose-turn", help="一行输出:接下来该谁,或为什么该停")
     sub.add_parser("report", help="协议健康度:打回率等指标,只读")
     p_in = sub.add_parser("inbox", help="对方上一回合做了什么")
     p_in.add_argument("count", nargs="?", type=int, default=1)
@@ -2535,6 +2575,7 @@ def main(argv=None):
         "handoff": cmd_handoff,
         "inbox": cmd_inbox,
         "report": cmd_report,
+        "whose-turn": cmd_whose_turn,
     }[args.cmd](root, cfg, args)
 
 

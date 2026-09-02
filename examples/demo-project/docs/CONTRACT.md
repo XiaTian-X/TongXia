@@ -10,6 +10,8 @@
 
 ## slugify
 
+- 依据: 人类定稿
+
 ### `slugify(text: str) -> str`
 
 **行为** 把任意文本转成适合放进 URL 的 slug。
@@ -36,6 +38,8 @@
 - 大写字母转小写;非 ASCII 字符原样保留并转小写
 
 ## truncate
+
+- 依据: 人类定稿
 
 ### `truncate(text: str, n: int) -> str`
 

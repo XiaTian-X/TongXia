@@ -91,6 +91,7 @@ CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交�
 | `pair.py handoff …` | 双方 | 每回合结尾。`changes` 用于评审打回和测试异议 |
 | `pair.py inbox` | 双方 | 看对方做了什么 |
 | `pair.py report` | **人类** | 打回率等健康度指标。接近 0 = 互相点头 |
+| `drive.py`(可选) | 人类 | 自动驱动两边,省掉来回敲。默认不开 |
 
 ## 文档
 
@@ -101,9 +102,9 @@ CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交�
 | [设计理念](docs/design-philosophy.md) | 九条第一性原理,以及每条的代价 |
 | [架构](docs/architecture.md) | 三层结构、回合数据流、**强制力分布表** |
 | [协议规格](docs/protocol-spec.md) | 状态机、13 条不变量、配置与状态 schema |
-| [命令参考](docs/command-reference.md) | 七条命令的参数、前置条件、退出码 |
+| [命令参考](docs/command-reference.md) | 全部命令的参数、前置条件、退出码 |
 | [同类工作调研](docs/prior-art.md) | the-pair / TDD Guard / AgentCoder / Adversarial Review / Spec Kit / BMAD …… |
-| [决策记录](docs/design-decisions.md) | 17 条 ADR,含被否掉的方案 |
+| [决策记录](docs/design-decisions.md) | 19 条 ADR,含被否掉的方案 |
 | [改进提案](docs/improvements.md) | 从调研里提炼的路线图,以及明确不做的清单 |
 | [故障排查](docs/troubleshooting.md) | 报错怎么办,以及那些不报错但更危险的现象 |
 | [贡献指南](docs/contributing.md) | 单一真源纪律、新增防护的五步 |

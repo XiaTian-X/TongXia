@@ -242,6 +242,22 @@ echo tester > .pair/whoami        # 或者:git switch -c pair/tester
 此拓扑要在 `config.json` 里开 `"sync": true`,`status` 会先 `git pull --rebase`,
 `handoff` 会在提交后 `git push`。
 
+### 想省掉来回敲那一步:自动驱动(可选)
+
+```bash
+python3 .agents/skills/pair-protocol/scripts/drive.py --both "claude -p"
+```
+
+它读协议的 `whose-turn`,拉起该轮到的那一方,跑完再问一次。**通信仍然只走 git** ——
+它只是把"人敲键盘"换成"脚本敲键盘",判定一条都没搬过去。
+
+**默认不开,而且建议先手动跑顺再用。** ADR-010 的理由:手动交接顺带保证了
+每回合有一个天然的观察窗口、跑飞的成本有上界。自动化会把每个还没暴露的设计
+缺陷放大成事故 —— 第一次真实运行就撞出一个协议死锁,而它是在人类的观察窗口里
+被发现的(见 [docs/dogfood-run-1.md](docs/dogfood-run-1.md))。
+
+驱动器在协议说该停、进程非零退出、连续两回合没进展、超过回合预算时都会停下。
+
 ### 人类介入的纪律:只提交自己产生的东西
 
 结对期间你随时可以介入 —— 修协议缺陷、加 `.gitignore`、裁决僵局。但有一条硬纪律:
