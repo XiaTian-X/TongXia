@@ -4,3 +4,4 @@ __pycache__/
 .pair/whoami
 .DS_Store
 .pair/.last-full-test.log
+.pair/.last-brief.md
