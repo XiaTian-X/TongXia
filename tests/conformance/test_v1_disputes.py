@@ -106,6 +106,23 @@ class TestPostDisputeSpec(PairTestCase):
         self.repo.write("tests/W1", "补上回归断言")
         self.assertAccepted(self.repo.run("handoff", "补上回归用例", role="tester"))
 
+    def test_评审打回后空转也被拒绝(self):
+        """补偿检查此前只被 impl 异议那条入口走到过。新入口接上之后,
+        它在这条路径上同样必须生效 —— 否则"评审打回"就成了一轮免费的空转:
+        豁免了 RED,而"必须动测试"没跟过来。
+
+        这条是真实跑出来的:接上新入口后的第一个 spec 回合就撞在这条检查上。"""
+        self.repo.advance_to("review-test")
+        self.repo.write("docs/reviews/W1-rt.md", "覆盖不足,那处修复没有测试守着。")
+        self.assertAccepted(self.repo.run(
+            "handoff", "changes", with_loc("这处修复没有回归测试"), role="dev"))
+        self.assertEqual(self.repo.state()["phase"], "spec")
+
+        # 只写散文,一个测试都不动
+        self.repo.write("docs/notes/W1.md", "我先不改测试,占个位。")
+        r = self.repo.run("handoff", "这一回合我没动测试", role="tester")
+        self.assertRefused(r, "没有改动任何测试", "空转")
+
     def test_cover_的_GREEN_不被这条豁免放松(self):
         """豁免只针对 RED。cover 的 spec 期望 GREEN,而 cover 同样有
         review-test changes -> spec 这条边 —— 整个置空会让红着的 cover 过关,
