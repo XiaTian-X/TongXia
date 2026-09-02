@@ -47,3 +47,9 @@
 - 理由: review-test 以"覆盖不足"打回时,tester 要补的回归测试按定义是绿的(修复已落地),而 feature 的 spec 要求 RED —— 正当路径把自己锁死。豁免逻辑本来就存在,注释里那句"异议之后紧接着的 spec 回合"逐字描述了这个处境,缺的只是入口:`after_dispute` 只在 impl 阶段的异议时置位。改成任何打回都置位,并改名 `after_rebound`。但**不能像异议那样整个置空 expect**:cover 的 spec 期望 GREEN,而 cover 同样有 review-test changes → spec 这条边,整个置空会让红着的 cover 过关,而"全程绿"正是 cover 的全部纪律。所以只豁免 RED。
 - 已否决: 另开一个 [cover] 工作项去补那条回归测试 —— 零协议改动,但会让 W1 带着不设防的修复完成,而且以后每次"评审要求补测试"都要人类介入。也否决了"不允许 review-test 以覆盖不足打回" —— 那正是 review-test 最有价值的部分。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.pair/enforcer.py`, `tests/conformance/test_v1_disputes.py`, `docs/protocol-spec.md`
+
+## W1 — 人类在结对期间提交任何东西,都会破坏"必须动了测试"这条检查的前提
+
+- 理由: "打回之后的修正回合必须真的动了测试"按**工作区改动**判断,它的隐含前提是"这一回合的产出一定还在工作区里"。人类修协议时用 `git add -A` 把 tester 停在工作区里的用例一并提交,该前提被破坏:tester 的产出确实存在,但已经不在工作区,检查把它读成"你什么都没干"并拦下。这不是 `git add -A` 独有的问题 —— 人类在结对期间提交任何东西都可能踩到。同一个毛病此前在 `verify-setup` 上被挑出来并修过(只提交自己产生的东西),然后由人类身份再犯一次。
+- 已否决: 让补偿检查改看"自上次交接以来的提交 + 工作区"而不是只看工作区 —— 那会让"上一回合已经提交过的测试"也算数,而这条检查防的正是空转,等于把它削掉。正确的方向是约束人类介入的纪律,不是放宽检查。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/troubleshooting.md`, `.agents/skills/pair-protocol/references/rules.md`
