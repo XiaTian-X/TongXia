@@ -11,6 +11,8 @@
 只留一条"正常路径通过"的用例,等于允许实现返回一份常量。
 """
 
+import json
+
 from harness import PairTestCase
 
 BRIEF = ".pair/.last-brief.md"
@@ -81,6 +83,24 @@ class TestBriefHeader(PairTestCase):
         self.assertEqual(lines[0], "# 回合简报")
         self.assertEqual(lines[2], "- 角色: tester")
         self.assertEqual(lines[4], "- 阶段: idle")
+
+    def test_旧状态没有类型时按_feature_写(self):
+        """`item_type` 这个键是 v1 才加的,`load_state` 明确支持从没有它的
+        状态迁移过来。协议其余部分把空类型一律当 feature(`flow_of(None)`
+        就是这么解释的),简报必须跟着走 —— 契约给的两种形态里没有裸 ID。
+
+        这条守的是一次评审打回换来的修复。把它去掉,那个修复就完全不设防。"""
+        self.repo.advance_to("spec")
+        st = self.repo.state()
+        del st["item_type"]                  # v0 的 state.json 没有这个键
+        self.repo.write(".pair/state.json", json.dumps(st, indent=2))
+        # 以人类身份提交:模拟的是一个 state.json 早于 item_type 的旧仓库,
+        # 不是 agent 在本回合篡改状态。
+        self.repo.git("add", "-A")
+        self.repo.git("commit", "-q", "-m", "旧版本留下的 state.json")
+
+        self.assertAccepted(self.repo.run("status", role="tester"))
+        self.assertEqual(self._lines()[3], "- 工作项: W1 [feature]")
 
     def test_写过简报之后交接不被拒(self):
         """简报落在 .pair/ 下,而 .pair 是冻结路径。不处理的话,写出来的

@@ -8,6 +8,14 @@
 
 from harness import EVIDENCE, PairRepo, PairTestCase, with_loc
 
+COVER_PLAN = '''# 规划
+
+## 工作项
+
+- [ ] **C1** [cover] — 补测试
+  - 对应契约:`docs/CONTRACT.md` → W1
+'''
+
 OBJECTION = """# 对 tests/W1 的异议
 
 该用例断言的返回值与 CONTRACT 的 W1 小节直接矛盾。
@@ -77,13 +85,55 @@ class TestImplDispute(PairTestCase):
 
 
 class TestPostDisputeSpec(PairTestCase):
-    """异议从 impl 打回 spec 时,dev 的实现已经随那次交接提交落地了。
-    tester 按异议改完测试之后套件往往整体就是绿的 —— 拿 spec 的 RED 要求卡它,
-    等于逼它再造一条假的失败用例。"""
+    """打回之后回到 spec 时,dev 的实现往往已经随之前的交接落地了。
+    tester 按打回意见改完测试,套件整体就是绿的 —— 拿 spec 的 RED 要求卡它,
+    等于逼它再造一条假的失败用例。
+
+    这条豁免对**两种打回**都成立:impl 阶段的异议,和 review-test 以
+    "覆盖不足"打回。后者是真实跑出来的:评审要求为一处修复补回归测试,
+    而那条测试按定义是绿的(修复已经落地)。"""
+
+    def test_review_test_打回后也豁免_RED(self):
+        """回归:曾经只有 impl 阶段的异议会置位标志,review-test 打回不会 ——
+        于是"评审要求补测试"这条正当路径把自己锁死在 spec。"""
+        self.repo.advance_to("review-test")
+        self.repo.write("docs/reviews/W1-rt.md", "覆盖不足,那处修复没有测试守着。")
+        self.assertAccepted(self.repo.run(
+            "handoff", "changes", with_loc("这处修复没有回归测试"), role="dev"))
+        self.assertEqual(self.repo.state()["phase"], "spec")
+        self.assertTrue(self.repo.state()["after_rebound"])
+        # 补一条针对已落地行为的测试:它是绿的
+        self.repo.write("tests/W1", "补上回归断言")
+        self.assertAccepted(self.repo.run("handoff", "补上回归用例", role="tester"))
+
+    def test_cover_的_GREEN_不被这条豁免放松(self):
+        """豁免只针对 RED。cover 的 spec 期望 GREEN,而 cover 同样有
+        review-test changes -> spec 这条边 —— 整个置空会让红着的 cover 过关,
+        而"全程绿"正是 cover 的全部纪律。"""
+        # 先正常做完 W1,再认领一个 cover 项
+        self.repo.advance_to("review-test")
+        self.repo.run("handoff", "approve", "覆盖够", *EVIDENCE, role="dev")
+        self.repo.set_plan(COVER_PLAN)
+        self.assertAccepted(self.repo.run("claim", "C1", role="tester"))
+        self.repo.write_cover_note("C1")
+        self.repo.write("tests/W1", "为已有行为补断言")   # 全程绿
+        self.assertAccepted(self.repo.run("handoff", "补测试", role="tester"))
+
+        # dev 在 review-test 打回 -> 回到 spec,after_rebound 置位
+        self.repo.write("docs/reviews/C1-rt.md", "覆盖不足。")
+        self.assertAccepted(self.repo.run(
+            "handoff", "changes", with_loc("覆盖不足"), role="dev"))
+        self.assertTrue(self.repo.state()["after_rebound"])
+
+        # 此时把套件弄红:RED 的豁免不该顺带把 cover 的 GREEN 也豁免掉
+        self.repo.write("tests/C1")                      # 没有 src/C1 -> 红
+        r = self.repo.run("handoff", "改完了", role="tester")
+        self.assertRefused(r, "GREEN")
 
     def _打回到_spec(self):
+        """dev 在 impl 阶段提异议 —— 它的实现会随那次交接一起提交落地。"""
         self.repo.advance_to("impl")
-        self.repo.write("src/W1")               # dev 的实现,会随异议一起提交
+        self.repo.write("src/W1")
         self.repo.write("docs/reviews/W1-dispute.md", "这条测试与契约矛盾。")
         r = self.repo.run("handoff", "changes",
                           with_loc("tests/W1 的断言与契约冲突"), role="dev")

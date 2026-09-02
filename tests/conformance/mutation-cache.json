@@ -1,6 +1,12 @@
 {
-  "baseline": "41bc931843e3af4d",
+  "baseline": "f49e8c6fab5d70e1",
   "catchers": {
+    "只认 impl 阶段的异议,漏掉评审打回": [
+      "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
+    ],
+    "把 RED 豁免放宽成整个红绿豁免": [
+      "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
+    ],
     "拆掉 PLAN 全完成的终止检查": [
       "test_positive.TestFullCycle.test_全部完成后停止轮转"
     ],
@@ -147,9 +153,6 @@
     "拆掉完成时的晋升 gate": [
       "test_v1_memory.TestPromotion.test_笔记没处理不许完成"
     ],
-    "拆掉异议后 spec 回合的豁免": [
-      "test_v1_disputes.TestPostDisputeSpec.test_修完测试后绿着交接也放行"
-    ],
     "拆掉异议后必须改测试": [
       "test_v1_disputes.TestPostDisputeSpec.test_空转一轮被拒绝"
     ],
@@ -166,6 +169,9 @@
     "拆掉引用路径真实性检查": [
       "test_v1_review_evidence.TestChangesNeedsLocation.test_引用不存在的文件被拒绝",
       "test_v1_review_evidence.TestChangesNeedsLocation.test_碰巧像位置的数字不算"
+    ],
+    "拆掉打回后 spec 回合的 RED 豁免": [
+      "test_v1_disputes.TestPostDisputeSpec.test_review_test_打回后也豁免_RED"
     ],
     "拆掉死锁留痕": [
       "test_v1_disputes.TestDeadlockTrace.test_status_显示曾经触发过",

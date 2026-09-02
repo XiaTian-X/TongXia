@@ -9,5 +9,5 @@
   "setup_verified": true,
   "deadlock_hits": [],
   "contract_sha": "35d11a0a838fd2d6f9534ea99bae8beae9a17bfa",
-  "after_dispute": false
+  "after_rebound": true
 }

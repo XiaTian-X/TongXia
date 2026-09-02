@@ -118,7 +118,7 @@ MUTATIONS = [
      "        if False or matches_any"),
 
     ("拆掉异议后必须改测试",
-     '    if state.get("after_dispute") and phase == "spec" and verdict is None:',
+     '    if state.get("after_rebound") and phase == "spec" and verdict is None:',
      "    if False:"),
 
     ("拆掉契约小节重名检测",
@@ -139,12 +139,20 @@ MUTATIONS = [
      "        if False:"),
 
     ("拆掉异议的红绿豁免",
-     "    expect = (None if (is_dispute or after_dispute_fix)",
-     "    expect = (flow[\"expect\"].get(phase) if (is_dispute or after_dispute_fix)"),
+     "    if is_dispute or (after_rebound and expect == \"RED\"):",
+     "    if False:"),
 
-    ("拆掉异议后 spec 回合的豁免",
-     '    after_dispute_fix = state.get("after_dispute") and phase == "spec"',
-     "    after_dispute_fix = False"),
+    ("拆掉打回后 spec 回合的 RED 豁免",
+     '    after_rebound = state.get("after_rebound") and phase == "spec"',
+     "    after_rebound = False"),
+
+    ("把 RED 豁免放宽成整个红绿豁免",
+     '    if is_dispute or (after_rebound and expect == "RED"):\n        expect = None',
+     "    if is_dispute or after_rebound:\n        expect = None"),
+
+    ("只认 impl 阶段的异议,漏掉评审打回",
+     '    state["after_rebound"] = (verdict == "changes")',
+     '    state["after_rebound"] = bool(is_dispute)'),
 
     ("拆掉契约审查门禁",
      "    if len(text) < MIN_SETUP_REPORT_CHARS:",

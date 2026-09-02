@@ -198,10 +198,11 @@ DEFAULT_STATE = {
     # 契约变更 —— 那是最值得留下理由的时刻。老状态里没有这个键,取默认
     # None,检查自动跳过,存量仓库零成本升级。
     "contract_sha": None,
-    # 上一次交接是不是一条异议。异议从 impl 打回 spec 时,dev 的实现已经随
-    # 那次交接提交落地了 —— tester 按异议改完测试之后套件很可能整体是绿的,
-    # 而 spec 阶段要求 RED。不记这一笔,异议路径会在下一回合把自己卡死。
-    "after_dispute": False,
+    # 上一次交接是不是一次**打回**(异议或评审 changes)。打回之后回到 spec 时,
+    # dev 的实现往往已经随之前的交接落地了 —— tester 按打回意见改完测试,
+    # 套件整体就是绿的,而 feature 的 spec 要求 RED。不记这一笔,
+    # "打回 → 修正"这条路会在下一回合把自己卡死。
+    "after_rebound": False,
 }
 
 # `- [ ] **W1** [bug] — 标题`,类型可省略(缺省 feature)
@@ -1384,16 +1385,16 @@ def cmd_handoff(root, cfg, args):
                 "cover 类型全程是绿的,红绿不变量抓不到空手交接,所以这条单独检查。"
                 % (state["item_type"], " ".join(test_paths)))
 
-    # --- 异议之后的修正回合必须真的动了测试 --------------------------------
+    # --- 打回之后的修正回合必须真的动了测试 --------------------------------
     # 红绿豁免的本意是"让 tester 能把测试改对"。但 feature 的 spec 本来就没有
     # "必须动测试"这条检查,两者一叠加,tester 可以一个测试都不改就把回合推回去,
     # 而 dev 面对的是一模一样的那条测试 —— 来回到第三次撞死锁闸,白烧两轮。
-    if state.get("after_dispute") and phase == "spec" and verdict is None:
+    if state.get("after_rebound") and phase == "spec" and verdict is None:
         touched = [p for xy, p in entries
                    if "D" not in xy and matches_any(p, cfg["roles"]["tester"])]
         if not touched:
-            die("拒绝交接 —— 上一回合是异议,而你没有改动任何测试。\n\n"
-                "异议之后的这一回合豁免了红绿,理由是让你能把测试改对 ——\n"
+            die("拒绝交接 —— 上一回合把你打回来了,而你没有改动任何测试。\n\n"
+                "打回之后的这一回合豁免了 RED 要求,理由是让你能把测试改对 ——\n"
                 "不是让你空转一轮把问题原样推回去。\n\n"
                 "可写测试路径:%s\n\n"
                 "如果你看完之后认为原来的测试是对的、异议不成立,把理由写进 %s,\n"
@@ -1426,12 +1427,18 @@ def cmd_handoff(root, cfg, args):
     # 逼他照着错误的断言写实现。
     green = run_tests(root, cfg)
     # 两处豁免,同一个理由:拿红绿卡住的是修正动作本身。
-    #   1. 提异议的那一回合(dev 正是因为弄不绿才打回的)
-    #   2. 异议之后紧接着的 spec 回合(tester 在修测试,而 dev 的实现已经落地,
-    #      改对之后往往整体就是绿的 —— 要求 RED 等于逼它再造一条假的失败)
-    after_dispute_fix = state.get("after_dispute") and phase == "spec"
-    expect = (None if (is_dispute or after_dispute_fix)
-              else flow["expect"].get(phase))
+    #   1. 提异议的那一回合 —— 全豁免。dev 正是因为弄不绿才打回的。
+    #   2. 打回之后紧接着的 spec 回合 —— **只豁免 RED**。tester 在按意见修测试,
+    #      而 dev 的实现往往已经落地,改对之后整体就是绿的,要求 RED 等于逼它
+    #      再造一条假的失败。
+    #
+    # 第 2 条为什么不能像第 1 条那样整个置空:cover 的 spec 期望的是 GREEN,
+    # 而 cover 也有 review-test changes → spec 这条边。整个置空会让一个红着的
+    # cover 回合过关,而"全程绿"正是 cover 的全部纪律。
+    after_rebound = state.get("after_rebound") and phase == "spec"
+    expect = flow["expect"].get(phase)
+    if is_dispute or (after_rebound and expect == "RED"):
+        expect = None
     if expect == "RED" and green:
         die("%s 阶段结束时测试必须是 RED,现在是 GREEN。\n"
             "你要么没写新用例,要么写了个本来就能通过的用例。\n"
@@ -1485,7 +1492,9 @@ def cmd_handoff(root, cfg, args):
         state["changes_count"] = changes_n
     state["phase"] = next_phase
     state["last_actor"] = me
-    state["after_dispute"] = bool(is_dispute)
+    # 任何打回都算 —— review-test 以"覆盖不足"打回时,tester 要补的那条
+    # 回归测试按定义是绿的(修复已经落地)。只认 impl 阶段的异议会漏掉这条入口。
+    state["after_rebound"] = (verdict == "changes")
     save_state(root, state)
 
     # --- 提交 -------------------------------------------------------------

@@ -115,7 +115,7 @@
 | 9 | 异议举证 | `impl` 阶段的 `changes` 必须在 `shared_paths` 下写了文件 |
 | 10 | **评审证据** | `approve` 必须带 `--checked` 与 `--uncovered`;`changes` 的理由或本回合的评审文件里必须有一处 `路径:行号`,且路径真实存在 |
 | 11 | 记忆层门禁 | 见 §6 |
-| 12 | 红绿 | 按类型的 `expect`。**异议路径、以及异议之后紧接着的 spec 回合**都豁免;后者另外要求本回合真的改动了 tester 路径下的文件 |
+| 12 | 红绿 | 按类型的 `expect`。**提异议那一回合全豁免**;**打回之后紧接着的 spec 回合只豁免 RED**(cover 的 GREEN 仍然强制),并另外要求本回合真的改动了 tester 路径下的文件 |
 | 13 | 死锁闸 | 同一工作项 `changes_count` 达到 3 时停止轮转 |
 
 ### 4.1 路径归属判定
@@ -367,7 +367,7 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 | `setup_verified` | bool | 开工前校验是否通过 |
 | `deadlock_hits` | string[] | 撞过死锁闸的记录,形如 `W3 x3` |
 | `contract_sha` | string\|null | claim 时契约文件的 blob sha |
-| `after_dispute` | bool | 上一次交接是不是异议。异议之后的 spec 回合豁免红绿 |
+| `after_rebound` | bool | 上一次交接是不是一次打回(异议或评审 changes)。打回之后的 spec 回合豁免 **RED** 要求(不豁免 GREEN) |
 
 老状态文件缺少新键时取默认值,对应检查自动跳过 —— 存量仓库零成本升级。
 
