@@ -148,9 +148,10 @@ STATE_REL = ".pair/state.json"
 CONFIG_REL = ".pair/config.json"
 TESTLOG_REL = ".pair/.last-test.log"
 FULL_TESTLOG_REL = ".pair/.last-full-test.log"
+BRIEF_REL = ".pair/.last-brief.md"
 # 协议自己写的日志。它们落在 .pair/ 下,而 .pair 是冻结路径 —— 不在这里豁免,
 # agent 下一回合就会被自己刚跑的那次测试卡在越界上,而且它删不干净(下次还生成)。
-PROTOCOL_LOGS = (TESTLOG_REL, FULL_TESTLOG_REL)
+PROTOCOL_LOGS = (TESTLOG_REL, FULL_TESTLOG_REL, BRIEF_REL)
 WHOAMI_REL = ".pair/whoami"
 SETUP_REPORT_REL = "docs/reviews/setup-verification.md"
 # 契约审查结论的最小长度。门槛不高,但足以挡住空文件和一句话敷衍。
@@ -936,6 +937,28 @@ def _brief_vars(cfg, state, phase):
     }
 
 
+def render_brief(me, state, green):
+    """回合简报的正文。格式由契约逐字节钉死,见 docs/pair-run/CONTRACT.md。"""
+    item = state["item"]
+    if item and state["item_type"]:
+        item = "%s [%s]" % (item, state["item_type"])
+    return "".join(
+        line + "\n" for line in [
+            "# 回合简报",
+            "",
+            "- 角色: %s" % me,
+            "- 工作项: %s" % (item or "(无)"),
+            "- 阶段: %s" % state["phase"],
+            "- 测试: %s" % ("GREEN" if green else "RED"),
+        ])
+
+
+def write_brief(root, text):
+    """把简报落盘。status 每回合注入给 agent 的东西只活在那一次终端输出里,
+    agent 说"我没看到那条决策"时人类无从对质 —— 这个文件就是对质的凭据。"""
+    (root / BRIEF_REL).write_text(text, encoding="utf-8")
+
+
 def cmd_status(root, cfg, args):
     if cfg.get("sync"):
         if git("pull", "--rebase", cwd=root, check=False) is None:
@@ -980,6 +1003,11 @@ def cmd_status(root, cfg, args):
         print("结对的一方(通常是还没动手的那个)需要先跑:")
         print("  python3 %s verify-setup" % PROG_HINT)
         print("在此之前不能认领工作项。")
+
+    # 轮到自己就写,与后面还打不打印阶段简报无关 —— PLAN 全部完成时
+    # 这个函数会提前 return,而契约要求那种情况下简报照写。
+    if me == owner:
+        write_brief(root, render_brief(me, state, green))
 
     if plan_all_done(root, cfg):
         print()
