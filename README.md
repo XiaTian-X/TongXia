@@ -130,17 +130,23 @@ python3 tests/conformance/run.py memory       # 只跑某几组
 但全绿本身证明不了什么,一个恒真的测试集比没有测试更危险。所以还有变异检查:
 
 ```bash
-python3 tests/conformance/mutation_check.py   # 约 55 秒(含它自己跑的基线)
+python3 tests/conformance/mutation_check.py   # 约 70 秒(含它自己跑的基线)
 ```
 
 它逐个拆掉 `pair.py` 里的防护,确认每一条都有测试能发现它消失了。
 **改动强制逻辑后两个都要跑。**新增防护时,在 `MUTATIONS` 里补上对应变异点。
+上面两处秒数都是 8 进程实测,换机器会变,别当承诺。
 
 起一个可跑的样板项目:
 
 ```bash
 python3 examples/make-demo.py /tmp/pair-demo
 ```
+
+git 推不出提交者身份时(没配 `user.*`,hostname 又不是 FQDN),它会给样板仓库
+的 `.git/config` 写一份兜底身份 `conformance` / `conformance@test`——只碰这个
+仓库,不碰全局配置,已有身份的机器一字不写。想换掉就在样板仓库里跑
+`git config user.email 你的邮箱`。
 
 ## 已知边界
 

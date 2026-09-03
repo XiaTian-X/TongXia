@@ -383,10 +383,6 @@ dev 只能改块外。这需要一个 Rust 感知的 diff 分析器 —— 成�
 这一轮只改了文档与脚本文案的**定位叙述**,门禁一条没动。下面几处是复审时
 发现、但本轮没有处理的东西,记在这里免得下次重新发现。
 
-> **第 9 条起不是同一个来源。** 它们是后面几轮登记进来的:`2a32b5f` 给
-> `--no-baseline` 加预检闸时暴露的缓存与环境问题,以及第三轮报告里留给
-> 后续的一处排版观察。放在同一节只因为都是"发现了但当时不处理"的东西。
-
 ### 1. `test_v1_review_evidence.py` 的类名与断言已经跟不上 ADR-023
 
 `tests/conformance/test_v1_review_evidence.py:104-112` 的
@@ -485,74 +481,181 @@ docstring 以及 ADR-022 的禁令直接矛盾。`:98` 的 `assertIn("互相点�
 `(\d+) 条 ADR` 与 `(\d+) 条不变量`,分别与 `## ADR-` 的计数和
 `len(HANDOFF_INVARIANTS)` 对齐。
 
-### 9. `mutation-cache.json` 要在基线能全绿的环境里重生成一次
+---
 
-当前缓存的 `baseline` 字段是 `2b25c4be0bd9ae2b`,而 `fingerprint()` 现在算出来
-是 `65deef448105619a` —— 失配。失配的后果由 `2a32b5f` 新加的第二道闸兜住
-(带 `--no-baseline` 跑会被预检拒绝),但快路径也就一直用不上。
+## 后续几轮登记的开放条目
 
-**唯一的刷新入口是默认路径。** `run_baseline()`(`:571`)跑绿之后会执行
-`mutation_check.py:589` 的 `save_cache(fingerprint(), load_cache()[1])` ——
-只刷新指纹、原样沿用旧 catchers。`--no-baseline` **不会**刷新:`:663-664`
-的写盘条件是 `if verified and (fresh != cache or cached_fp != fp)`,而 `verified`
-在指纹失配时是 `False`;新增的 `precheck_no_baseline`(`:593`)也不写缓存
-(它自己的注释就写了"预检不写缓存、不放宽 `verified`")。所以失配这件事
-**不会自愈**,只能靠一次默认路径的绿基线抹平。
+**按严重度排序。** 排最前的是这里唯一一道"没有测试守着"的闸 —— 在这个
+仓库的价值体系里,那比缓存指纹失配、比排版漂移都严重:一次重构可以把它
+悄悄删掉,而整套件照样绿。
 
-**怎么做:** 在真实终端(全局 git 身份可用、`test_v1_shipped` 能绿的环境)跑
-`python3 tests/conformance/mutation_check.py`(**不加** `--no-baseline`),
-基线绿后约一分钟结束,然后只提交 `tests/conformance/mutation-cache.json`
-一个文件。本沙箱里跑不了:基线红(见第 10 条),默认路径会在 `:565-566`
-直接 `return 1`。
+### 1. `2a32b5f` 新增的基线预检闸零测试覆盖
 
-### 10. `test_v1_shipped` 的环境依赖:它要求机器上有可解析的 git 身份
+`mutation_check.py:593` 的 `precheck_no_baseline` 与 `:463` 的
+`isolated_copy`,在 `tests/conformance/test_mutation_tooling.py` 里
+**0 命中**;作为对照,同一次提交要守的另一道闸 `baseline_verified` 有
+**5 处**(`:90`、`:91`、`:94`、`:96`、`:99`)。14 条全绿**不等于**新闸被测住:
+下一次重构可以把它整个删掉,套件照样 14/14。
 
-`test_开工前校验只卡在契约审查结论那一步`(`:64`)在没有 git 身份的机器上必红。
-实测的失败链是两级:
+它守的正是本项目最怕的失败模式:基线本来就红的环境里,回退路径的判据只有
+rc≠0,分不清失败来自变异还是来自环境,于是每条变异都被判成"抓到",报出一个
+恒真的 70/70 与退出码 0。而它自己没有测试。
 
-- 第一级:`examples/make-demo.py:42` 的
-  `subprocess.run(("git",) + args, cwd=target, check=True)` 跑
-  `git commit -q -m "chore: 装上结对协议"`,因
-  `fatal: unable to auto-detect email address (got 'xbase@Mac.(none)')`
-  抛 `CalledProcessError`(退出码 128)。
-- 第二级:`tests/conformance/test_v1_shipped.py:70-74` 给 `pair.py verify-setup`
-  的 env 被剥成 `{"PAIR_ROLE": "dev", "PATH": "/usr/bin:/bin"}`(`:73`),
-  没有 HOME、没有任何 `GIT_*`/`GIT_CONFIG_*`。所以 `pair.py:2804` 那句
-  `git("commit", ...)` 同样会因 `Author identity unknown` 而 die。
+**为什么至今没被测住 —— 成本。** `precheck_no_baseline` 内部硬编码两件事:
+`isolated_copy(tmp)`(从 `REPO` 整仓 copytree)与跑
+`dst / "tests/conformance/run.py" -j jobs`(全量套件)。端到端调它一次等于
+跑一次全量。实测(本机 8 进程):
 
-**这不是沙箱独有的问题。** 任何没有可解析 git 身份的机器或 CI 上它都会红 ——
-这是环境依赖,不是代码缺陷。
+| 动作 | 实测 |
+|---|---|
+| `isolated_copy` 等价的 copytree(排除 `.git`/`__pycache__`) | 0.02~0.03s |
+| 整仓副本跑一次全量(`run_baseline` 自己打印的值) | 44.3s |
+| 极小假仓库(1~2 个用例)跑 `run.py -j 8` | 0.10s |
+| 当前 `test_mutation_tooling.py` 全 14 条 | 0.17s |
 
-**一处需要修正的因果表述。** "env 被剥离"**本身**不是阻断原因。实测在
-`{"PAIR_ROLE","PATH"}` 这个剥离 env 下,四条注入身份的路径**全部 rc=0**:
-`git -c user.name=… -c user.email=…`、`GIT_CONFIG_GLOBAL` 指向含身份的临时文件、
-样板仓库的 `.git/config` 里写仓库级身份、`HOME` 指向含 `.gitconfig` 的目录。
-真正的根因只有一条:**这台机器上任何一级都取不到身份** ——
-`git config --list --show-origin` 里没有任何 `user.*`,`/etc/gitconfig` 与
-`/opt/homebrew/etc/gitconfig` 都不存在,`~/.gitconfig` 里没有身份段。
+**copytree 不是瓶颈,跑全量才是。** 直接把端到端预检加进 conformance 套件,
+套件会从约 47s 涨到约 91s(接近翻倍),而变异检查的默认路径本来就要付这
+44s 一次 —— 同一份成本付两遍,换来的额外覆盖只有"子进程真的起起来了"
+这一层,不值。
 
-所以"两级"这个说法只在**一种修法**下成立:把 `make-demo.py:42` 改成
-`git -c …`(一次性、不落盘)—— 那样样板仓库里仍然没有身份,
-`pair.py:2804` 确实照样 die。换成上面另外三种注入方式,两级会一起解决。
+**候选 A:参数化 `precheck_no_baseline(jobs, root=None)`,`root` 非空时跳过
+copytree、直接用给定目录。** 测试侧造一个极小假仓库(`tests/conformance/`
+下放一份从真仓 copy 来的 `run.py` 加一个必败用例),喂绿/红两种,断言返回
+契约。成本 0.10s × 2 = **0.2s**。
+守住:`precheck_no_baseline` 的全部内部逻辑 —— 设 `PAIR_MUTATION_RUN=1`、
+起 `run.py` 子进程、`_ids` 解析输出、`(rc, fails, text)` 三元组契约。
+守不住:真实的 `isolated_copy` 被 `root` 绕过了,所以"副本与判定环境同构"
+这一层测不到 —— 而那正是这道闸的关键前提(`:599-602` 用了四行 docstring
+解释它)。另需一条测试单独钉 `isolated_copy`。
+代价:改签名(禁改区),并同步 `:544` 的调用点。
 
-**若要 CI 化**,建议按这个顺序挑:让 `make-demo.py` 在 `git init` 之后给样板
-仓库写**仓库级**身份(一处改动解决两级);或者让测试的 env 补上
-`GIT_CONFIG_GLOBAL`/`HOME`。两处都落在 `examples/` 与 `tests/` 禁改区,
-需人类裁决。
+**候选 B:测试侧 monkeypatch `MUT.isolated_copy` 让它返回极小假仓库。**
+不动产品代码,成本同样 **0.2s**。守住的范围与候选 A 相同,守不住的也相同,
+但多一层脆弱:桩打在模块属性上,若实现改成内联 `shutil.copytree`(不再调
+`isolated_copy`),桩会**静默失效**,那条测试就变成在真仓上跑全量(44s)
+或直接失败。用一个会静默失效的桩去守一道"防止静默假绿"的闸,方向不对。
 
-### 11. `examples/make-demo.py` 失败时抛裸 traceback
+**候选 C:把判定抽成纯函数,照 `baseline_verified` 的既有先例。**
+判定现在嵌在 `main:545` 的 `if rc != 0 or fails:` 里,无法单独调用。而
+`baseline_verified`(`:427-436`)的 docstring 已经写下本仓的处理惯例:
+"抽成纯函数是为了能被测住:它是这套缓存机制里唯一一处判断错了就会让
+整个检查变成恒真的地方"。预检的判据是同一类东西,应当同办。成本**微秒级**。
 
-`:42` 的 `check=True` 在 git 失败时直接抛 `CalledProcessError`,用户看到的是
+**推荐:候选 C,再加两条不需要改签名的补充,共三层。** 不选 A/B 的理由是
+它们都为了覆盖"子进程起起来了"而付 0.2s,却**恰好绕开了最该守的那层**
+(同构性);而 `_ids` 解析已被 `TestCacheStalenessIsDetected`(`:39-55`,
+走 `run_suite`,`:415` 同样是 `fails = _ids(text)`)间接覆盖。
+
+**层 A —— 判定真值表(纯函数)。** 在 `mutation_check.py` 加
+
+```python
+def precheck_verdict(rc, fails):
+    """预检放行吗 —— rc=0 且失败集为空,两个条件缺一不可。"""
+    return rc == 0 and not fails
+```
+
+`main:545` 改成 `if not precheck_verdict(rc, fails):`。测试断言真值表,
+其中最关键的一条是 **`precheck_verdict(0, ["x.Y.z"])` 必须为 False**:
+rc=0 但 `_ids` 抓到了 FAIL 行也要拒。这条最容易被写漏,因为直觉上
+"rc=0 就是绿";而它恰好是并行运行器最可能出现的形态(某一片失败,
+汇总行却仍然打印)。
+
+**层 B —— 同构条件的源码断言。** 照 `test_v1_shipped.py:136-145` 的
+`test_不碰_git` 先例(读源码 `re.findall` 断言意图),钉三条:
+`precheck_no_baseline` 的函数体里出现 `isolated_copy(`;出现
+`PAIR_MUTATION_RUN`;`isolated_copy` 的 ignore 模式里有 `".git"`。
+成本微秒级。它守的是**设计意图不被悄悄改掉** —— 有人把预检挪到真实仓库里
+跑(看着一样能红),或顺手去掉 `PAIR_MUTATION_RUN`(会让"变异点仍能匹配到
+源码"那条混进归因前提),这条就会红。
+
+**层 C —— `isolated_copy` 的真实行为。** 直接调 `MUT.isolated_copy(tmp)`,
+断言副本里 `.git` 与 `__pycache__` **不存在**、`pair.py` 与
+`tests/conformance/run.py` **存在**。成本 **0.03s**(实测)。
+这是层 B 的行为对证:源码断言说"ignore 里有 `.git`",行为断言说"副本里
+真的没有 `.git`" —— 少任何一层都能被绕过。
+
+**规模:** `mutation_check.py` **+4~6 行**(一个纯函数加一处调用点改写);
+`test_mutation_tooling.py` **+40~50 行**(3 条测试,14 → 17 条);套件耗时
+**+0.03s**(47.5s → 47.5s,实测不可辨)。
+
+**一条必须一并付的后续成本:** `fingerprint()`(`:377-386`)哈希的是
+`pair.py` 加 `tests/conformance/*.py` 全部,**包含 `mutation_check.py`
+自己**。所以层 A 与这三条测试一旦落地,缓存的 `baseline` 指纹立刻失配,
+需要跑一次默认路径刷新(约 70s)。这不是缺陷,是既有设计,但排期要算进去。
+
+**若不接受动 `mutation_check.py`(连抽纯函数都不许)**,退化方案是只做
+层 B 加层 C:纯测试侧、0 行产品代码、+0.03s。守不住判定真值表 —— 但那是
+`main` 里的一行 `if`,漂移风险低于"同构条件被悄悄改掉"。
+
+### 2. `MAX_CACHED = 1` 与缓存里实际抓手数漂移
+
+三方口径一致:`mutation_check.py:357` 的 `MAX_CACHED = 1`、`:351-356` 的
+设计注释、`docs/contributing.md:70-73` 的"每个变异点只记**一个**抓手"。
+但实测 `tests/conformance/mutation-cache.json` 里 70 条的抓手个数分布是
+`{1: 46, 2: 9, 3: 7, 4: 8}`,即 **24/70 条有 2~4 个抓手**,与"只记一个"不符。
+
+**成因:** `MAX_CACHED > 1` 的时代留下的历史数据。
+
+**不会自愈:** `:661` 的写回条件是
+`if status == "caught" and note != "缓存命中"`,快路径命中时 `note` 正是
+"缓存命中",于是 `fresh` 保持 `dict(cache)` 原样;而只要 catcher 还有效就
+一直命中,所以永远走不到重写那一行。实测印证:`ea5344e` 那次刷新
+`git diff --numstat` = `1 1`,只有 `baseline` 一行变,catchers 一字节未动。
+
+**影响不致命:** `loaded`(`:422-423`)校验的是"请求了几个就跑了几个",
+多记几个只会让失效判定更严格 —— 更容易回退跑全量,不会漏抓变异。代价是
+白跑,不是假绿。
+
+**推荐处置:一次性归一化**,把每条 catchers 截到 `[:1]` 再写回,随后重跑一次
+`mutation_check.py` 默认路径自证。重跑本身就是验证:若某条截断后留下的那
+一个抓手不再抓住它的变异,快路径会自动回退跑全量并重写该条
+(`:496-499` 加 `:661`),输出里会出现"缓存已失效,重建";全绿且零回退就说明
+70 条截断后依然成立。
+
+**备选:** 放宽 `:661`,让命中时也按 `MAX_CACHED` 重写 —— 会自愈,但把
+"快路径命中说明缓存已经是对的"这条注释里的前提改掉了,而且要把 24 条一次
+刷齐就得跑全量。
+
+**不要改文档措辞去迁就数据。** `docs/contributing.md:70-73` 描述的是代码
+意图,与 `MAX_CACHED = 1` 及 `:351-356` 的注释一致;**漂移在数据侧,不在
+文档侧**。改成"至多一个(历史缓存里可能更多)"等于把 bug 写成特性。
+
+### 3. `make-demo.py` 仍残留一处环境依赖:`commit.gpgsign`
+
+`6f7afe0` 给 `examples/make-demo.py` 补了条件式的提交者身份兜底(见"已解决"
+一节),但**有意没有**照抄 `tests/conformance/harness.py:202` 的
+`config commit.gpgsign false`。理由是那一行属于测试脚手架:它要保证 266 条
+用例不受宿主机 GPG 配置影响;而 `make-demo.py` 面向用户,强关签名会让真想
+签名提交的人在样板项目里**静默失去签名** —— 与本次修复要避免的"静默错误
+归属"是同一类坏结果。
+
+**代价(已知边界):** 在配了 `commit.gpgsign=true` 又没有可用 GPG key 的
+机器上,`make-demo.py:68` 的 `git commit` 仍会失败,`test_v1_shipped` 那条
+照样红。本机 `%G?` = N(31 个提交无一签名),266/266 全绿,所以本机不需要它。
+
+**处置需人类裁决:** 是否值得再加一次条件式探测(例如在 `git var
+GIT_AUTHOR_IDENT` 之外再探 `git config --get commit.gpgsign`,只在它为
+`true` 且探测不到可用 key 时才关掉)。反对的理由是"有没有可用 key"这件事
+本身探测不可靠(要真的试签一次才知道),为此加的逻辑复杂度超过它挡住的场景。
+
+### 4. `examples/make-demo.py` 失败时抛裸 traceback(原第 11 条)
+
+`:68` 的 `check=True` 在 git 失败时直接抛 `CalledProcessError`,用户看到的是
 一整段 Python traceback(实测里最后几行是 `subprocess.run(...)` 的栈帧),
 没有一句"哪里不对、下一步怎么办"。而同一个文件在目标目录非空时是**有**
-友好信息的(`:27-29` 打印"目标目录 … 非空,拒绝覆盖。"再 `return 1`)——
+友好信息的(`:52-54` 打印"目标目录 … 非空,拒绝覆盖。"再 `return 1`)——
 风格不一致。
 
-**建议:** 把 `:39-42` 那个循环包进 try/except,失败时打印是哪一步
+**建议:** 把 `:64-68` 那三步包进 try/except,失败时打印是哪一步
 (`init` / `add` / `commit`)、git 的原始输出、以及最常见的原因(git 身份
 没配),再返回非零码。纯体验问题,`examples/` 属禁改区。
 
-### 12. `pair.py` 简报里"指到"与"路径:行号"之间多一个半角空格
+**行号已按 `6f7afe0` 之后的 78 行版本核对过:** 旧引的 `:42` 现在是 `:68`,
+旧引的友好信息 `:27-29` 现在是 `:52-54`,旧引的循环 `:39-42` 现在是
+`:64-68` —— `init` 已从循环里提出,好让身份兜底插在 `init` 与 `commit`
+之间。
+
+### 5. `pair.py` 简报里"指到"与"路径:行号"之间多一个半角空格(原第 12 条)
 
 `:902` 与 `:926`(review-impl 与 review-test 两段简报,内容相同)写的是
 `打回 -> 指到 路径:行号`,「指到」与「路径」之间有一个半角空格。
@@ -564,6 +667,108 @@ docstring 以及 ADR-022 的禁令直接矛盾。`:98` 的 `assertIn("互相点�
 (断言匹的是子串,空格在它前面),门禁全绿;而任何 `pair.py` 改动都要
 重跑一次 AST 归一化自证与全量套件(约 150 秒),成本与收益不匹配。
 留到下次因为别的原因动 `pair.py` 时顺手改。
+
+---
+
+## 已解决(留档)
+
+留在这里而不是删掉,是因为这两条的**因果**前后被修过三次 —— 最终版本比
+结论本身更值钱:照着错误因果去修会白跑一趟。
+
+### `mutation-cache.json` 的基线指纹失配  ✅ 已解决(原第 9 条,`ea5344e`)
+
+原缺陷:缓存的 `baseline` 是 `2b25c4be0bd9ae2b`,而 `fingerprint()` 算出来
+是 `65deef448105619a` —— 失配,快路径一直用不上;而 `--no-baseline` 会被
+`2a32b5f` 新加的预检闸拒掉,所以失配**不会自愈**。唯一的刷新入口是默认
+路径:`run_baseline()`(`:571`)跑绿之后执行 `:589` 的
+`save_cache(fingerprint(), load_cache()[1])` —— 只刷指纹、原样沿用旧
+catchers;`:663-664` 的写盘条件带 `verified`,而 `verified` 在指纹失配时
+是 `False`。
+
+**最终事实(`ea5344e`):**
+
+- 指纹 `2b25c4be0bd9ae2b` → `65deef448105619a`,与当前树的 `fingerprint()`
+  相等。
+- `catchers` **一个字节未动**:`git diff --numstat` = `1 1`,70 个键、与
+  `MUTATIONS` 的双向差集 0/0、`old` 串失配 0 处。所以**这 70 条"变异点 →
+  抓手"的映射是原样沿用旧缓存,不是这一轮重新验证过的** —— 走的是 `:589`
+  那条路径,`load_cache()[1]` 就是把旧 catchers 原封不动取出来再写回去。
+- 70 个变异点全部 caught,**零条走回退全量**("缓存已失效,重建"与"首次
+  全量"均为 0 处),结论行 `全部被测试抓到。测试集确实有拦截力。`
+- 实测:基线 44.3s、变异阶段 26.0s、整条命令 70.4s(8 进程、缓存全命中)。
+
+**为什么拖到这一轮才刷得动:** 默认路径要求基线先全绿,而基线被下面那条
+环境依赖锁在 265/266。`6f7afe0` 修掉那个依赖,基线第一次在本机 266/266
+全绿,这条的前置条件才成立。
+
+**原条目里两处表述已过期,订正在此:**"在真实终端(全局 git 身份可用)跑"
+—— 真实终端同样红,理由见下一条;以及"本沙箱里跑不了"—— 与沙箱无关。
+
+### `test_v1_shipped` 的环境依赖  ✅ 已解决(原第 10 条,`6f7afe0`)
+
+`test_开工前校验只卡在契约审查结论那一步`(`:64`)在没有 git 身份的机器上
+必红,把基线钉在 265/266,并因此锁死上面那条的刷新入口。
+
+**病灶不是"env 被剥离"。** 6 组受控实验:在
+`{"PAIR_ROLE": "dev", "PATH": "/usr/bin:/bin"}` 这个剥离 env 下,四条注入
+身份的路径**全部 rc=0** —— `git -c user.name=… -c user.email=…`、
+`GIT_CONFIG_GLOBAL` 指向含身份的临时文件、样板仓库的 `.git/config` 里写
+仓库级身份、`HOME` 指向含 `.gitconfig` 的目录。
+
+**病灶也不是沙箱。** 升级权限后的只读探测,沙箱内外逐项一致:`hostname` 与
+`hostname -f` 都返回 `Mac`;`scutil --get HostName` = `not set`;
+`socket.getfqdn()` = `Mac`(不含点);`getaddrinfo` 的 `AI_CANONNAME` =
+`mac`;`/tmp` 里新建的临时仓库跑 `git commit`,沙箱外同样 rc=128。
+
+**真正的根因是一条链:** hostname 不是 FQDN → git **主动拒绝**从
+`username@hostname` 自动推导 email(它拼出 `xbase@Mac.(none)` 然后拒绝用)
+→ 各级配置又没有任何 `user.*` 兜底(`git config --list --show-origin` 里
+零条 `user.*`;`/etc/gitconfig`、`/opt/homebrew/etc/gitconfig`、
+`/usr/local/git/etc/gitconfig` 三个系统级文件均不存在;`~/.gitconfig` 存在
+但只有两个 credential 段)→ 任何 commit 永久 rc=128。这是这台机器的持久
+状态,不是环境波动。
+
+**一并订正两处旧结论:**
+
+1. "在真实终端里应当通过"—— **错**。本机真实终端同样红,因为
+   `scutil --get HostName` 就没设置过。
+2. 第五轮交接时给的"选项 b:`GIT_AUTHOR_*`/`GIT_COMMITTER_*` 环境变量
+   前缀"作为让基线变绿的手段 —— **不成立**。实测它对**直接调用**
+   `make-demo.py` 有效,但 `test_v1_shipped.py:73` 传的是整个 `env=` 字典
+   (**整体替换**,不是合并),环境变量到不了 `pair.py`。只有仓库级配置
+   (已采纳)或全局配置才行。
+
+**同源铁证(照抄既有约定的依据):** `harness.py:204` 与 `make-demo.py:67` 的
+commit message `"chore: 装上结对协议"` **逐字相同**,git 命令序列同为
+`init → (config) → add -A → commit`。harness 就是 make-demo 的测试镜像,
+只是它多写了身份(`:200-201`)—— **这正是缺陷本身**:镜像的一半有身份,
+另一半没有。
+
+**最终采纳的方案:** 在 `make-demo.py` 里加 `ensure_identity(target)`
+(`:22-44`),`git init` 之后、`add`/`commit` 之前调用(`:64-68`),写仓库级
+`user.name=conformance` / `user.email=conformance@test`,取值照抄
+`harness.py:200-201` 与 `:372-373`。一处改动解决两级失败,因为
+`pair.py:2804` 的 `cwd=root` 来自 `repo_root()`(`:259-265`,
+`git rev-parse --show-toplevel` 从进程 cwd 求得),而 `test_v1_shipped.py:73`
+的 `cwd=str(proj)` 就是 make-demo 的输出目录;仓库级身份既不依赖 `HOME`
+也不依赖环境变量,所以能穿过那处 env 剥离。
+
+**两处有意偏离既有约定:**
+
+- **条件式,不是无条件。** 探测用 `git var GIT_AUTHOR_IDENT` 的 rc,只在
+  探测失败时才写。harness 无条件是可接受的 —— 它的目录来自 `mkdtemp`
+  (`:198`)、由 `addCleanup` 注册 `shutil.rmtree`(`:206-207`、`:323-325`),
+  生命周期完全在测试进程内;而且测试要的就是不受宿主机影响的确定身份。
+  `make-demo.py` 不同:它面向用户,产出目录可能被长期留存,无条件写假身份
+  会**静默把用户后续所有提交错误归属**,比响亮地 rc=128 更坏。
+- **没有照抄 `commit.gpgsign false`**(`harness.py:202` 有、`:373` 没有)。
+  理由与代价见开放条目第 3 条。
+
+**验证:** 266/266 全绿(此前 265/266)。三组反向验证确认条件式真的是
+条件式:用 `GIT_CONFIG_GLOBAL` 造出身份时兜底一字不写、author 保持
+`Real Human <real@example.com>`;用 `GIT_AUTHOR_*` 造出身份时同样零写入、
+author 保持 `Env Person <env@example.com>`;无身份时 rc 从 128 变 0、写入
+两条、author 是 `conformance <conformance@test>`。
 
 ---
 

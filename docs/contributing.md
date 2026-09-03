@@ -56,7 +56,8 @@ python3 tests/conformance/run.py --list      # 只列出会跑哪些
 
 一个变异只要**有任何一个测试**抓到它就算过关。所以第一次跑完全量之后,
 把"谁抓到了它"记进 `tests/conformance/mutation-cache.json`,之后先只跑那一个。
-70 个变异点的变异阶段从十几分钟降到约 20 秒(整条命令约 55 秒,差的是基线)。
+70 个变异点的变异阶段从十几分钟降到约 26 秒(整条命令约 70 秒,差的是基线)。
+这两项都是 8 进程、缓存全命中(70/70,零回退)时的实测。
 
 ```bash
 python3 tests/conformance/mutation_check.py --full      # 忽略缓存,全部重跑
@@ -119,6 +120,12 @@ rc≠0,就打印失败清单、归因说明与三条下一步,以**退出码 2**
 ```bash
 python3 examples/make-demo.py /tmp/pair-demo
 ```
+
+它只在 git 自己推不出提交者身份时才兜底 —— 探测 `git var GIT_AUTHOR_IDENT` 的
+退出码,非 0 才往样板仓库的 `.git/config` 写 `user.name=conformance` /
+`user.email=conformance@test`(取值沿用 `tests/conformance/harness.py` 的既有
+约定)。已经有身份的机器一字不写,写进去的也只是仓库级配置、不碰
+`~/.gitconfig`。想用自己的身份,在样板仓库里 `git config user.email 你的邮箱`。
 
 ## 新增一条防护时
 
