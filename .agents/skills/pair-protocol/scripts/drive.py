@@ -39,6 +39,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 PAIR_PY = HERE / "pair.py"
+TURNS_REL = ".pair/turns"
 
 DEFAULT_PROMPT = (
     "轮到你了。按 SKILL.md 的规矩走这一回合:先跑 status,照它说的做,"
@@ -72,12 +73,25 @@ def snapshot(root):
             tuple(st.get("completed_items", [])))
 
 
+def next_log(root, role):
+    """下一个回合日志的路径。按序号递增,重跑不覆盖。"""
+    d = root / TURNS_REL
+    d.mkdir(parents=True, exist_ok=True)
+    n = len(list(d.glob("*.log"))) + 1
+    return d / ("%03d-%s.log" % (n, role))
+
+
 def run_turn(root, command, role, prompt, dry):
     """拉起一方跑一个回合。
 
     命令按 shell 解释,角色通过 `PAIR_ROLE` 环境变量传(协议解析角色的
     第一优先级),提示语从**标准输入**喂进去 —— 那是最通用的一条路,
     命令不读 stdin 也不会出错。
+
+    输出**边打边落盘**:实时打给你看,同时留一份在 .pair/turns/。
+    只落盘不打印,等于为了留痕把你正在看的东西关掉;只打印不落盘,
+    全自动跑一轮下来什么都不剩 —— 而上一轮最值钱的发现恰恰来自
+    人在中间看了一眼(见 docs/dogfood-run-1.md)。
     """
     print("\n" + "=" * 60)
     print(" 轮到 %s —— %s" % (role, command))
@@ -85,9 +99,35 @@ def run_turn(root, command, role, prompt, dry):
     if dry:
         print("(--dry-run:不真的拉起)")
         return 0
-    return subprocess.run(command, shell=True, cwd=str(root),
-                          env=dict(os.environ, PAIR_ROLE=role),
-                          input=(prompt or "").encode("utf-8")).returncode
+
+    log = next_log(root, role)
+    proc = subprocess.Popen(command, shell=True, cwd=str(root),
+                            env=dict(os.environ, PAIR_ROLE=role),
+                            stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+    with open(log, "wb") as f:
+        f.write(("$ %s   (PAIR_ROLE=%s)\n\n" % (command, role)).encode("utf-8"))
+        try:
+            proc.stdin.write((prompt or "").encode("utf-8"))
+            proc.stdin.close()
+        except OSError:
+            pass                      # 子进程不读 stdin,不是错误
+        for line in proc.stdout:
+            sys.stdout.buffer.write(line)
+            sys.stdout.flush()
+            f.write(line)
+    code = proc.wait()
+    print("\n(本回合输出已存到 %s)" % log.relative_to(root))
+    return code
+
+
+def _where(root):
+    d = root / TURNS_REL
+    logs = sorted(d.glob("*.log")) if d.exists() else []
+    if not logs:
+        return ""
+    return "\n>>> 每回合的完整输出在 %s/,最后一个是 %s" % (
+        TURNS_REL, logs[-1].name)
 
 
 def drive(root, cmds, prompt, max_turns, dry):
@@ -96,7 +136,7 @@ def drive(root, cmds, prompt, max_turns, dry):
         kind, rest = ask(root)
         if kind == "stop":
             print("\n>>> 协议要求停下:%s" % rest)
-            print(">>> 交给人类。")
+            print(">>> 交给人类。%s" % _where(root))
             return 0
 
         role = rest.strip()
@@ -109,15 +149,15 @@ def drive(root, cmds, prompt, max_turns, dry):
         if dry:
             return 0
         if code != 0:
-            print("\n>>> %s 的进程非零退出(%d)。交给人类。" % (role, code))
+            print("\n>>> %s 的进程非零退出(%d)。交给人类。%s"
+                  % (role, code, _where(root)))
             return 1
 
         after = snapshot(root)
         if after == before:
             if stalled_at == before:
                 print("\n>>> 连续两个回合状态没有前进 —— 卡住了,再跑只会卡在同一处。")
-                print(">>> 交给人类。看 %s 最后的输出,或者自己跑一次 status。"
-                      % role)
+                print(">>> 交给人类。%s" % _where(root))
                 return 1
             stalled_at = before
             print("\n(状态没变,再给一次机会 —— 有可能它这一回合被门禁拦下并改好了)")
@@ -154,6 +194,17 @@ def main(argv=None):
     root = Path(subprocess.run(["git", "rev-parse", "--show-toplevel"],
                                stdout=subprocess.PIPE).stdout
                 .decode("utf-8").strip() or ".")
+
+    # 回合日志落在 .pair/ 下,而协议把 .pair 当冻结路径。没被 git 忽略的话,
+    # 第一份日志就会让下一次交接判越界 —— 而且 agent 删不干净,下一回合又生成。
+    ignored = subprocess.run(["git", "check-ignore", "-q", TURNS_REL + "/x.log"],
+                             cwd=str(root)).returncode == 0
+    if not ignored:
+        print("!! %s/ 没有被 git 忽略。" % TURNS_REL)
+        print("!! 回合日志会让下一次 handoff 判越界(.pair 是冻结路径)。")
+        print("!! 往 .gitignore 加一行 `%s/` 再跑。\n" % TURNS_REL)
+        return 2
+
     return drive(root, cmds, args.prompt, args.max_turns, args.dry_run)
 
 

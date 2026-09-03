@@ -93,6 +93,29 @@ class TestWhoseTurn(unittest.TestCase):
                          "whose-turn 里跑了测试 —— 它是被循环调用的查询")
 
 
+class TestDriverKeepsATrace(unittest.TestCase):
+    """自动驱动如果不留痕,等于把每回合的观察窗口关掉 —— 而第一次真实运行里
+    最值钱的两个发现,恰恰来自人在中间看了一眼。"""
+
+    SRC = (SCRIPTS / "drive.py").read_text(encoding="utf-8")
+
+    def test_边打边落盘而不是二选一(self):
+        """只落盘不打印 = 为了留痕把你正在看的东西关掉;
+        只打印不落盘 = 全自动跑完什么都不剩。"""
+        self.assertIn("sys.stdout.buffer.write", self.SRC, "输出没有实时打给人看")
+        self.assertIn("f.write(line)", self.SRC, "输出没有落盘")
+
+    def test_日志目录进了_GITIGNORE_LINES(self):
+        """它落在 .pair/ 下,而 .pair 是冻结路径。不忽略的话,第一份日志就会
+        让下一次 handoff 判越界,而且 agent 删不干净 —— 下一回合又生成。"""
+        self.assertIn(".pair/turns/", PAIR.GITIGNORE_LINES)
+
+    def test_没被忽略时拒绝启动(self):
+        """光加进 GITIGNORE_LINES 只管新项目。老项目里驱动器必须自己拦住。"""
+        self.assertIn("check-ignore", self.SRC)
+        self.assertIn("没有被 git 忽略", self.SRC)
+
+
 class TestDriverHasNoProtocolLogic(unittest.TestCase):
     """和 CLI 那条约束同源:判定一旦在驱动器里复制一份,它就成了协议的
     第二个实现,而防漂移是这个项目从头到尾在做的事。"""

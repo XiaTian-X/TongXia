@@ -3,3 +3,4 @@
 .pair/.last-full-test.log
 __pycache__/
 *.pyc
+.pair/turns/

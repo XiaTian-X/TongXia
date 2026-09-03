@@ -1992,7 +1992,7 @@ DECISIONS_SKELETON = """# 决策记录（追加式 — 只能往后加，不能�
 # 不忽略的话,它会落在**对方**的路径下,让两个角色互相把对方卡在越界上。
 # 这与目标项目用什么语言无关。
 GITIGNORE_LINES = [".pair/.last-test.log", ".pair/.last-full-test.log",
-                   ".pair/whoami",
+                   ".pair/whoami", ".pair/turns/",
                    "__pycache__/", "*.pyc"]
 
 
