@@ -22,6 +22,10 @@
 
 快路径成立的前提是**基线全绿**,所以缓存里还存着一份基线指纹;`--no-baseline`
 只在指纹对得上时才敢用快路径,否则自动退回全量。
+
+指纹闸只闸得住快路径。回退路径同样靠"未变异状态是绿的"才能把 rc≠0 归因到
+变异上,所以 `--no-baseline` 会先在**未变异的隔离副本**里预检一遍全量套件:
+副本环境本身就红的,拒绝做变异检查 —— 否则每一个变异都会被误判成"抓到"。
 """
 import argparse
 import hashlib
@@ -352,12 +356,20 @@ CACHE_REL = "tests/conformance/mutation-cache.json"
 # 并放宽 loaded,那是另一笔账,现在不做。
 MAX_CACHED = 1
 
-# 快路径("只跑缓存里那几个测试,失败就算抓到")成立的前提是**基线是绿的** ——
-# 只有基线全绿,才能把"这些测试失败了"归因到变异上。
+# 快路径("只跑缓存里那几个测试,失败就算抓到")和回退路径("全量 failfast,
+# rc≠0 就算抓到")成立的前提是同一个:**在做归因判定的那个环境里,未变异状态
+# 是绿的** —— 只有基线全绿,才能把"测试失败了"归因到变异上。
 #
 # 所以基线跑绿时把当时的指纹记进缓存;`--no-baseline` 只有在指纹对得上时才敢
-# 走快路径。否则(比如你正改到一半、某个测试本来就红着)快路径会在 0.8 秒内
-# 报"全部被抓到" —— 一个看着是绿的、其实什么都没验的检查,正是这个项目最怕的东西。
+# 走快路径。但指纹闸只闸得住快路径:指纹对不上时回退路径照跑,而它的判据
+# 只有 rc≠0,**分不清失败来自变异还是来自环境**。基线本来就红的环境里,每个
+# 变异都会被判成"抓到" —— 一个看着是绿的、其实什么都没验的检查,正是这个
+# 项目最怕的东西。
+#
+# 所以 `--no-baseline` 还要过第二道闸:precheck_no_baseline 在未变异的隔离
+# 副本(与 check_one 的判定环境同构)里跑一遍全量套件,失败集非空就拒绝
+# 检查;为空则两条路径的 rc≠0 都必然由变异引起,判据恢复可靠。预检不写缓存、
+# 不放宽 verified —— "指纹对不对得上"仍由 baseline_verified 独自裁定。
 BASELINE_KEY = "baseline"
 CATCHERS_KEY = "catchers"
 
@@ -448,6 +460,16 @@ def save_cache(baseline, catchers):
         encoding="utf-8")
 
 
+def isolated_copy(tmp):
+    """判定环境的同构副本。排除 .git —— 变异不该碰真实的 git 历史,
+    预检也不该碰(见 precheck_no_baseline)。"""
+    dst = Path(tmp) / "repo"
+    shutil.copytree(REPO, dst, symlinks=True,
+                    ignore=shutil.ignore_patterns(
+                        ".git", "__pycache__", "*.pyc", ".DS_Store"))
+    return dst
+
+
 def check_one(job):
     """在隔离副本里应用一个变异并判定它有没有被抓到。
 
@@ -456,10 +478,7 @@ def check_one(job):
     name, old, new, cached = job
     tmp = Path(tempfile.mkdtemp(prefix="mutate-"))
     try:
-        dst = tmp / "repo"
-        shutil.copytree(REPO, dst, symlinks=True,
-                        ignore=shutil.ignore_patterns(
-                            ".git", "__pycache__", "*.pyc", ".DS_Store"))
+        dst = isolated_copy(tmp)
         p = dst / PAIR_REL
         src = p.read_text(encoding="utf-8")
         if old not in src:
@@ -495,7 +514,8 @@ def main(argv=None):
     ap.add_argument("--slice", metavar="k/n",
                     help="只跑第 k 片(共 n 片),用于 CI 分片或分次建缓存")
     ap.add_argument("--no-baseline", action="store_true",
-                    help="跳过基线检查(只在你刚跑过基线时用)")
+                    help="跳过基线检查(改用一次未变异副本预检;"
+                         "指纹对不上时快路径仍停用)")
     args = ap.parse_args(argv)
 
     muts = [m for m in MUTATIONS if not args.only or args.only in m[0]]
@@ -517,6 +537,30 @@ def main(argv=None):
         verified = baseline_verified(True, load_cache()[0], fp)
         print("(已跳过基线检查%s)\n"
               % ("" if verified else ";指纹与上次跑绿时不一致,快路径已停用"))
+        # 指纹闸只管快路径。回退路径(以及被环境污染的快路径)同样要靠
+        # "未变异状态是绿的"才能把 rc≠0 归因到变异,所以在判定环境同构的
+        # 副本里预检一遍;副本环境红着就拒绝 —— 否则每一条变异都会被误判成
+        # "抓到",报出一个恒真的 70/70。
+        rc, fails, text = precheck_no_baseline(args.jobs)
+        if rc != 0 or fails:
+            print("拒绝做变异检查:在未变异的隔离副本里,测试就没有全绿。\n")
+            if fails:
+                print("副本环境里的失败项(%d 个):" % len(fails))
+                for f in fails:
+                    print("  - %s" % f)
+            print("\n基线不是绿的,此时跑变异,rc≠0 分不清是变异引起的还是环境"
+                  "本来就红 —— \"全部被抓到\"会是恒真结论,而恒真的检查比没有"
+                  "检查更危险。\n下一步:\n"
+                  "  1. 先修红:看上面的失败清单,逐条修到全绿;\n"
+                  "  2. 环境性失败(比如 git 身份探测不到)就换一个能跑绿的"
+                  "环境;\n"
+                  "  3. 或者去掉 --no-baseline 走默认路径,让基线门禁把问题"
+                  "拦在最前面。")
+            if rc != 0 and not fails:
+                # 运行器自身出问题时(导入失败、崩溃),一条 FAIL 行都抓不到。
+                # 这时候只报"失败清单为空"反而像绿的,把原始输出兜底打出来。
+                print("\n预检运行器输出:\n%s" % text.rstrip())
+            return 2
     else:
         if run_baseline(args.jobs) != 0:
             return 1
@@ -544,6 +588,41 @@ def run_baseline(jobs):
     print("基线全绿 (%.1fs)\n" % (time.time() - t0))
     save_cache(fingerprint(), load_cache()[1])
     return 0
+
+
+def precheck_no_baseline(jobs):
+    """--no-baseline 的归因前提预检:在**未变异**的隔离副本里跑一遍全量套件。
+
+    返回 (returncode, 失败 id 列表, 原始输出)。returncode 非零或失败列表
+    非空,都意味着"rc≠0 由变异引起"这条归因不成立,调用方必须拒绝检查。
+
+    为什么在副本里跑而不是在真实仓库里跑:check_one 的判定发生在 copytree
+    出来的副本里(排除 .git)。需要恢复的不变量是"在**做归因判定的那个
+    环境**里,未变异状态是绿的" —— 真实仓库绿而副本红,回退路径照样恒真。
+    预检必须与判定环境同构,所以要落在副本里。
+
+    为什么设 PAIR_MUTATION_RUN:判定环境(check_one → run_suite)带着它,
+    预检必须同构 —— "变异点仍能匹配到源码"那条检查属于基线职责(由默认
+    路径的 run_baseline 一次性把守),不该混进这里的归因前提。
+    """
+    print("=== --no-baseline 预检:未变异的隔离副本,全量套件 ===")
+    t0 = time.time()
+    tmp = Path(tempfile.mkdtemp(prefix="mutate-precheck-"))
+    try:
+        dst = isolated_copy(tmp)
+        env = dict(os.environ, PAIR_MUTATION_RUN="1")
+        proc = subprocess.run(
+            [sys.executable, str(dst / "tests/conformance/run.py"),
+             "-j", str(jobs)], cwd=str(dst), env=env,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        text = proc.stdout.decode("utf-8", "replace")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    fails = _ids(text)
+    if proc.returncode == 0 and not fails:
+        print("预检全绿 (%.1fs) —— rc≠0 可以归因到变异,判据可靠\n"
+              % (time.time() - t0))
+    return proc.returncode, fails, text
 
 
 def run_mutations(muts, args, fp, verified):
