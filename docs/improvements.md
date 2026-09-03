@@ -371,10 +371,115 @@ dev 只能改块外。这需要一个 Rust 感知的 diff 分析器 —— 成�
 |---|---|
 | 加第三个 reviewer / critic 角色 | Adversarial Review 用 3 个打赢 5 个,结构 > 数量;两方结构没有"多数压少数"的孤立压力,这是特性 |
 | 让两个 agent 直接对话 | 与"通信只走 git"直接冲突。传话游戏式衰减 + 辩论研究里的从众翻转,两条都指向不要做 |
-| 决策条目加"分析"字段 | 共享推理路径会让两边趋同,而互相点头正是要防的 |
+| 决策条目加"分析"字段 | 共享推理路径会让两份产出趋同,合起来少一道验收 |
 | agent 可以改 `docs/CONTRACT.md` | 契约漂移是唯一会致命的失败模式,必须有人类落笔这一道 |
 | 自动唤醒对方(默认开) | 自动化会把每个还没暴露的设计缺陷放大成事故。作为可选项可以,不能是默认 —— **可选的 `drive.py` 已落地,见 ADR-019** |
 | 把协议逻辑放进 CLI / MCP 层 | 会漂移。文档与实现一分叉,强制力就失真 |
+
+---
+
+## 本轮定位重框(ADR-022 / ADR-023)留下的工作项
+
+这一轮只改了文档与脚本文案的**定位叙述**,门禁一条没动。下面几处是复审时
+发现、但本轮没有处理的东西,记在这里免得下次重新发现。
+
+### 1. `test_v1_review_evidence.py` 的类名与断言已经跟不上 ADR-023
+
+`tests/conformance/test_v1_review_evidence.py:104-112` 的
+`TestBriefAsksForDisagreement`,docstring 写的是"评审简报是正向要求,
+不是负向禁止 —— 这是实证里真正起作用的那一半",三个断言是
+`裁决必须带证据`、`先找问题`、`--checked`。ADR-023 把正向要求的形式从
+"配额"改成"证据"之后,这三个字符串在新简报里**全都还在**,所以它照样绿,
+却不再守着类名声称的那个性质(简报要求分歧)。该性质可以继续被侵蚀而不会红。
+
+**建议:** 断言扩到新增的双向句(`同样失真`)或结构句(`打回 -> 指到
+路径:行号`);或者把类名改成 `TestBriefAsksForEvidenceInBothDirections`
+并同步 docstring。两者都要动 `tests/`,本轮禁改。
+
+### 2. `test_v1_report.py` 钉住的是散文,不是机制
+
+`tests/conformance/test_v1_report.py:4` 的模块 docstring 仍是旧口径
+("这个命令**唯一的存在理由**"),与 `pair.py` 里 `cmd_report` 的新
+docstring 以及 ADR-022 的禁令直接矛盾。`:98` 的 `assertIn("互相点头", out)`
+把一句人类可见的散文钉成了断言:本轮它之所以还绿,只因为改写**恰好保留了
+那四个字**。今后任何一次口径重框都会让它以"功能回归"的面貌变红,而真实
+原因只是一次散文替换。
+
+**建议:** 改钉不会随口径漂移的结构句 —— `cmd_report` 打印的"这是手段层
+最该警惕的失效模式"那段机制描述(`pair.py:2030-2032`)是更稳的锚;
+同步 `:4` 的 docstring。
+
+### 3. 四处"防漂移正是这个项目从头到尾在做的事"的口径同步
+
+- `.agents/skills/pair-protocol/scripts/pair.py:1864-1865`
+  (`cmd_whose_turn` 的 docstring)
+- `.agents/skills/pair-protocol/scripts/drive.py:10-11`
+- `cli/pair_bootstrap/__init__.py:12-13`
+- `tests/conformance/test_v1_shipped.py:125`
+
+本轮人类裁决为**不改**,已在 ADR-022 的 `代价` 段登记为 knowingly 保留。
+
+**为什么它值得排在前面:** 前三处不是历史记录,而是**活的分发物** ——
+`pyproject.toml` 的 `force-include` 把整个 skill 目录打进 wheel,
+`pair init` 又用 `copytree` 把它复制进每个消费项目,`cli/pair_bootstrap`
+本身也在 `packages` 里。这三处会把旧定位持续扩散到每一个新接入的项目。
+第四处在测试的 docstring 里,不随包分发,优先级最低。
+
+### 4. `examples/demo-project/docs/DECISIONS.md` 的文件头已经漂移
+
+`:6-7` 仍是旧骨架的说法("共享推理会让两边想到一块去,而互相点头正是
+这套机制要防的事"),与 `pair.py` 里新的 `DECISIONS_SKELETON`("共享推理
+会让两份产出趋同,合起来少一道验收")不一致。
+
+**重跑不会自愈:** `examples/make-demo.py` 先用 `copytree` 把这份样板原样
+复制过去(`:31`),再跑 `pair.py init`,而 `init` 铺文件那一步对已存在的
+文件一律跳过,旧头部就一直留着;对非空的目标目录它直接拒绝覆盖(`:27-29`),
+连重跑的机会都没有。**必须直接改样板文件。** 触达面已收敛:`examples/`
+不进 wheel(`packages` 里只有 `cli/pair_bootstrap`),消费项目拿不到它。
+
+### 5. `docs/protocol-spec.md` 的退出码表缺"全量套件红"那一条码 2
+
+§9 的退出码表(`:380` 起)只列了 push 失败那一条码 2(`:386`)。
+`docs/command-reference.md` 本轮已经补上"工作项完成那一回合全量套件红"
+(`:129`),两处应当一致。protocol-spec 的 §7 配置表(`:319`)倒是写了
+"只报告不阻断(退出码 2)",缺的只是 §9 那张表。
+
+### 6. ADR-020 的 `代价` 字段用了变体名
+
+`docs/design-decisions.md` 里 ADR-020(`:455` 起)写的是
+`**代价与已知边界**` 而不是 `**代价**`。代价内容本身**在**(三条 bullet),
+所以 `docs/README.md:56` 的"每条含代价"在语义上成立,但按字面字段名扫只能
+扫到 22/23 条。同类变体还有 ADR-022 的 `**理由与取舍**`;另外
+`docs/README.md:56` 写的是"**被否掉的方案**",而 23 条 ADR 一律写
+`**否掉的方案**`。
+
+**为什么要人类裁决:** 对齐字段名必须编辑既有 ADR,与追加式纪律冲突。
+(ADR-023 用的是 `**理由**`,与既有多数条目一致。)
+
+### 7. `docs/design-philosophy.md` 里"已知的最大缺口"已经过期
+
+`:98-100` 写着本协议**没做到 evidence-grounded**,脚本拦不住"看起来不错",
+并称之为"已知的最大缺口",指向本文件的 P0-2。可是 P0-2(`:74`)标着
+✅ 已落地,ADR-014 就是它的决策记录,`docs/architecture.md:177-178` 也写着
+"现在脚本要求 `approve` 交出检查清单、`changes` 指到 `路径:行号`"。三处
+互相矛盾。
+
+已用 `git show c6ea78b:` 复核为**既存文本**(旧版同一句),不是本轮引入;
+但本轮新加的小节正插在它下面(`:102` 起),没有顺手修它。
+
+**建议:** 改成"做到了结构层的 evidence-grounded,内容层仍然拦不住",
+并把最大缺口指向 P0-1(用例级测试)。
+
+### 8. "16 条不变量""N 条 ADR"这两个散文数字没有测试钉住
+
+`README.md` 与 `docs/README.md` 各有一处"N 条 ADR"、一处"16 条不变量"。
+`test_docs_consistency` 只比对 `pair-enforcements` 标记里的 id 列表与
+`HANDOFF_INVARIANTS`,从不数散文里的数字 —— 本轮"22 条改 23 条"就是靠
+人工 grep 兜底的。这是既存缺口:任何一次增删条目或不变量都会让它静默漂移。
+
+**建议:** 给 `test_docs_consistency` 加一条,扫规范性文档里的
+`(\d+) 条 ADR` 与 `(\d+) 条不变量`,分别与 `## ADR-` 的计数和
+`len(HANDOFF_INVARIANTS)` 对齐。
 
 ---
 

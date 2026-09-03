@@ -3,7 +3,7 @@
 让**任意两个** AI coding agent(Claude Code / Codex / Cursor / Gemini CLI /
 Copilot / Goose / OpenCode …)**共同把 `docs/PLAN.md` 里规划的项目做出来**:
 一个只写测试,一个只写实现,严格轮流交接,互相评审,直到 PLAN 全部勾选、
-门禁套件全绿;配了全量套件时,它红了不算完成 —— 如实告诉人类,由人类决定。
+门禁套件全绿;配了全量套件时,它红了不能宣布"完成"——如实告诉人类,由人类决定。
 
 分工与评审不是为了把两个 agent 摆成对立面,而是为了让两份努力**可以合并、
 不互相抵消**,收敛到同一个交付。协议以 [Agent Skill](https://agentskills.io)
@@ -32,8 +32,8 @@ impl 回合结束时必须是绿的——`handoff` 强制检查。"做完了没"
 **对抗性是结构性的,但它服务的是交付。** tester 的工作定义就是写出 dev
 过不了的用例——这比"请评审一下"有效得多。评审的目的是保障交付质量:
 既要真挑出问题,也不为了显得"没在互相点头"而制造无谓的打回——
-后者会消耗掉该工作项三次打回额度里的一次(额度用尽即熔断、停轮转交
-人类)、浪费一个回合、把交付往后拖。
+后者会消耗掉该工作项三次打回额度里的一次(额度用尽即撞死锁闸、停轮转交
+人类)、浪费至少两个回合、把交付往后拖。
 
 **协议是可执行的,不是散文。** 不同模型对同一段 prose rules 的遵守程度差别很大。
 把规则编码进 `pair.py`,才能保证"任意两个 harness"都受同样的约束。
@@ -84,7 +84,7 @@ INSTALL.md                        ← 怎么接入已有项目
 ```
 
 CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交给它。这条约束是
-刻意的:一旦 CLI 里出现协议逻辑,它就会和 skill 漂移 —— 而漂移会让 agent
+刻意的:一旦 CLI 里出现协议逻辑,它就会和 skill 漂移——而漂移会让 agent
 读到的规则不再是被强制的规则,交付质量因此失去保障。
 
 ## 命令
@@ -111,7 +111,7 @@ CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交�
 | [协议规格](docs/protocol-spec.md) | 状态机、16 条不变量、配置与状态 schema |
 | [命令参考](docs/command-reference.md) | 全部命令的参数、前置条件、退出码 |
 | [同类工作调研](docs/prior-art.md) | the-pair / TDD Guard / AgentCoder / Adversarial Review / Spec Kit / BMAD …… |
-| [决策记录](docs/design-decisions.md) | 22 条 ADR,含被否掉的方案 |
+| [决策记录](docs/design-decisions.md) | 23 条 ADR,含被否掉的方案 |
 | [改进提案](docs/improvements.md) | 从调研里提炼的路线图,以及明确不做的清单 |
 | [故障排查](docs/troubleshooting.md) | 报错怎么办,以及那些不报错但更危险的现象 |
 | [贡献指南](docs/contributing.md) | 单一真源纪律、新增防护的五步 |

@@ -53,7 +53,7 @@ Agent Skills / AGENTS.md / MCP / A2A。
 
 ### [design-decisions.md](design-decisions.md) — 决策记录
 
-22 条 ADR,每条含背景 / 决策 / 理由 / 代价 / **被否掉的方案**。
+23 条 ADR,每条含背景 / 决策 / 理由 / 代价 / **被否掉的方案**。
 写下来是为了以后不用重新讨论,尤其是"为什么不那样做"。
 
 ### [improvements.md](improvements.md) — 改进提案与路线图
