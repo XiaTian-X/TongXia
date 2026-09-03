@@ -46,7 +46,7 @@ class TestImplDispute(PairTestCase):
     def test_写了异议就能红着打回(self):
         """核心:红绿不变量对异议路径豁免,否则 dev 永远出不去。"""
         self.repo.advance_to("impl")
-        self.repo.write("docs/reviews/W1-dispute.md", OBJECTION)
+        self.repo.write_dispute()
         r = self.repo.run("handoff", "changes", with_loc("测试与契约矛盾"), role="dev")
         self.assertAccepted(r)
         self.assertEqual(self.repo.state()["phase"], "spec",
@@ -54,21 +54,21 @@ class TestImplDispute(PairTestCase):
 
     def test_异议的提交前缀是_dispute(self):
         self.repo.advance_to("impl")
-        self.repo.write("docs/reviews/W1-dispute.md", OBJECTION)
+        self.repo.write_dispute()
         self.repo.run("handoff", "changes", with_loc("测试与契约矛盾"), role="dev")
         self.assertTrue(self.repo.head_subject().startswith("dispute:"),
                         "实际提交:%s" % self.repo.head_subject())
 
     def test_dev_仍然不能借异议之名改测试(self):
         self.repo.advance_to("impl")
-        self.repo.write("docs/reviews/W1-dispute.md", OBJECTION)
+        self.repo.write_dispute()
         self.repo.write("tests/W1", "我自己改了")
         r = self.repo.run("handoff", "changes", with_loc("顺手把测试改了"), role="dev")
         self.assertRefused(r, "越界")
 
     def test_打回后_tester_修正再走通(self):
         self.repo.advance_to("impl")
-        self.repo.write("docs/reviews/W1-dispute.md", OBJECTION)
+        self.repo.write_dispute()
         self.repo.run("handoff", "changes", with_loc("测试与契约矛盾"), role="dev")
 
         self.repo.write("tests/W1", "按异议修正后的用例")
@@ -79,7 +79,7 @@ class TestImplDispute(PairTestCase):
 
     def test_异议计入打回次数(self):
         self.repo.advance_to("impl")
-        self.repo.write("docs/reviews/W1-dispute.md", OBJECTION)
+        self.repo.write_dispute()
         self.repo.run("handoff", "changes", with_loc("测试与契约矛盾"), role="dev")
         self.assertEqual(self.repo.state()["changes_count"], 1)
 
@@ -151,7 +151,7 @@ class TestPostDisputeSpec(PairTestCase):
         """dev 在 impl 阶段提异议 —— 它的实现会随那次交接一起提交落地。"""
         self.repo.advance_to("impl")
         self.repo.write("src/W1")
-        self.repo.write("docs/reviews/W1-dispute.md", "这条测试与契约矛盾。")
+        self.repo.write_dispute()
         r = self.repo.run("handoff", "changes",
                           with_loc("tests/W1 的断言与契约冲突"), role="dev")
         self.assertAccepted(r)

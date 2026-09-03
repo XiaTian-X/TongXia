@@ -122,8 +122,11 @@ HANDOFF_INVARIANTS = (
                            # 且(配了 scope 时)落在 scope 内
     "test-deletion",       # 删测试必须带 --allow-deletion
     "new-tests",           # cover 的 spec 回合必须真的碰了测试文件
+    "review-naming",       # 评审目录顶层 .md 的名字要对上某个工作项
     "dispute-evidence",    # impl 阶段的 changes 必须写进 shared_paths
     "review-evidence",     # approve 要检查清单,changes 要 路径:行号 引用
+    "archaeology-sha",     # 依据: 考古观察@<sha> 的 sha 必须真实存在
+    "document-shape",      # 异议/契约变更/基线说明的必含小节,见下面的子项
     "memory-gate",         # 记忆层门禁,见下面几条子项
     "red-green",           # 按工作项类型的红绿期望,异议路径豁免
     "deadlock",            # 同一工作项打回 3 次即停止轮转
@@ -141,6 +144,10 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "contract-provenance",   # 契约小节必须写 `依据`,不可断言的不能开非 cover 项
     "refactor-safety-net",   # refactor 必须声明保护它的测试
     "post-dispute-fix",      # 异议后的 spec 回合豁免红绿,但必须真的改了测试
+    "dispute-shape",         # document-shape 的子项:异议必须存在且有三小节
+    "contract-change-shape", # document-shape 的子项:契约变更四小节(按文件名触发)
+    "baseline-shape",        # document-shape 的子项:基线说明两小节
+    "setup-report-coverage", # 契约审查结论必须逐节点名 + 声明作者身份
 )
 
 
@@ -182,6 +189,22 @@ ARCHAEOLOGY_SECTIONS = ("现状考古", "我保留了哪些契约外行为", "�
 # cover 的特征测试记录。特征测试的固有风险是**把缺陷一起焊死** —— 你照着
 # 现状写断言,而现状里可能有 bug。第二节就是为这件事存在的。
 COVER_SECTIONS = ("行为来源", "我冻结了哪些可疑行为")
+
+# --- 评审目录里的文档 ---------------------------------------------------
+# 命名的用处是让人和脚本都找得到:一份评审记录属于哪个工作项,从文件名就该看出来。
+# 但规范只管**前缀**,不管后半截 —— 上一轮真实运行里 tester 写过一份
+# `W1-spec-blocked.md`(不是裁决,是"我被协议卡住了"的求裁文书),那完全正当,
+# 规范不该把它拒掉。
+REVIEW_FIXED_NAMES = ("setup-verification.md", "baseline.md")
+# `contract-change-<ID>.md`。前缀在前、ID 在后,与 improvements.md 的 P1-3 一致。
+REVIEW_ID_PREFIXES = ("contract-change-",)
+
+# 三份有必含小节的文档。三处的共同点:rules.md 早就写明了要素,却零强制。
+DISPUTE_SECTIONS = ("哪条用例", "和契约的哪一条矛盾", "应该改成什么")
+CONTRACT_CHANGE_SECTIONS = ("现在的契约是什么", "为什么不行",
+                            "提议改成什么", "影响哪些测试和实现")
+BASELINE_SECTIONS = ("放弃了哪些用例", "为什么")
+BASELINE_REL = "docs/reviews/baseline.md"
 DECISION_FIELDS = ("理由", "已否决", "影响路径")
 
 DEFAULT_STATE = {
@@ -857,7 +880,8 @@ PHASE_BRIEF = {
 
   硬约束:
     - 只能写:%(paths)s
-    - 禁止修改或删除任何测试。认为测试写错了 -> 写异议到 docs/reviews/,
+    - 禁止修改或删除任何测试。认为测试写错了 -> 写异议到 %(review_file)s
+      (三个小节:哪条用例 / 和契约的哪一条矛盾 / 应该改成什么),
       用 handoff changes "理由" 打回,由测试方修
     - 禁止针对测试输入硬编码返回值来蒙混过关
 %(redgreen)s%(notes)s
@@ -877,6 +901,11 @@ PHASE_BRIEF = {
   互相点头等于这个项目白做。交出至少一处你找到的问题,或者你具体查过
   哪些地方、为什么认为那里没问题。
 
+  详情写进:%(review_file)s
+  (评审目录里的文件名要能对上工作项。模板见 references/documents.md)
+  两个 flag 里的话要自己站得住,别写成"详见那个文件" —— 它们进提交正文,
+  对方在 inbox 里必然看到,而文件要它主动去开。
+
     打回 -> python3 %(prog)s handoff changes "问题清单,至少一处 路径:行号"
     通过 -> python3 %(prog)s handoff approve "摘要"
                 --checked "你具体检查了什么" --uncovered "还没覆盖到什么\"""",
@@ -895,10 +924,28 @@ PHASE_BRIEF = {
   互相点头等于这个项目白做。交出至少一处你找到的问题,或者你具体查过
   哪些地方、为什么认为那里没问题。
 
+  详情写进:%(review_file)s
+  (评审目录里的文件名要能对上工作项。模板见 references/documents.md)
+  两个 flag 里的话要自己站得住,别写成"详见那个文件" —— 它们进提交正文,
+  对方在 inbox 里必然看到,而文件要它主动去开。
+
     打回 -> python3 %(prog)s handoff changes "问题清单,至少一处 路径:行号"
     通过 -> python3 %(prog)s handoff approve "摘要"
                 --checked "你具体检查了什么" --uncovered "还没覆盖到什么\"""",
 }
+
+
+def review_file_for(cfg, state, phase):
+    """这一回合该写哪个评审文件。**能生成的就别校验** ——
+    命名规则的信息 state 里全有,直接告诉它,拒绝分支自然没人撞。"""
+    item = state["item"]
+    if not item or phase not in REVIEW_PHASES + DISPUTE_PHASES:
+        return ""
+    base = cfg["shared_paths"][0]
+    if phase in DISPUTE_PHASES:
+        return "%s/%s-dispute.md" % (base, item)
+    n = state["changes_count"]
+    return "%s/%s-%s%s.md" % (base, item, phase, "" if not n else "-%d" % (n + 1))
 
 
 def _brief_vars(cfg, state, phase):
@@ -935,6 +982,7 @@ def _brief_vars(cfg, state, phase):
         "cover_hint": ("这条测试真的能发现回归吗(cover 类型的核心问题)"
                        if state["item_type"] == "cover"
                        else "用例是否真的对应 PLAN 里的工作项"),
+        "review_file": review_file_for(cfg, state, phase),
     }
 
 
@@ -1201,6 +1249,164 @@ def _known_path(ref, known):
     return any(k == ref or k.endswith("/" + ref) for k in known)
 
 
+def _review_top_level(cfg, path):
+    """这个路径是不是评审目录的**顶层 .md**。
+
+    子目录(`docs/reviews/W1/x.md`)、附件、以及点开头的文件(`.gitkeep`)
+    一律不管 —— 命名规则的用处是让人找得到评审记录,不是管辖整个目录。
+    """
+    name = PurePosixPath(path).name
+    if not name.endswith(".md") or name.startswith("."):
+        return False
+    parent = str(PurePosixPath(path).parent)
+    return any(parent == str(PurePosixPath(sp)) for sp in cfg["shared_paths"])
+
+
+def check_review_names(root, cfg, entries, item_ids):
+    """评审记录的文件名要能对上某个工作项。返回拒绝理由;None 放行。
+
+    **对的是 PLAN 里的全部工作项 ID,不是当前这个。** 只认当前 item 会造成
+    两种误伤:人类在 `docs/reviews/` 放了文件却没提交(协议正是这么要求人类
+    介入的),以及上一个工作项遗留在工作区里的评审文件 —— 两种情况下 agent
+    的唯一出路都是改名或删掉**不是它写的东西**,而那两件事它都不该做。
+    """
+    bad = []
+    for xy, path in entries:
+        if "D" in xy or path in PROTOCOL_LOGS or matches_any(path, cfg["ignore_paths"]):
+            continue
+        if not _review_top_level(cfg, path):
+            continue
+        name = PurePosixPath(path).name
+        if name in REVIEW_FIXED_NAMES:
+            continue
+        stem = name
+        for pre in REVIEW_ID_PREFIXES:
+            if name.startswith(pre):
+                stem = name[len(pre):]
+                break
+        # `W1.md` 和 `W1-review-impl.md` 都算数,但 `W11-x.md` 不能在 W1 的回合蒙混
+        if any(stem == i + ".md" or stem.startswith(i + "-") for i in item_ids):
+            continue
+        bad.append(path)
+
+    if not bad:
+        return None
+    return ("拒绝交接 —— 评审目录里这些文件的名字对不上任何工作项:\n  %s\n\n"
+            "规范:`<工作项ID>-<随便什么>.md`,或者 `<工作项ID>.md`。\n"
+            "固定名 %s 和 `contract-change-<工作项ID>.md` 也可以。\n"
+            "PLAN 里现有的工作项:%s\n\n"
+            "**如果这个文件不是你写的,不要改名、不要删,告诉人类。**\n"
+            "人类在结对期间往这里放文件却没提交,就会变成这样 —— "
+            "见 INSTALL.md 的「人类介入的纪律」。"
+            % ("\n  ".join(bad), "、".join(REVIEW_FIXED_NAMES),
+               "、".join(item_ids) or "(无)"))
+
+
+def missing_sections(text, sections, min_chars=MIN_NOTE_SECTION_CHARS):
+    """文本里缺了哪些必需小节。从 missing_note_sections 里解出来的纯函数版 ——
+    同一段逻辑此前只有笔记在用,现在异议、契约变更请求、基线说明都要用。"""
+    missing = []
+    for name in sections:
+        m = re.search(r"^#{2,}\s*%s\s*$" % re.escape(name), text, re.M)
+        if not m:
+            missing.append("缺少小节 `## %s`" % name)
+            continue
+        rest = text[m.end():]
+        nxt = re.search(r"^#{1,6}\s", rest, re.M)
+        body = (rest[:nxt.start()] if nxt else rest).strip()
+        if len(body) < min_chars:
+            missing.append("`## %s` 正文太短(%d 字,至少 %d)"
+                           % (name, len(body), min_chars))
+    return missing
+
+
+ARCHAEOLOGY_SHA_RE = re.compile(r"依据[::]\s*考古观察@([0-9a-fA-F]{4,40})")
+
+
+def check_archaeology_shas(root, cfg, entries):
+    """`依据: 考古观察@<sha>` 里的 sha 必须指向真实的 commit。
+
+    `cover` 回合起草的契约草案会**变成契约本身** —— 它是下游影响最大的一份
+    agent 产出。而 `考古观察@<sha>` 是三档依据里唯一**可被脚本校验**的那档:
+    sha 存不存在,git 说了算。不查的话,写一个编的 sha 和写"人类定稿"
+    一样容易,那这一档就只是个好听的标签。
+    """
+    bad = []
+    for xy, path in entries:
+        if "D" in xy or not matches_any(path, cfg["shared_paths"]):
+            continue
+        for sha in ARCHAEOLOGY_SHA_RE.findall(_read(root / path)):
+            if git("cat-file", "-e", sha + "^{commit}", cwd=root, check=False) is None:
+                bad.append((path, sha))
+    if not bad:
+        return None
+    return ("拒绝交接 —— `考古观察@<sha>` 里的 sha 在本仓库找不到:\n%s\n\n"
+            "`考古观察` 是三档依据里唯一可被脚本校验的那一档,靠的就是这个 sha。\n"
+            "它记的是「我读的是哪个版本的代码」 —— 编一个 sha,这一档就只剩标签。\n"
+            "用 `git rev-parse --short HEAD` 取当前的。"
+            % "\n".join("  %s → %s" % (p, sha) for p, sha in bad))
+
+
+def check_shaped_documents(root, cfg, entries, state, phase, verdict):
+    """异议 / 契约变更请求 / 基线说明:有必含小节的那三份。返回拒绝理由。
+
+    三处的共同点是 rules.md 早就写明了要素、却零强制 —— 而它们各自守着的东西
+    都不轻:异议是**全协议唯一豁免红绿不变量**的入口;契约变更会改动那份
+    "唯一会致命"的文件;基线说明是门禁范围被缩小的唯一留痕。
+    """
+    item = state["item"]
+    written = {PurePosixPath(p).name: p for xy, p in entries
+               if "D" not in xy and _review_top_level(cfg, p)}
+
+    def shape(name, sections, why):
+        rel = written.get(name)
+        if rel is None:
+            return None
+        miss = missing_sections(_read(root / rel), sections)
+        if not miss:
+            return None
+        return ("拒绝交接 —— %s 缺少必需的小节:\n  - %s\n\n"
+                "需要这几节,每节正文至少 %d 字:\n%s\n\n%s"
+                % (rel, "\n  - ".join(miss), MIN_NOTE_SECTION_CHARS,
+                   "\n".join("  ## " + x for x in sections), why))
+
+    # 异议:dev 在 impl 阶段打回测试。规则 2 早就写了三要素,却零强制。
+    # 这里**要求文件必须存在**,不是"写了才查形状" —— 因为 verdict + phase
+    # 这个信号是现成的,而按文件名触发的检查,开关在被约束者手里。
+    # 不变量 9 只要求"写了 shared_paths 下的某个文件",这一条把它变具体。
+    if item and verdict == "changes" and phase in DISPUTE_PHASES:
+        name = "%s-dispute.md" % item
+        if name not in written:
+            return ("拒绝交接 —— 提异议要写进 %s/%s。\n\n"
+                    "需要三个小节(rules.md 规则 2 的三要素),每节至少 %d 字:\n"
+                    "%s\n\n"
+                    "这条路径**豁免红绿不变量** —— 全协议只有它豁免。\n"
+                    "换来的代价就是把话说清楚:对方看不到你的对话,\n"
+                    "指不出是哪条用例、和契约的哪一条矛盾,它无从下手。"
+                    % (cfg["shared_paths"][0], name, MIN_NOTE_SECTION_CHARS,
+                       "\n".join("  ## " + x for x in DISPUTE_SECTIONS)))
+        r = shape(name, DISPUTE_SECTIONS,
+                  "这条路径豁免红绿不变量 —— 全协议只有它豁免。"
+                  "换来的代价就是把话说清楚。")
+        if r:
+            return r
+
+    # 契约变更请求:按文件名触发。脚本无从知道"这个回合是一次契约变更请求",
+    # 所以这条是"你用了这个名字就得守这个形状",不是"契约变更必须走这个形状"。
+    if item:
+        r = shape("contract-change-%s.md" % item, CONTRACT_CHANGE_SECTIONS,
+                  "契约漂移是这套机制唯一会致命的失败模式。"
+                  "人类要拿这份材料去改那份文件,四要素缺一都不够。")
+        if r:
+            return r
+
+    r = shape("baseline.md", BASELINE_SECTIONS,
+              "门禁套件被收窄之后,这份是「放弃了什么」的唯一留痕。")
+    if r:
+        return r
+    return None
+
+
 def check_review_evidence(root, cfg, phase, verdict, entries, message, args):
     """评审必须带证据。返回拒绝理由;None 表示放行。
 
@@ -1392,6 +1598,12 @@ def cmd_handoff(root, cfg, args):
                 "cover 类型全程是绿的,红绿不变量抓不到空手交接,所以这条单独检查。"
                 % (state["item_type"], " ".join(test_paths)))
 
+    # --- 评审目录的命名 ---------------------------------------------------
+    refusal = check_review_names(
+        root, cfg, entries, [i for i, _, _, _ in parse_plan(root, cfg)])
+    if refusal:
+        die(refusal)
+
     # --- 打回之后的修正回合必须真的动了测试 --------------------------------
     # 红绿豁免的本意是"让 tester 能把测试改对"。但 feature 的 spec 本来就没有
     # "必须动测试"这条检查,两者一叠加,tester 可以一个测试都不改就把回合推回去,
@@ -1420,6 +1632,18 @@ def cmd_handoff(root, cfg, args):
 
     # --- 评审证据 ---------------------------------------------------------
     refusal = check_review_evidence(root, cfg, phase, verdict, entries, message, args)
+    if refusal:
+        die(refusal)
+
+    # --- 考古观察的 sha 必须是真的 ------------------------------------------
+    refusal = check_archaeology_shas(root, cfg, entries)
+    if refusal:
+        die(refusal)
+
+    # --- 三份有必含小节的文档 ----------------------------------------------
+    # 放在评审证据之后:一个什么都没写的回合该先收到"你没写下来",
+    # 而不是"小节缺了"。顺序即语义。
+    refusal = check_shaped_documents(root, cfg, entries, state, phase, verdict)
     if refusal:
         die(refusal)
 
@@ -2214,6 +2438,16 @@ def _blank_fenced_blocks(text):
     return _FENCE_RE.sub(blank, text)
 
 
+def _normalize(text):
+    """NFKC 归一 + 折叠空白。
+
+    小节名常常是整个函数签名(骨架的标题模板就是
+    `函数名(参数: 类型) -> 返回类型`),而全角/半角冒号、多一个空格,
+    在两份不同的人写的文档里几乎必然出现。不归一就等于抽签。
+    """
+    return re.sub(r"\s+", "", unicodedata.normalize("NFKC", text))
+
+
 def contract_sections(text):
     """返回 ({小节名: 自身正文}, {重名的小节名})。
 
@@ -2319,6 +2553,15 @@ def cmd_verify_setup(root, cfg, args):
                 bad("scope 把 roles.%s 的文件全排除了 —— 该角色永远无法提交任何改动。"
                     "\n      scope=%s  roles.%s=%s"
                     % (r, cfg["scope"], r, cfg["roles"][r]))
+
+    # --- 收窄了门禁套件,就得说清楚放弃了什么 --------------------------------
+    # 配了 full_test_cmd = 门禁套件被收窄过 = 红绿不变量的覆盖面被缩小了。
+    # 那份说明是"缩小到哪里、放弃了什么"的唯一留痕,没有它,以后没人知道
+    # 当年绿的到底是哪一半。
+    if cfg.get("full_test_cmd") and not (root / BASELINE_REL).exists():
+        warn("配了 full_test_cmd(门禁套件被收窄过),但没有 %s。\n"
+             "      写两节:`## 放弃了哪些用例` / `## 为什么`。\n"
+             "      这是门禁范围被缩小的唯一留痕。" % BASELINE_REL)
 
     # --- 全量套件(只报告)---------------------------------------------------
     if cfg.get("full_test_cmd"):
@@ -2504,6 +2747,46 @@ def cmd_verify_setup(root, cfg, args):
         die("尚未交出契约审查结论(%s 缺失或过短,至少 %d 字)。\n"
             "这是本步骤存在的主要理由,不能跳过。"
             % (SETUP_REPORT_REL, MIN_SETUP_REPORT_CHARS))
+
+    # --- 结论必须逐节点名 ---------------------------------------------------
+    # 长度是地板,不是门。一段泛泛而谈轻松过 120 字,而这道门守着协议自称
+    # **唯一会致命**的失败模式。要点名十个小节,就得逐个读过去。
+    #
+    # 能力边界要说清楚:它只保证**覆盖面**,不保证消歧。
+    # 最优敷衍解仍然是「以下小节均无歧义:A、B、C」。
+    # architecture.md 里「契约不含糊 | ❌ 只有人类」那一行因此原样留着。
+    #
+    # 结论侧先剥掉围栏 —— 否则把整份 CONTRACT.md 粘进一个 ``` 里,
+    # 所有小节名瞬间"全被点名",而那正是这条检查要消灭的东西的加强版。
+    naked = _normalize(_blank_fenced_blocks(text))
+    unnamed = []
+    for item_id, typ, _, block in pending:
+        refs = CONTRACT_REF_RE.findall(block)
+        if not refs:
+            continue
+        anchor_name = refs[0].strip().strip("`")
+        if anchor_name in dupes or anchor_name not in sections:
+            continue            # 上面已经单独报过,这里再报是纯噪音
+        if _normalize(anchor_name) not in naked:
+            unnamed.append((item_id, anchor_name))
+    if unnamed:
+        die("契约审查结论里没有点到这些小节:\n%s\n\n"
+            "结论要逐节过 —— 泛泛一句「看过了没问题」正是这道门要挡的东西。\n"
+            "每一节都问:返回值精确到能写断言吗?错误条件穷举了吗?\n"
+            "边界(空、超长、null、并发)写明了吗?有没有两种合理解读?\n\n"
+            "(注意:把契约整段粘进 ``` 围栏不算点名 —— 围栏内容会被剥掉。)"
+            % "\n".join("  工作项 %s → 「%s」" % (i, a) for i, a in unnamed))
+
+    # --- 起草人自审要说出来 --------------------------------------------------
+    # 上一轮真实运行里那份结论开头自己写着"审查者:起草人本人,证明力打折"。
+    # 那是用真实运行换回来的观察 —— 把它从自觉变成必答一行。
+    if not re.search(r"参与|起草|撰写", text):
+        die("契约审查结论里要说明你有没有参与过这份契约的起草。\n\n"
+            "写一行就行,例如:\n"
+            "  - 我没有参与契约起草。\n"
+            "  - 我参与了契约起草,这份结论的证明力因此打折。\n\n"
+            "为什么要问:起草人审自己写的东西看不见自己的盲区。\n"
+            "这道门守的是唯一会致命的失败模式,读结论的人有权知道谁写的。")
 
     # 本命令对外的承诺是"只读校验"。此处只提交它自己产生的东西:
     # 状态位与那份契约审查结论。曾经这里是 `git add -A` —— 那会把工作区里

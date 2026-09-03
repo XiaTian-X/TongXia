@@ -87,6 +87,20 @@ def with_loc(reason, loc=LOC):
     return "%s,见 %s" % (reason, loc)
 
 
+DISPUTE_DOC = """## 哪条用例
+
+`tests/W1` 那条。它断言 tests/W1 存在时 src/W1 不存在,而这跟契约写的正好相反。
+
+## 和契约的哪一条矛盾
+
+`docs/CONTRACT.md` 的 W1 小节写明:tests/W1 存在时 src/W1 必须存在。
+用例假设的是相反的关系,两者不可能同时成立。
+
+## 应该改成什么
+
+把断言反过来:tests/W1 存在时断言 src/W1 也存在。契约不用动,是用例写反了。
+"""
+
 COVER_NOTE = """## 行为来源
 
 读了实现并在本地跑了一遍:空输入返回空字符串而不抛错。契约里没有这一条,
@@ -97,6 +111,21 @@ COVER_NOTE = """## 行为来源
 空输入返回空字符串看着像遗漏 —— 更像该抛 ValueError。但现有调用方依赖它,
 我照原样固化了。如果这其实是缺陷,应当另开一个 [bug] 工作项来修。
 """
+
+
+def setup_report(*sections):
+    """一份能过 verify-setup 的契约审查结论。
+
+    它要满足三条:够长、点到每个被引用的小节、说明作者有没有参与起草。
+    抽成函数是因为用例里到处都要它,而三条要求以后还可能变。
+    """
+    body = "\n\n".join(
+        "## %s\n\n返回值的类型和字段精确到能直接写断言。错误条件已经穷举:"
+        "抛什么、什么时候抛都写明了。边界情况里空串和超长两种都在契约里,"
+        "null 与并发不适用。逐句读过,没有可以有两种合理解读的地方。" % name
+        for name in sections)
+    return ("# 契约审查结论\n\n我没有参与这份契约的起草,"
+            "以下结论是逐节读过之后写的。\n\n" + body + "\n")
 
 
 CONFIG = {
@@ -225,6 +254,10 @@ class PairRepo:
     def write_archaeology(self, item="R1"):
         """refactor 的考古记录。三个小节,每节要够长。"""
         self.write("docs/notes/%s.md" % item, ARCHAEOLOGY_NOTE)
+
+    def write_dispute(self, item="W1"):
+        """impl 阶段异议的规范文件。三要素来自 rules.md 规则 2。"""
+        self.write("docs/reviews/%s-dispute.md" % item, DISPUTE_DOC)
 
     def write_cover_note(self, item="C1"):
         """cover 的特征测试记录。两个小节,每节要够长。"""

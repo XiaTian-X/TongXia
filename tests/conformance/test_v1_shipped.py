@@ -32,8 +32,12 @@ def _pair():
 
 PAIR = _pair()
 
-REPORT = ("# 契约审查结论\n\n逐条核对了两节的返回值、错误条件与边界情况,"
-          "未发现歧义。空串与超长输入契约里都写明了,断言可以直接照写。" * 2)
+# 样板项目的契约有 slugify / truncate 两节,结论必须逐节点名并声明作者身份。
+REPORT = ("# 契约审查结论\n\n我没有参与这份契约的起草。\n\n"
+          "## slugify\n\n返回值精确到能写断言,空串与超长两种边界契约里都写明了,"
+          "错误条件已穷举。未发现歧义。\n\n"
+          "## truncate\n\n同上逐条核对过。n 为负数时的行为契约没写,"
+          "tester 不得凭空假设,需要时走契约变更流程。\n")
 
 
 class TestDemoProject(unittest.TestCase):

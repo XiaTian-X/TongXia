@@ -277,6 +277,51 @@ MUTATIONS = [
      '    to_add = [STATE_REL, SETUP_REPORT_REL] + [',
      '    to_add = ["-A"] + [] + ['),
 
+    # --- 文档规范 -------------------------------------------------------
+    ("拆掉评审文件命名检查",
+     "    if not bad:\n        return None\n    return (\"拒绝交接 —— 评审目录里",
+     "    if True:\n        return None\n    return (\"拒绝交接 —— 评审目录里"),
+
+    ("拆掉固定名豁免",
+     "        if name in REVIEW_FIXED_NAMES:",
+     "        if False:"),
+
+    ("拆掉子目录豁免",
+     "    return any(parent == str(PurePosixPath(sp)) for sp in cfg[\"shared_paths\"])",
+     "    return True"),
+
+    ("拆掉点文件豁免",
+     '    if not name.endswith(".md") or name.startswith("."):',
+     '    if not name.endswith(".md"):'),
+
+    ("拆掉异议文件必须存在",
+     '        if name not in written:',
+     "        if False:"),
+
+    ("拆掉必含小节的正文长度下限",
+     "        if len(body) < min_chars:",
+     "        if False:"),
+
+    ("拆掉考古 sha 校验",
+     "    if not bad:\n        return None\n    return (\"拒绝交接 —— `考古观察",
+     "    if True:\n        return None\n    return (\"拒绝交接 —— `考古观察"),
+
+    ("拆掉契约审查结论的逐节点名",
+     "    if unnamed:",
+     "    if False:"),
+
+    ("拆掉结论侧的围栏剥离",
+     "    naked = _normalize(_blank_fenced_blocks(text))",
+     "    naked = _normalize(text)"),
+
+    ("拆掉起草人身份声明",
+     '    if not re.search(r"参与|起草|撰写", text):',
+     "    if False:"),
+
+    ("拆掉基线说明的提醒",
+     '    if cfg.get("full_test_cmd") and not (root / BASELINE_REL).exists():',
+     "    if False:"),
+
     ("拆掉死锁留痕",
      '            hit = "%s x%d" % (item or "?", changes_n)',
      '            hit = None; state["deadlock_hits"] = []; hit = ""'),

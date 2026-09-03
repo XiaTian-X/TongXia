@@ -136,7 +136,7 @@ agent 被人类唤醒
 
 这是理解这个架构最重要的一张表:**哪些规则是脚本拦的,哪些只能靠留痕。**
 
-<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix -->
+<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage -->
 
 | 规则 | 强制方式 | 失效条件 |
 |---|---|---|
@@ -158,9 +158,19 @@ agent 被人类唤醒
 | cover 的特征测试记录 | 脚本拒绝(两个小节) | 写满字数但不说实话 |
 | refactor 的安全网 | 脚本拒绝(保护测试路径必须存在且属 tester) | 指向一个跟本次重构无关的测试目录 |
 | 异议后必须真的改测试 | 脚本拒绝(豁免红绿,但要求动过 tester 路径) | 改一个无关的测试文件 |
+| 评审文件命名 | 脚本拒绝 | 改代码 |
+| 异议的三要素 | 脚本拒绝(文件必须存在 + 三小节) | 每节写满 40 字废话 |
+| 契约变更的四要素 | 脚本拒绝(**按文件名触发**) | 换个文件名 |
+| 考古观察的 sha 真实 | 脚本拒绝(git 说了算) | 用真 sha 但没真读代码 |
+| 契约审查逐节点名 | 脚本拒绝 | 「以下小节均无歧义:A、B、C」 |
 | **不许过拟合断言** | ❌ 只有 prose + 对方评审 | 双方都敷衍 |
 | **不许硬编码蒙混** | ❌ 只有 prose + 对方评审 | 双方都敷衍 |
 | **契约不含糊** | ❌ 只有人类 | 人类偷懒 |
+
+> **注意最后一行没有变。** 「契约审查逐节点名」只保证**覆盖面**,不保证消歧:
+> 它挡得住"通篇没提任何一节",挡不住"每节都提了、每节都说没问题"。
+> 把它当成已经守住了那条,就是 ADR-012 说的"让人以为强制力还在" ——
+> 只不过这次发生在文档上。
 
 最后三行是这套协议的真实边界。
 

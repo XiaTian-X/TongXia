@@ -163,6 +163,13 @@ PLAN 里的工作项全部完成后,协议停止轮转并报告项目结束。
 
 判例见 [references/rules.md](references/rules.md) 规则 10。
 
+## 你要写的每一种文档
+
+评审记录、异议、契约变更请求、契约审查结论、基线说明 —— 每一种的规范文件名、
+必含小节和模板都在 [references/documents.md](references/documents.md),
+其中几条由 `handoff` 强制。人类写契约时抄
+[references/contract-templates.md](references/contract-templates.md)。
+
 ## 冻结文件
 
 `docs/PLAN.md` 和 `docs/CONTRACT.md` 由人类维护,agent 一律只读。

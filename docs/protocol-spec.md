@@ -100,7 +100,7 @@
 
 `handoff` 按以下顺序校验。任何一条不过即拒绝提交,**不得**绕过。
 
-<!-- pair-enforcements: turn-ownership project-done state-untampered verdict-valid transition-valid write-boundary test-deletion new-tests dispute-evidence review-evidence memory-gate red-green deadlock -->
+<!-- pair-enforcements: turn-ownership project-done state-untampered verdict-valid transition-valid write-boundary test-deletion new-tests review-naming dispute-evidence review-evidence archaeology-sha document-shape memory-gate red-green deadlock -->
 
 | # | 不变量 | 触发条件 |
 |---|---|---|
@@ -112,11 +112,14 @@
 | 6 | 写权限边界 | 每个改动文件必须命中当前阶段的可写路径,不在 `frozen_paths` 下,且(配了 `scope` 时)落在 `scope` 内 —— 评审目录与记忆层对 `scope` 豁免 |
 | 7 | 测试删除 | 删除 tester 路径下的文件必须带 `--allow-deletion "理由"` |
 | 8 | 新增测试 | `cover` 的 spec 回合必须有非删除的测试文件改动 |
-| 9 | 异议举证 | `impl` 阶段的 `changes` 必须在 `shared_paths` 下写了文件 |
-| 10 | **评审证据** | `approve` 必须带 `--checked` 与 `--uncovered`;`changes` 的理由或本回合的评审文件里必须有一处 `路径:行号`,且路径真实存在 |
-| 11 | 记忆层门禁 | 见 §6 |
-| 12 | 红绿 | 按类型的 `expect`。**提异议那一回合全豁免**;**打回之后紧接着的 spec 回合只豁免 RED**(cover 的 GREEN 仍然强制),并另外要求本回合真的改动了 tester 路径下的文件 |
-| 13 | 死锁闸 | 同一工作项 `changes_count` 达到 3 时停止轮转 |
+| 9 | **评审目录命名** | 顶层 `.md` 的名字要对上 PLAN 里某个工作项,或是固定名 |
+| 10 | 异议举证 | `impl` 阶段的 `changes` 必须在 `shared_paths` 下写了文件 |
+| 11 | **评审证据** | `approve` 必须带 `--checked` 与 `--uncovered`;`changes` 的理由或本回合的评审文件里必须有一处 `路径:行号`,且路径真实存在 |
+| 12 | **考古 sha** | `依据: 考古观察@<sha>` 的 sha 必须是真实 commit |
+| 13 | **文档形状** | 异议必须存在且三小节;`contract-change-<ID>.md` 四小节;`baseline.md` 两小节 |
+| 14 | 记忆层门禁 | 见 §6 |
+| 15 | 红绿 | 按类型的 `expect`。**提异议那一回合全豁免**;**打回之后紧接着的 spec 回合只豁免 RED**(cover 的 GREEN 仍然强制),并另外要求本回合真的改动了 tester 路径下的文件 |
+| 16 | 死锁闸 | 同一工作项 `changes_count` 达到 3 时停止轮转 |
 
 ### 4.1 路径归属判定
 
@@ -209,6 +212,9 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 | `refactor` 的 `保护测试` 不属 tester | 失败 |
 | `full_test_cmd` 是绿的 | 警告 |
 | 入口文件含协议激活段落 | 警告 |
+| 契约审查结论逐节点名(围栏内容不算) | 失败 |
+| 契约审查结论声明了作者是否参与起草 | 失败 |
+| 配了 `full_test_cmd` 就该有 `docs/reviews/baseline.md` | 警告 |
 | `test_cmd` 已配置且基线全绿 | 失败 |
 | PLAN 有合法工作项,类型合法 | 失败 |
 | 每个工作项都指向存在的契约小节 | 失败 |

@@ -99,6 +99,11 @@ pair.py handoff changes "问题清单,至少一处 路径:行号"
 | `--checked "内容"` | **approve 必填。** 你具体检查了什么 |
 | `--uncovered "内容"` | **approve 必填。** 你知道还没被覆盖到的是什么(没有就写"无")|
 
+两个 flag 的内容**必须自包含**,整段只写"详见某文件"会被拒 ——
+它们的强制力有一半来自进提交正文、对方在 `inbox` 里必然看到。
+详情写进 `docs/reviews/<工作项ID>-<阶段>.md`,规范见
+[documents.md](../.agents/skills/pair-protocol/references/documents.md)。
+
 `approve` 只能出现在评审阶段。`changes` 在评审阶段是打回,在 `impl` 阶段是异议。
 
 ### 被拒了怎么办

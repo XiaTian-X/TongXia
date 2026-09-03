@@ -7,7 +7,7 @@ init 由任意 agent 或人类在结对开始**之前**跑;verify-setup 由结�
 
 import unittest
 
-from harness import BareRepo, PairTestCase, Result
+from harness import BareRepo, PairTestCase, Result, setup_report
 
 GREEN_TEST = ("import unittest\n\n"
               "class T(unittest.TestCase):\n"
@@ -148,7 +148,7 @@ class TestVerifySetup(PairTestCase):
 
     config = {"require_setup_verification": True}
 
-    REPORT = '# 契约审查\\n\\n逐条核对了 slugify 与 truncate 的返回值、错误条件和边界情况,未发现歧义。W1 的空串行为在契约里写明抛 ValueError,断言可以直接照写。逐条核对了 slugify 与 truncate 的返回值、错误条件和边界情况,未发现歧义。W1 的空串行为在契约里写明抛 ValueError,断言可以直接照写。'
+    REPORT = setup_report("W1", "W2")
 
     def test_没交契约审查结论时不放行(self):
         """脚本查不了歧义,但可以强制\"你必须交出一份结论\" ——

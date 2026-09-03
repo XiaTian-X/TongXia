@@ -1,5 +1,5 @@
 {
-  "baseline": "277c8d37fd3f7092",
+  "baseline": "2b25c4be0bd9ae2b",
   "catchers": {
     "只认 impl 阶段的异议,漏掉评审打回": [
       "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
@@ -124,6 +124,12 @@
     "拆掉回合归属检查": [
       "test_turn_and_state.TestTurnOwnership.test_不是自己的回合不能交接"
     ],
+    "拆掉固定名豁免": [
+      "test_v1_documents.TestReviewNaming.test_固定名永远放行"
+    ],
+    "拆掉基线说明的提醒": [
+      "test_v1_documents.TestBaselineNote.test_收窄了套件却没有基线说明会被警告"
+    ],
     "拆掉契约依据必填": [
       "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝",
       "test_boundaries.TestDeletionGuard.test_声明的删除理由会进提交记录",
@@ -135,6 +141,9 @@
     ],
     "拆掉契约变更强制": [
       "test_v1_memory.TestContractChange.test_契约变过就必须留记录"
+    ],
+    "拆掉契约审查结论的逐节点名": [
+      "test_v1_documents.TestSetupReportNamesSections.test_把契约粘进围栏不算点名"
     ],
     "拆掉契约审查门禁": [
       "test_v1_setup.TestVerifySetup.test_敷衍的结论不算数",
@@ -150,6 +159,9 @@
       "test_boundaries.TestDeletionGuard.test_显式声明后允许删除",
       "test_boundaries.TestReviewIsReadOnly.test_评审时不能改实现"
     ],
+    "拆掉子目录豁免": [
+      "test_invariants.TestDeadlockGate.test_同一工作项打回三次触发死锁闸"
+    ],
     "拆掉完成时的晋升 gate": [
       "test_v1_memory.TestPromotion.test_笔记没处理不许完成"
     ],
@@ -160,6 +172,9 @@
       "test_v1_disputes.TestImplDispute.test_异议必须写进_reviews",
       "test_v1_memory.TestBoundaryNotWeakened.test_笔记不能冒充异议举证"
     ],
+    "拆掉异议文件必须存在": [
+      "test_v1_documents.TestDisputeShape.test_没写规范异议文件被拒"
+    ],
     "拆掉异议的红绿豁免": [
       "test_v1_disputes.TestImplDispute.test_写了异议就能红着打回",
       "test_v1_disputes.TestImplDispute.test_异议的提交前缀是_dispute",
@@ -169,6 +184,9 @@
     "拆掉引用路径真实性检查": [
       "test_v1_review_evidence.TestChangesNeedsLocation.test_引用不存在的文件被拒绝",
       "test_v1_review_evidence.TestChangesNeedsLocation.test_碰巧像位置的数字不算"
+    ],
+    "拆掉必含小节的正文长度下限": [
+      "test_v1_documents.TestDisputeShape.test_小节在但正文太短也被拒"
     ],
     "拆掉打回后 spec 回合的 RED 豁免": [
       "test_v1_disputes.TestPostDisputeSpec.test_review_test_打回后也豁免_RED"
@@ -186,6 +204,9 @@
     "拆掉测试删除防护": [
       "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝"
     ],
+    "拆掉点文件豁免": [
+      "test_v1_documents.TestReviewNaming.test_子目录与附件不受管辖"
+    ],
     "拆掉状态篡改检测": [
       "test_turn_and_state.TestStateTamper.test_status_会警告状态被篡改",
       "test_turn_and_state.TestStateTamper.test_篡改后状态被自动还原",
@@ -193,6 +214,12 @@
     ],
     "拆掉第二次打回强制": [
       "test_v1_memory.TestRebound.test_第二次打回不留结论被拒绝"
+    ],
+    "拆掉结论侧的围栏剥离": [
+      "test_v1_documents.TestSetupReportNamesSections.test_把契约粘进围栏不算点名"
+    ],
+    "拆掉考古 sha 校验": [
+      "test_v1_documents.TestArchaeologySha.test_编的_sha_被拒"
     ],
     "拆掉角色重叠检测": [
       "test_v1_setup.TestVerifySetup.test_角色边界重叠被报出"
@@ -216,6 +243,9 @@
       "test_boundaries.TestReviewIsReadOnly.test_评审时不能改实现",
       "test_boundaries.TestReviewIsReadOnly.test_评审时不能改测试"
     ],
+    "拆掉评审文件命名检查": [
+      "test_v1_documents.TestReviewNaming.test_ID_互为前缀时不许蒙混"
+    ],
     "拆掉评审理由强制": [
       "test_invariants.TestReviewVerdict.test_空手_approve_被拒绝"
     ],
@@ -224,6 +254,9 @@
       "test_v1_review_evidence.TestApproveNeedsChecklist.test_空字符串不算数",
       "test_v1_review_evidence.TestApproveNeedsChecklist.test_空手通过被拒绝",
       "test_v1_review_evidence.TestChangesNeedsLocation.test_异议路径同样要带位置"
+    ],
+    "拆掉起草人身份声明": [
+      "test_v1_documents.TestSetupReportNamesSections.test_不声明作者身份被拒"
     ]
   }
 }
