@@ -21,8 +21,9 @@
 
 ### [design-philosophy.md](design-philosophy.md) — 设计理念
 
-九条第一性原理,每条都是在回答同一个问题:**怎样让"两个 LLM 互相点头"
-在结构上做不到,而不是靠嘱咐它们别这么干。**
+九条第一性原理,每条都服务同一个目的:**让两个 agent 各自尽力,合起来
+真的把 `PLAN.md` 里规划的工作项交付出来**。防互相点头是其中一层手段,
+不是北极星。
 
 红绿即时钟 · 路径切分即隔离 · 对抗性写进角色定义 · 协议可执行 ·
 通信只走 git · 仓库即记忆 · 范围收窄是前提 · 人类是时钟 · 单一真源
@@ -34,12 +35,13 @@
 
 ### [protocol-spec.md](protocol-spec.md) — 协议规格
 
-规范性文档。角色解析、阶段与归属、工作项类型与流程、12 条不变量、
+规范性文档。角色解析、阶段与归属、工作项类型与流程、16 条不变量、
 命令契约、记忆层、配置 schema、状态 schema、退出码。
 
 ### [command-reference.md](command-reference.md) — 命令参考
 
-七条命令逐一:参数、前置条件、副作用、被拒了怎么办、退出码。
+八个 `pair.py` 子命令逐一:参数、前置条件、副作用、被拒了怎么办、退出码;
+另含 bootstrap `pair init` 与可选的 `drive.py`。
 
 ### [prior-art.md](prior-art.md) — 同类工作调研
 
@@ -51,7 +53,7 @@ Agent Skills / AGENTS.md / MCP / A2A。
 
 ### [design-decisions.md](design-decisions.md) — 决策记录
 
-13 条 ADR,每条含背景 / 决策 / 理由 / 代价 / **被否掉的方案**。
+22 条 ADR,每条含背景 / 决策 / 理由 / 代价 / **被否掉的方案**。
 写下来是为了以后不用重新讨论,尤其是"为什么不那样做"。
 
 ### [improvements.md](improvements.md) — 改进提案与路线图

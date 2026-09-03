@@ -6,6 +6,9 @@
 
 ## 一句话结论
 
+比较的主轴是**谁更能保障两个 agent 共同把规划交付出来**,不是"谁更能防
+互相点头" —— 后者只是前者的手段层。
+
 **没有找到功能重合的项目。** 最接近的四类工作各自解决了这套协议的一部分,
 但没有一个同时具备:双 agent 严格轮流、写权限按路径物理切分、红绿作为回合信号、
 通信只走 git、协议以可执行脚本强制、跨 harness 中立。
@@ -75,8 +78,8 @@ Claude Code 的 hook,实时拦截 agent 的写操作,强制 TDD:
 2. **over-implementation 检测。** 本项目靠 tester 在 review-impl 回合人工发现
    "dev 多写了没被测试要求的东西",没有任何机器辅助。
 3. **它是单 agent 的。** hook 拦的是同一个 agent 的手,不存在对抗性 ——
-   这正是本项目的差异点:强制的对象是**两个互相不信任的 agent 的交接**,
-   而不是一个 agent 的手速。
+   这正是本项目的差异点:强制的对象是**两个各自尽力、需要互相验收的
+   agent 的交接**,而不是一个 agent 的手速。
 
 差异定位:TDD Guard 保证"一个 agent 按 TDD 的顺序写代码";
 本项目保证"两个 agent 各写各的、互相验收"。前者是纪律,后者是分权。
@@ -109,7 +112,7 @@ Claude Code 的 hook,实时拦截 agent 的写操作,强制 TDD:
 ### Adversarial Review(arXiv:2608.18167)
 
 三 agent 代码评审协议:coding agent + reviewer + **critic**,critic 的职责是
-**审计评审本身**。它命名了本项目最担心的失败模式:
+**审计评审本身**。它命名了本项目在**手段层**最警惕的失败模式:
 
 > **false-consensus failure mode** —— agents converge on agreement without
 > sufficient evidence.
