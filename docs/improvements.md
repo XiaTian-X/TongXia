@@ -383,6 +383,10 @@ dev 只能改块外。这需要一个 Rust 感知的 diff 分析器 —— 成�
 这一轮只改了文档与脚本文案的**定位叙述**,门禁一条没动。下面几处是复审时
 发现、但本轮没有处理的东西,记在这里免得下次重新发现。
 
+> **第 9 条起不是同一个来源。** 它们是后面几轮登记进来的:`2a32b5f` 给
+> `--no-baseline` 加预检闸时暴露的缓存与环境问题,以及第三轮报告里留给
+> 后续的一处排版观察。放在同一节只因为都是"发现了但当时不处理"的东西。
+
 ### 1. `test_v1_review_evidence.py` 的类名与断言已经跟不上 ADR-023
 
 `tests/conformance/test_v1_review_evidence.py:104-112` 的
@@ -480,6 +484,86 @@ docstring 以及 ADR-022 的禁令直接矛盾。`:98` 的 `assertIn("互相点�
 **建议:** 给 `test_docs_consistency` 加一条,扫规范性文档里的
 `(\d+) 条 ADR` 与 `(\d+) 条不变量`,分别与 `## ADR-` 的计数和
 `len(HANDOFF_INVARIANTS)` 对齐。
+
+### 9. `mutation-cache.json` 要在基线能全绿的环境里重生成一次
+
+当前缓存的 `baseline` 字段是 `2b25c4be0bd9ae2b`,而 `fingerprint()` 现在算出来
+是 `65deef448105619a` —— 失配。失配的后果由 `2a32b5f` 新加的第二道闸兜住
+(带 `--no-baseline` 跑会被预检拒绝),但快路径也就一直用不上。
+
+**唯一的刷新入口是默认路径。** `run_baseline()`(`:571`)跑绿之后会执行
+`mutation_check.py:589` 的 `save_cache(fingerprint(), load_cache()[1])` ——
+只刷新指纹、原样沿用旧 catchers。`--no-baseline` **不会**刷新:`:663-664`
+的写盘条件是 `if verified and (fresh != cache or cached_fp != fp)`,而 `verified`
+在指纹失配时是 `False`;新增的 `precheck_no_baseline`(`:593`)也不写缓存
+(它自己的注释就写了"预检不写缓存、不放宽 `verified`")。所以失配这件事
+**不会自愈**,只能靠一次默认路径的绿基线抹平。
+
+**怎么做:** 在真实终端(全局 git 身份可用、`test_v1_shipped` 能绿的环境)跑
+`python3 tests/conformance/mutation_check.py`(**不加** `--no-baseline`),
+基线绿后约一分钟结束,然后只提交 `tests/conformance/mutation-cache.json`
+一个文件。本沙箱里跑不了:基线红(见第 10 条),默认路径会在 `:565-566`
+直接 `return 1`。
+
+### 10. `test_v1_shipped` 的环境依赖:它要求机器上有可解析的 git 身份
+
+`test_开工前校验只卡在契约审查结论那一步`(`:64`)在没有 git 身份的机器上必红。
+实测的失败链是两级:
+
+- 第一级:`examples/make-demo.py:42` 的
+  `subprocess.run(("git",) + args, cwd=target, check=True)` 跑
+  `git commit -q -m "chore: 装上结对协议"`,因
+  `fatal: unable to auto-detect email address (got 'xbase@Mac.(none)')`
+  抛 `CalledProcessError`(退出码 128)。
+- 第二级:`tests/conformance/test_v1_shipped.py:70-74` 给 `pair.py verify-setup`
+  的 env 被剥成 `{"PAIR_ROLE": "dev", "PATH": "/usr/bin:/bin"}`(`:73`),
+  没有 HOME、没有任何 `GIT_*`/`GIT_CONFIG_*`。所以 `pair.py:2804` 那句
+  `git("commit", ...)` 同样会因 `Author identity unknown` 而 die。
+
+**这不是沙箱独有的问题。** 任何没有可解析 git 身份的机器或 CI 上它都会红 ——
+这是环境依赖,不是代码缺陷。
+
+**一处需要修正的因果表述。** "env 被剥离"**本身**不是阻断原因。实测在
+`{"PAIR_ROLE","PATH"}` 这个剥离 env 下,四条注入身份的路径**全部 rc=0**:
+`git -c user.name=… -c user.email=…`、`GIT_CONFIG_GLOBAL` 指向含身份的临时文件、
+样板仓库的 `.git/config` 里写仓库级身份、`HOME` 指向含 `.gitconfig` 的目录。
+真正的根因只有一条:**这台机器上任何一级都取不到身份** ——
+`git config --list --show-origin` 里没有任何 `user.*`,`/etc/gitconfig` 与
+`/opt/homebrew/etc/gitconfig` 都不存在,`~/.gitconfig` 里没有身份段。
+
+所以"两级"这个说法只在**一种修法**下成立:把 `make-demo.py:42` 改成
+`git -c …`(一次性、不落盘)—— 那样样板仓库里仍然没有身份,
+`pair.py:2804` 确实照样 die。换成上面另外三种注入方式,两级会一起解决。
+
+**若要 CI 化**,建议按这个顺序挑:让 `make-demo.py` 在 `git init` 之后给样板
+仓库写**仓库级**身份(一处改动解决两级);或者让测试的 env 补上
+`GIT_CONFIG_GLOBAL`/`HOME`。两处都落在 `examples/` 与 `tests/` 禁改区,
+需人类裁决。
+
+### 11. `examples/make-demo.py` 失败时抛裸 traceback
+
+`:42` 的 `check=True` 在 git 失败时直接抛 `CalledProcessError`,用户看到的是
+一整段 Python traceback(实测里最后几行是 `subprocess.run(...)` 的栈帧),
+没有一句"哪里不对、下一步怎么办"。而同一个文件在目标目录非空时是**有**
+友好信息的(`:27-29` 打印"目标目录 … 非空,拒绝覆盖。"再 `return 1`)——
+风格不一致。
+
+**建议:** 把 `:39-42` 那个循环包进 try/except,失败时打印是哪一步
+(`init` / `add` / `commit`)、git 的原始输出、以及最常见的原因(git 身份
+没配),再返回非零码。纯体验问题,`examples/` 属禁改区。
+
+### 12. `pair.py` 简报里"指到"与"路径:行号"之间多一个半角空格
+
+`:902` 与 `:926`(review-impl 与 review-test 两段简报,内容相同)写的是
+`打回 -> 指到 路径:行号`,「指到」与「路径」之间有一个半角空格。
+`89d5711` 引入。对照 `SKILL.md:132` 的「打回要指到 `路径:行号`」,
+那里的空格来自反引号之前,是有理由的;`pair.py` 这两处是纯文本,
+空格没有对应理由。
+
+**本轮不改的理由:** 纯排版,不影响 `路径:行号` 这个关键词断言
+(断言匹的是子串,空格在它前面),门禁全绿;而任何 `pair.py` 改动都要
+重跑一次 AST 归一化自证与全量套件(约 150 秒),成本与收益不匹配。
+留到下次因为别的原因动 `pair.py` 时顺手改。
 
 ---
 
