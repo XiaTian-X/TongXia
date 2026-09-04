@@ -69,7 +69,7 @@ class TestDemoProject(unittest.TestCase):
             REPORT, encoding="utf-8")
         proc = subprocess.run(
             [sys.executable, ".agents/skills/pair-protocol/scripts/pair.py",
-             "verify-setup"],
+             "verify-setup", "--drafter", "other"],
             cwd=str(proj), env={"PAIR_ROLE": "dev", "PATH": "/usr/bin:/bin"},
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         out = proc.stdout.decode("utf-8", "replace")

@@ -7,7 +7,7 @@ init 由任意 agent 或人类在结对开始**之前**跑;verify-setup 由结�
 
 import unittest
 
-from harness import BareRepo, PairTestCase, Result, setup_report
+from harness import VERIFY_OK, BareRepo, PairTestCase, Result, setup_report
 
 GREEN_TEST = ("import unittest\n\n"
               "class T(unittest.TestCase):\n"
@@ -165,7 +165,7 @@ class TestVerifySetup(PairTestCase):
     def test_交了结论后通过并允许认领(self):
         self.assertFalse(self.repo.state()["setup_verified"])
         self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
-        r = self.repo.run("verify-setup", role="dev")
+        r = self.repo.run(*VERIFY_OK, role="dev")
         self.assertAccepted(r)
         self.assertTrue(self.repo.state()["setup_verified"])
         self.assertAccepted(self.repo.run("claim", "W1", role="tester"))
@@ -175,7 +175,7 @@ class TestVerifySetup(PairTestCase):
         —— 测试一上来就是绿的,协议再也抓不到"没写新用例"。"""
         self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
         self.repo.write("src/偷跑的实现", "本该由 dev 在 impl 回合写")
-        r = self.repo.run("verify-setup", role="dev")
+        r = self.repo.run(*VERIFY_OK, role="dev")
         self.assertAccepted(r)
         self.assertIn("未提交的代码改动", r.text)
         self.assertIn("偷跑的实现", r.text)
@@ -185,7 +185,7 @@ class TestVerifySetup(PairTestCase):
 
     def test_契约审查结论本身会被提交(self):
         self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
-        self.assertAccepted(self.repo.run("verify-setup", role="dev"))
+        self.assertAccepted(self.repo.run(*VERIFY_OK, role="dev"))
         tracked = self.repo.git("ls-files").stdout.decode("utf-8")
         self.assertIn("setup-verification.md", tracked)
 
@@ -230,12 +230,12 @@ class TestVerifySetup(PairTestCase):
         self.repo.write("tests/orphan", "没有对应实现的测试")
         self.repo.git("add", "-A")
         self.repo.git("commit", "-q", "-m", "人类提交了一条红的测试")
-        r = self.repo.run("verify-setup", role="dev")
+        r = self.repo.run(*VERIFY_OK, role="dev")
         self.assertRefused(r, "基线不是全绿")
 
     def test_PLAN_为空被报出(self):
         self.repo.set_plan("# 规划\n\n还没写工作项。\n")
-        r = self.repo.run("verify-setup", role="dev")
+        r = self.repo.run(*VERIFY_OK, role="dev")
         self.assertRefused(r, "没有合法工作项")
 
     def test_可以配置关闭门禁(self):

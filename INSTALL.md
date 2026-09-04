@@ -331,9 +331,11 @@ python3 .agents/skills/pair-protocol/scripts/drive.py --both "claude -p"
 
 ### 开工顺序
 
-1. 让**还没动手的那一方**跑 `pair.py verify-setup`。它会要求通读契约并把歧义
-   写进 `docs/reviews/setup-verification.md` —— **交出这份结论之前校验不通过,
-   也不能认领工作项**
+1. 让**还没动手的那一方**跑 `pair.py verify-setup --drafter self|other`。
+   它会要求通读契约、把歧义写进 `docs/reviews/setup-verification.md` 并逐节点名
+   —— **交出这份结论之前校验不通过,也不能认领工作项**。
+   `--drafter` 声明这一方有没有参与契约起草(`self` 表示参与过,结论证明力打折),
+   它进提交正文,不写在结论里
 2. 人类看这份歧义报告,定稿契约
 3. 在任意一个 agent 那里说"继续"。不该它动的那个会自己停下 —— 回合状态在
    `.pair/state.json` 里,不在对话里,所以你不用记现在轮到谁

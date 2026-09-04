@@ -14,7 +14,7 @@ import json
 import unittest
 from pathlib import Path
 
-from harness import (EVIDENCE, PLAN_TEMPLATE, BareRepo, PairTestCase,
+from harness import (EVIDENCE, PLAN_TEMPLATE, VERIFY_OK, BareRepo, PairTestCase,
                      setup_report, with_loc)
 
 REVIEWS = "docs/reviews"
@@ -76,6 +76,16 @@ class TestReviewNaming(PairTestCase):
                         + "\n\n## 为什么\n\n" + "跑一次要二十分钟,每回合都跑会让协议没法用。" * 3)
         self.assertAccepted(self.repo.run(
             "handoff", "approve", "没问题", *EVIDENCE, role="tester"))
+
+    def test_基线说明缺小节时告诉你别动别人的文件(self):
+        """`baseline.md` 是总表里唯一归**人类**的那份。人类把它留在工作区里
+        没提交,agent 交接就撞上小节检查 —— 而它的唯一出路会变成改掉或删掉
+        不是它写的东西。命名检查早就为这件事留了出路,这条必须一样。"""
+        self._到评审回合()
+        self.repo.write("%s/baseline.md" % REVIEWS, "## 放弃了哪些用例\n\n太少了。")
+        r = self.repo.run("handoff", "approve", "没问题", *EVIDENCE, role="tester")
+        self.assertRefused(r, "缺少必需的小节",
+                           "不是你写的", "不要改、不要删", "告诉人类")
 
     def test_子目录与附件不受管辖(self):
         """命名规则的用处是让人找得到评审记录,不是管辖整个目录。"""
@@ -191,15 +201,33 @@ class TestSetupReportNamesSections(PairTestCase):
 
     def test_不声明作者身份被拒(self):
         """起草人审自己写的东西看不见自己的盲区 —— 读的人有权知道谁写的。"""
-        body = "\n\n".join("## %s\n\n返回值精确到能写断言,错误条件已穷举,边界都写明了。" % n
-                           for n in ("W1", "W2"))
-        self.repo.write("%s/setup-verification.md" % REVIEWS, body * 2)
+        self.repo.write("%s/setup-verification.md" % REVIEWS, setup_report("W1", "W2"))
         r = self.repo.run("verify-setup", role="dev")
-        self.assertRefused(r, "有没有参与过这份契约的起草")
+        self.assertRefused(r, "有没有参与过这份契约的起草", "--drafter")
+
+    def test_声明不看结论里的措辞(self):
+        """回归:这条曾经是在结论里搜「参与|起草|撰写」。那样两头落空 ——
+        「本结论作者未介入契约的编写」这种正确说法被拒,而正文里随便一个
+        「参与」(哪怕说的是参与实现)就能放行。ADR-014 的理由在这里同样成立。"""
+        self.repo.write(
+            "%s/setup-verification.md" % REVIEWS,
+            setup_report("W1", "W2") + "\n我参与了 W1 的实现讨论。\n")
+        r = self.repo.run("verify-setup", role="dev")
+        self.assertRefused(r, "--drafter")
 
     def test_逐节点名且声明了就通过(self):
         self.repo.write("%s/setup-verification.md" % REVIEWS, setup_report("W1", "W2"))
-        self.assertAccepted(self.repo.run("verify-setup", role="dev"))
+        self.assertAccepted(self.repo.run(*VERIFY_OK, role="dev"))
+
+    def test_声明进提交正文(self):
+        """和 --allow-deletion / --no-decision 同一手法:不是放行,是强制留痕。
+        对方在 inbox 里必然看到「这份结论是不是起草人自己写的」。"""
+        self.repo.write("%s/setup-verification.md" % REVIEWS, setup_report("W1", "W2"))
+        self.assertAccepted(
+            self.repo.run("verify-setup", "--drafter", "self", role="dev"))
+        body = self.repo.git("log", "-1", "--format=%b").stdout.decode("utf-8")
+        self.assertIn("起草人自审: 是", body)
+        self.assertIn("证明力打折", body)
 
 
 class TestBaselineNote(PairTestCase):
@@ -210,7 +238,7 @@ class TestBaselineNote(PairTestCase):
 
     def test_收窄了套件却没有基线说明会被警告(self):
         self.repo.write("%s/setup-verification.md" % REVIEWS, setup_report("W1", "W2"))
-        r = self.repo.run("verify-setup", role="dev")
+        r = self.repo.run(*VERIFY_OK, role="dev")
         self.assertAccepted(r)
         self.assertIn("baseline.md", r.text)
         self.assertIn("[警告]", r.text)

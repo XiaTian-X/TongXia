@@ -92,7 +92,7 @@ CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交�
 | 命令 | 谁跑 | 何时 |
 |---|---|---|
 | `pair init` (CLI) | 人类或第三方 agent | 接入项目,一次 |
-| `pair.py verify-setup` | 结对的另一方 | 开工前,一次。含契约歧义审查 |
+| `pair.py verify-setup --drafter …` | 结对的另一方 | 开工前,一次。含契约歧义审查与起草人声明 |
 | `pair.py status` | 双方 | 每回合开头 |
 | `pair.py claim <ID>` | tester | 认领工作项 |
 | `pair.py handoff …` | 双方 | 每回合结尾。`changes` 用于评审打回和测试异议 |

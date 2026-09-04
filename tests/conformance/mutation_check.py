@@ -319,7 +319,7 @@ MUTATIONS = [
      "    naked = _normalize(text)"),
 
     ("拆掉起草人身份声明",
-     '    if not re.search(r"参与|起草|撰写", text):',
+     "    if args.drafter is None:",
      "    if False:"),
 
     ("拆掉基线说明的提醒",

@@ -1360,7 +1360,15 @@ def check_shaped_documents(root, cfg, entries, state, phase, verdict):
     written = {PurePosixPath(p).name: p for xy, p in entries
                if "D" not in xy and _review_top_level(cfg, p)}
 
-    def shape(name, sections, why):
+    # 归人类的那份要多给一条出路。命名检查(check_review_names)已经踩过这个
+    # 教训并写进了 docstring:只按当前回合判,会把人类留在工作区里的文件算到
+    # agent 头上,而它的唯一出路就变成改名或删掉**不是它写的东西**。
+    # `baseline.md` 是总表里唯一归人类的那份,同一条出路必须给它。
+    NOT_YOURS = ("\n\n**如果这个文件不是你写的,不要改、不要删,告诉人类。**\n"
+                 "%s 归人类写。人类在结对期间往评审目录放文件却没提交,\n"
+                 "就会变成这样 —— 见 INSTALL.md 的「人类介入的纪律」。")
+
+    def shape(name, sections, why, human_owned=False):
         rel = written.get(name)
         if rel is None:
             return None
@@ -1368,9 +1376,10 @@ def check_shaped_documents(root, cfg, entries, state, phase, verdict):
         if not miss:
             return None
         return ("拒绝交接 —— %s 缺少必需的小节:\n  - %s\n\n"
-                "需要这几节,每节正文至少 %d 字:\n%s\n\n%s"
+                "需要这几节,每节正文至少 %d 字:\n%s\n\n%s%s"
                 % (rel, "\n  - ".join(miss), MIN_NOTE_SECTION_CHARS,
-                   "\n".join("  ## " + x for x in sections), why))
+                   "\n".join("  ## " + x for x in sections), why,
+                   (NOT_YOURS % name) if human_owned else ""))
 
     # 异议:dev 在 impl 阶段打回测试。规则 2 早就写了三要素,却零强制。
     # 这里**要求文件必须存在**,不是"写了才查形状" —— 因为 verdict + phase
@@ -1403,7 +1412,8 @@ def check_shaped_documents(root, cfg, entries, state, phase, verdict):
             return r
 
     r = shape("baseline.md", BASELINE_SECTIONS,
-              "门禁套件被收窄之后,这份是「放弃了什么」的唯一留痕。")
+              "门禁套件被收窄之后,这份是「放弃了什么」的唯一留痕。",
+              human_owned=True)
     if r:
         return r
     return None
@@ -2745,9 +2755,16 @@ def cmd_verify_setup(root, cfg, args):
  有歧义就写下来,交给人类在开工前定稿。没有就明确写"无歧义",并说明你
  逐条核对过哪些 —— 空泛的一句"看过了没问题"不算。
 
- 写完后重新执行 verify-setup。在交出这份结论之前,校验不会通过,
- 也不能认领工作项。
-""" % (cfg["contract_file"], SETUP_REPORT_REL))
+ 结论里**逐节点名** —— 每个被工作项引用的小节都要在结论里出现过,
+ 泛泛一句"看过了没问题"正是这道门要挡的东西。
+
+ 写完后带上起草人声明重新执行(二选一,声明会写进提交正文):
+
+   python3 %s verify-setup --drafter other   # 我没参与契约起草
+   python3 %s verify-setup --drafter self    # 我参与了,结论证明力打折
+
+ 在交出这份结论之前,校验不会通过,也不能认领工作项。
+""" % (cfg["contract_file"], SETUP_REPORT_REL, PROG_HINT, PROG_HINT))
         die("尚未交出契约审查结论(%s 缺失或过短,至少 %d 字)。\n"
             "这是本步骤存在的主要理由,不能跳过。"
             % (SETUP_REPORT_REL, MIN_SETUP_REPORT_CHARS))
@@ -2783,14 +2800,21 @@ def cmd_verify_setup(root, cfg, args):
 
     # --- 起草人自审要说出来 --------------------------------------------------
     # 上一轮真实运行里那份结论开头自己写着"审查者:起草人本人,证明力打折"。
-    # 那是用真实运行换回来的观察 —— 把它从自觉变成必答一行。
-    if not re.search(r"参与|起草|撰写", text):
-        die("契约审查结论里要说明你有没有参与过这份契约的起草。\n\n"
-            "写一行就行,例如:\n"
-            "  - 我没有参与契约起草。\n"
-            "  - 我参与了契约起草,这份结论的证明力因此打折。\n\n"
+    # 那是用真实运行换回来的观察 —— 把它从自觉变成必答一项。
+    #
+    # **用参数,不在结论里搜关键词。** 这里适用 ADR-014 的同一条理由,而且
+    # 关键词版实测两头落空:「本结论作者未介入契约的编写」这种正确说法被拒,
+    # 正文里随便一个「参与」(哪怕说的是参与实现)却能放行。参数是结构。
+    # 声明进提交正文,读结论的人在 inbox 里必然看到 —— 和 --allow-deletion
+    # / --no-decision 同一手法:不是放行,是强制留痕。
+    if args.drafter is None:
+        die("还要声明你有没有参与过这份契约的起草,二选一:\n\n"
+            "  python3 %s verify-setup --drafter other   # 我没参与起草\n"
+            "  python3 %s verify-setup --drafter self    # 我参与了,结论证明力打折\n\n"
             "为什么要问:起草人审自己写的东西看不见自己的盲区。\n"
-            "这道门守的是唯一会致命的失败模式,读结论的人有权知道谁写的。")
+            "这道门守的是唯一会致命的失败模式,读结论的人有权知道谁写的。\n"
+            "声明会写进提交正文,不用你在结论里另写一句。"
+            % (PROG_HINT, PROG_HINT))
 
     # 本命令对外的承诺是"只读校验"。此处只提交它自己产生的东西:
     # 状态位与那份契约审查结论。曾经这里是 `git add -A` —— 那会把工作区里
@@ -2801,7 +2825,11 @@ def cmd_verify_setup(root, cfg, args):
     to_add = [STATE_REL, SETUP_REPORT_REL] + [
         p for _, p in changed_entries(root) if matches_any(p, cfg["shared_paths"])]
     git("add", "--", *sorted(set(to_add)), cwd=root)
-    git("commit", "-q", "-m", "chore(pair): 通过开工前校验,含契约审查结论", cwd=root)
+    drafter_line = ("起草人自审: 是 —— 审查者参与过契约起草,本结论证明力打折"
+                    if args.drafter == "self"
+                    else "起草人自审: 否 —— 审查者未参与契约起草")
+    git("commit", "-q", "-m", "chore(pair): 通过开工前校验,含契约审查结论",
+        "-m", drafter_line, cwd=root)
 
     stray = [p for xy, p in changed_entries(root)
              if "D" not in xy and not matches_any(p, cfg["ignore_paths"])
@@ -2816,6 +2844,7 @@ def cmd_verify_setup(root, cfg, args):
 
     print()
     print("  契约审查结论已收到(%s,%d 字)。" % (SETUP_REPORT_REL, len(text)))
+    print("  %s" % drafter_line)
     print("  开工前校验全部通过,现在可以认领工作项了。")
     print()
     return 0
@@ -2829,7 +2858,10 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("init", help="初始化本仓库(结对开始之前跑)")
-    sub.add_parser("verify-setup", help="开工前只读校验,由结对的另一方跑")
+    p_vs = sub.add_parser("verify-setup", help="开工前只读校验,由结对的另一方跑")
+    p_vs.add_argument("--drafter", choices=("self", "other"), default=None,
+                      help="你有没有参与这份契约的起草:self=参与过(结论证明力打折)"
+                           " / other=没参与。声明会写进提交正文")
     sub.add_parser("status", help="我是谁 / 轮到谁 / 红绿 / 该干什么")
 
     p_claim = sub.add_parser("claim", help="认领 PLAN 里的一个工作项")

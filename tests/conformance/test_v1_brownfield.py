@@ -7,8 +7,8 @@
 
 import unittest
 
-from harness import (CONTRACT_TEMPLATE, EVIDENCE, PLAN_TEMPLATE, BareRepo,
-                     PairTestCase, setup_report, with_loc)
+from harness import (CONTRACT_TEMPLATE, EVIDENCE, PLAN_TEMPLATE, VERIFY_OK,
+                     BareRepo, PairTestCase, setup_report, with_loc)
 
 GREEN_TEST = ("import unittest\n\n"
               "class T(unittest.TestCase):\n"
@@ -79,7 +79,7 @@ class TestContractProvenance(PairTestCase):
     def test_没写依据的小节在开工前被拦下(self):
         self.repo.set_plan(PLAN_TEMPLATE, NO_PROVENANCE_CONTRACT)
         self.repo.write("docs/reviews/setup-verification.md", setup_report("W1", "W2"))
-        r = self.repo.run("verify-setup", role="dev")
+        r = self.repo.run(*VERIFY_OK, role="dev")
         self.assertRefused(r, "没写 `依据`", "人类定稿")
 
     def test_开工前只警告不阻断(self):
@@ -88,7 +88,7 @@ class TestContractProvenance(PairTestCase):
         self.repo.set_plan(COVER_PLAN.replace("[cover]", "[feature]"),
                            UNVERIFIED_CONTRACT)
         self.repo.write("docs/reviews/setup-verification.md", setup_report("W1", "W2"))
-        r = self.repo.run("verify-setup", role="dev")
+        r = self.repo.run(*VERIFY_OK, role="dev")
         self.assertAccepted(r)
         self.assertIn("不可断言", r.text)
         self.assertIn("[警告]", r.text)
@@ -192,7 +192,7 @@ class TestRefactorNeedsSafetyNet(PairTestCase):
   - 验收标准:行为不变
 """)
         self.repo.write("docs/reviews/setup-verification.md", setup_report("W1", "W2"))
-        r = self.repo.run("verify-setup", role="dev")
+        r = self.repo.run(*VERIFY_OK, role="dev")
         self.assertNotIn("没有指向契约", r.text)
         self.assertAccepted(self.repo.run("claim", "R1", role="tester"))
 
@@ -338,7 +338,7 @@ class TestContractSectionParsing(PairTestCase):
 """
         self.repo.set_plan(PLAN_TEMPLATE, contract)
         self.repo.write("docs/reviews/setup-verification.md", setup_report("W1", "W2"))
-        r = self.repo.run("verify-setup", role="dev")
+        r = self.repo.run(*VERIFY_OK, role="dev")
         self.assertNotIn("多个标题都叫", r.text)
         self.assertAccepted(r)
         self.assertAccepted(self.repo.run("claim", "W1", role="tester"))

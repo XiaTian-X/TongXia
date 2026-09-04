@@ -68,14 +68,19 @@ python3 .agents/skills/pair-protocol/scripts/pair.py status
 结对开始前,由**还没动手的那一方**跑一次:
 
 ```
-python3 .agents/skills/pair-protocol/scripts/pair.py verify-setup
+python3 .agents/skills/pair-protocol/scripts/pair.py verify-setup --drafter self|other
 ```
 
 它检查配置自洽、基线全绿、PLAN 格式、契约覆盖度。
 
 **它还要求一件只有你能做的事:通读契约,把你认为有歧义的条款写进
-`docs/reviews/setup-verification.md`。** 交出这份结论之前校验不会通过,
-也不能 `claim` —— 脚本查不了歧义,所以它至少强制你交出一份结论。
+`docs/reviews/setup-verification.md`,并且逐节点名** —— 每个被工作项引用的
+契约小节都要在结论里出现过。交出这份结论之前校验不会通过,也不能 `claim`
+—— 脚本查不了歧义,所以它至少强制你交出一份结论。
+
+`--drafter` 必填:`other` = 我没参与契约起草,`self` = 我参与了、这份结论的
+证明力因此打折。**这句话不写在结论正文里,脚本不看措辞、只看参数。**
+声明进提交正文,对方必然看到。
 
 契约歧义是这套机制唯一会致命的失败模式:tester 测 `login() -> token`、
 dev 写 `authenticate() -> Session`,两边各自都"对",合起来是废的。
