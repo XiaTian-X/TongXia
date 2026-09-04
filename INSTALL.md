@@ -24,14 +24,21 @@ Goose、OpenCode、Amp、Factory、Junie、Kiro 等都从这里扫描)。**Claud
 `.claude/skills/`**,所以要一条软链接指向同一份真源。Windows 上创建软链接需要
 管理员权限或开发者模式,CLI 会自动退化成桩文件。
 
-`init` 会探测技术栈和布局、写配置、铺各家入口文件、起草 PLAN 与 CONTRACT 骨架,
+`pair.py init` 会探测技术栈和布局、写配置、铺各家入口文件、起草 PLAN 与 CONTRACT 骨架,
 并且**幂等** —— 已存在的文件一律跳过,可以反复跑。
 
-**一处不会自愈的地方:** 重跑 `pair init` 会整体覆盖协议目录
-(`.agents/skills/pair-protocol/`),但**不会更新已经存在的
-`docs/DECISIONS.md`** —— 铺文件那一步对已存在的文件一律跳过。所以存量项目
-重跑之后拿到的是新的 `SKILL.md`、`rules.md`、`pair.py`,和**旧的决策记录
-文件头**。
+**一处不会自愈的地方。** 先分清两个不同的 `init`:
+
+- **`pair init`**(bootstrap CLI)会**整体覆盖协议目录**
+  (`.agents/skills/pair-protocol/`)—— `cli/pair_bootstrap/__init__.py:65` 用的是
+  `shutil.copytree(skill, dest, dirs_exist_ok=True)`;覆盖完它再转调 `pair.py init`。
+- **`pair.py init`**(协议自己的初始化)**完全不碰协议目录** —— `grep -n copytree pair.py`
+  零命中;它铺的是项目侧文件,且对已存在的文件一律跳过(`pair.py:2341-2348` 的 `put()`)。
+
+两个 `init` 都**不会更新已经存在的 `docs/DECISIONS.md`**。所以按上面那条手工路径
+(`cp -R` + `pair.py init`)接入的存量项目要注意:新的 `SKILL.md`、`rules.md`、
+`pair.py` 是你自己 `cp -R` 那一步铺的,重跑 `pair.py init` 不会替你重铺协议目录;
+而决策记录的文件头无论走哪条路都还是旧的。
 
 影响面很窄:文件头只写"为什么这么记",新旧两版的操作性规则完全一致
 (四个字段缺一不可、追加式、单条 1500 字符上限、故意没有"分析"字段、
@@ -41,7 +48,8 @@ Goose、OpenCode、Amp、Factory、Junie、Kiro 等都从这里扫描)。**Claud
 
 要统一文件头只能由人类落笔。决策文件受**追加式门禁**保护:agent 改动已经
 写下的内容会被 `handoff` 判为伪造共识(与手改 `state.json` 同级)而拒绝交接,
-协议内没有出路,而且每次重跑 `init` 都不会修它。
+协议内没有出路,而且两个 `init` 都不会修它(`pair.py init` 跳过已存在的文件,
+`pair init` 只覆盖协议目录、不碰 `docs/`)。
 
 ## 基线必须全绿
 

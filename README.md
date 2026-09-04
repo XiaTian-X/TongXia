@@ -119,7 +119,7 @@ CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交�
 ## 开发
 
 ```bash
-python3 tests/conformance/run.py              # 全量,并行(8 核约 35 秒)
+python3 tests/conformance/run.py              # 全量,并行(8 进程约 44 秒)
 python3 tests/conformance/run.py --changed    # 只跑与本次改动相关的
 python3 tests/conformance/run.py memory       # 只跑某几组
 ```
@@ -143,9 +143,10 @@ python3 tests/conformance/mutation_check.py   # 约 70 秒(含它自己跑的基
 python3 examples/make-demo.py /tmp/pair-demo
 ```
 
-git 推不出提交者身份时(没配 `user.*`,hostname 又不是 FQDN),它会给样板仓库
-的 `.git/config` 写一份兜底身份 `conformance` / `conformance@test`——只碰这个
-仓库,不碰全局配置,已有身份的机器一字不写。想换掉就在样板仓库里跑
+git 推不出 author 或 committer 身份时(没配 `user.*`,hostname 又不是 FQDN),
+它会给样板仓库的 `.git/config` 写一份兜底身份 `conformance` /
+`conformance@test`——只碰这个仓库,不碰全局配置,已有身份的机器一字不写
+(两条 ident 都推得出才不写)。想换掉就在样板仓库里跑
 `git config user.email 你的邮箱`。
 
 ## 已知边界
