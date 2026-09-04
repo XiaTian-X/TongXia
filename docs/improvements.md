@@ -409,7 +409,7 @@ docstring 以及 ADR-022 的禁令直接矛盾。`:98` 的 `assertIn("互相点�
 最该警惕的失效模式"那段机制描述(`pair.py:2041-2043`)是更稳的锚;
 同步 `:4` 的 docstring。
 
-### 3. 四处"防漂移正是这个项目从头到尾在做的事"的口径同步
+### 3. 四处"防漂移正是这个项目从头到尾在做的事"的口径同步  ✅ 已解决
 
 - `.agents/skills/pair-protocol/scripts/pair.py:1875-1876`
   (`cmd_whose_turn` 的 docstring)
@@ -417,7 +417,16 @@ docstring 以及 ADR-022 的禁令直接矛盾。`:98` 的 `assertIn("互相点�
 - `cli/pair_bootstrap/__init__.py:12-13`
 - `tests/conformance/test_v1_shipped.py:125`
 
-本轮人类裁决为**不改**,已在 ADR-022 的 `代价` 段登记为 knowingly 保留。
+**已改。** 四处都换成了"两份判定迟早不一致,门禁看着还在、实际拦不住" ——
+说的是同一个机制,但把它摆回手段层。改动逐处保持行数不变,所以
+`CITED_LINE_COUNTS` 那道绊线不受影响,既有行号引用也没有错位。
+
+同一轮还补了两处 ADR-022 的 sweep 漏掉的:`docs/contributing.md` 开篇
+把"防漂移"放在了目的槽位(**未登记过**),以及 `docs/README.md` 与
+`docs/troubleshooting.md` 里两处"北极星"——那个词只在 ADR-022 定义过,
+两处引用都是否定式用法且没有链回定义,换成了项目自己的词。
+
+ADR-006、ADR-015 里的同类表述按追加式纪律不改写,由 ADR-022 在顶层解释。
 
 **为什么它值得排在前面:** 前三处不是历史记录,而是**活的分发物** ——
 `pyproject.toml` 的 `force-include` 把整个 skill 目录打进 wheel,

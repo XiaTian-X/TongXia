@@ -9,8 +9,8 @@
     1. 把 .agents/skills/pair-protocol/ 复制进目标项目 + 建 .claude/skills 软链接
     2. 调用刚复制过去的 pair.py init,把后续全部交出去
 
-这条约束是刻意的:一旦 CLI 里出现协议逻辑,它就会和 skill 漂移,
-而防漂移正是这个项目从头到尾在做的事。
+这条约束是刻意的:一旦 CLI 里出现协议逻辑,它就会和 skill 漂移 ——
+两份判定不一致时门禁看着还在、实际拦不住,交付会悄悄变废。
 """
 
 import argparse

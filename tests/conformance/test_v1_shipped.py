@@ -122,7 +122,7 @@ class TestDriverKeepsATrace(unittest.TestCase):
 
 class TestDriverHasNoProtocolLogic(unittest.TestCase):
     """和 CLI 那条约束同源:判定一旦在驱动器里复制一份,它就成了协议的
-    第二个实现,而防漂移是这个项目从头到尾在做的事。"""
+    第二个实现,而两份判定迟早不一致 —— 门禁看着还在、实际拦不住。"""
 
     FORBIDDEN = ("PHASE_OWNER", "DEADLOCK_LIMIT", "REVIEW_PHASES", "FLOWS",
                  "setup_verified", "plan_all_done", "item_type", "frozen_paths")
