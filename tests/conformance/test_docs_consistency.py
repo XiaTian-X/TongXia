@@ -31,6 +31,44 @@ NORMATIVE = ([SKILL / "SKILL.md", SKILL / "references" / "rules.md",
 PROPOSALS = {"improvements.md"}
 
 
+# 文档里用 `文件.py:行号` 引用过的源码文件。basename 必须唯一 —— 重名了就
+# 认不出引用指的是哪一个,下面的 setUpModule 级断言会直接红。
+CITED = {p.name: p for r in (SKILL / "scripts", REPO / "tests" / "conformance",
+                             REPO / "examples", REPO / "cli" / "pair_bootstrap")
+         for p in sorted(r.glob("*.py"))}
+
+# 被引文件的行数。变了就说明所有指向它的行号引用都可能错位 —— 见
+# test_被引文件的行数没变过。**改这里之前先逐条核对引用,别只改数字。**
+CITED_LINE_COUNTS = {
+    "pair.py": 2903,
+    "harness.py": 401,
+    "mutation_check.py": 681,
+    "make-demo.py": 94,
+    "drive.py": 212,
+    "__init__.py": 102,
+    "test_v1_shipped.py": 149,
+    "test_v1_report.py": 116,
+    "test_v1_review_evidence.py": 112,
+}
+
+# `pair.py:1799` / `harness.py:204-205`。反引号可有可无 —— 两种写法文档里都有。
+_CITE_RE = re.compile(r"([A-Za-z_][\w\-]*\.py):(\d+)(?:-(\d+))?")
+
+
+def _citations(doc):
+    """(文件名, 起, 止, 原文) —— 只认得出 CITED 里的文件。"""
+    for m in _CITE_RE.finditer(doc):
+        if m.group(1) in CITED:
+            a = int(m.group(2))
+            yield m.group(1), a, int(m.group(3) or a), m.group(0)
+
+
+def _docs_with_citations():
+    """提案文档也算:它的行号引用同样指向**当前**的代码。"""
+    for path in NORMATIVE:
+        yield path, path.read_text(encoding="utf-8")
+
+
 def _load_pair():
     spec = importlib.util.spec_from_file_location("pair_under_test", PAIR_PY)
     mod = importlib.util.module_from_spec(spec)
@@ -180,6 +218,81 @@ class TestDocsConsistency(unittest.TestCase):
                     if anchor.lower() not in slugs:
                         broken.append("%s -> %s(锚点不存在)" % (_rel(path), target))
         self.assertFalse(broken, "失效的文档链接:\n  " + "\n  ".join(broken))
+
+    # --- 行号引用 -----------------------------------------------------
+    def test_文档里的行号引用都落在文件内(self):
+        """`pair.py:1799` 这类引用是**硬编码的坐标**,最起码得指到文件里面。"""
+        bad = []
+        for path, doc in _docs_with_citations():
+            for name, a, b, _ in _citations(doc):
+                src = CITED[name].read_text(encoding="utf-8").splitlines()
+                if b > len(src):
+                    bad.append("%s -> %s:%d-%d(该文件只有 %d 行)"
+                               % (_rel(path), name, a, b, len(src)))
+        self.assertFalse(bad, "指到文件外面的行号引用:\n  " + "\n  ".join(bad))
+
+    def test_被引文件的行数没变过(self):
+        """行号引用的**绊线**。
+
+        被引文件上方插一行,下面每一处引用就都指向别处,而在这条出现之前
+        没有任何东西会红 —— `fc5c212` 一次让 7 处同时失效,全部是评审证据
+        级别的锚点(这个仓库的裁决门禁本身就要求 `路径:行号`)。
+
+        **为什么不比对内容:** 试过,不成立。引用旁边的反引号片段常常是
+        *描述*而不是原文(`put()` vs `def put(rel, content):`、`git commit`
+        vs `subprocess.run(("git",) + args, ...)`),按片段比对会误伤。
+
+        所以钉的是**触发条件**:被引文件的行数一变,就说明每一处引用都
+        *可能*已经错位,红并把它们当前指到的内容打出来,人五秒钟核完。
+        **它是绊线,不是校验器** —— 行数不变的内容修改抓不到,而且逃逸口
+        (不核对就改数字)与变异缓存的基线指纹同级。别把它读成"行号引用
+        已经有脚本守着了"。
+        """
+        drifted = []
+        for name, expect in sorted(CITED_LINE_COUNTS.items()):
+            actual = len(CITED[name].read_text(encoding="utf-8").splitlines())
+            if actual != expect:
+                drifted.append((name, expect, actual))
+        if not drifted:
+            return
+        lines = []
+        for name, expect, actual in drifted:
+            src = CITED[name].read_text(encoding="utf-8").splitlines()
+            lines.append("%s:%d 行 -> %d 行,受影响的引用:" % (name, expect, actual))
+            for path, doc in _docs_with_citations():
+                for cname, a, b, raw in _citations(doc):
+                    if cname != name:
+                        continue
+                    body = " / ".join(x.strip() for x in src[a - 1:b] if x.strip())
+                    lines.append("    %s 的 %s   现在指到:%s"
+                                 % (_rel(path), raw, body[:70] or "(空行)"))
+        self.fail("被引文件的行数变了,行号引用可能已经失效 ——\n  "
+                  + "\n  ".join(lines)
+                  + "\n\n逐条核对上面每一处指到的内容,改对之后更新 "
+                    "CITED_LINE_COUNTS。\n不核对就只改数字,这条检查等于没有。")
+
+    # --- 散文里的计数 -------------------------------------------------
+    def test_散文里的_ADR_与不变量计数与代码一致(self):
+        """散文里那两个数字(N 条 ADR / N 条不变量)漂起来是静默的。
+
+        `fc5c212` 追加了一条 ADR 而两处计数一字未动,就是这么漏的。
+        提案文档(improvements.md)不算:它会引用过去与将来的计数。
+        """
+        adrs = (REPO / "docs" / "design-decisions.md").read_text(encoding="utf-8")
+        want = {"条 ADR": len(re.findall(r"^## ADR-", adrs, re.M)),
+                "条不变量": len(pair.HANDOFF_INVARIANTS)}
+        bad = []
+        for path in NORMATIVE:
+            if path.name in PROPOSALS:
+                continue
+            doc = path.read_text(encoding="utf-8")
+            for unit, n in want.items():
+                for m in re.finditer(r"(\d+)\s*%s" % unit, doc):
+                    if int(m.group(1)) != n:
+                        bad.append("%s 写的是「%s」,实际 %d %s"
+                                   % (_rel(path), m.group(0), n, unit))
+        self.assertFalse(bad, "散文里的计数与代码不一致:\n  "
+                              + "\n  ".join(bad))
 
     # --- 变异点 -------------------------------------------------------
     @unittest.skipIf(os.environ.get("PAIR_MUTATION_RUN"),
