@@ -28,6 +28,16 @@ def ensure_identity(target):
     提交 —— `verify-setup` 与 `handoff` 都会提交,`test_v1_shipped.py` 断言的
     正是"出厂的样板项目必须能通过全部脚本检查"。
 
+    **两个 ident 都要探。** `git commit` 要 author 与 committer 两份身份,
+    两份可以各自独立来源(环境变量、各级配置、自动推导),所以只探
+    `GIT_AUTHOR_IDENT` 不够:只注入 `GIT_AUTHOR_*` 而没注入
+    `GIT_COMMITTER_*`、各级配置又无 `user.*` 的机器上,author 探测 rc=0 而
+    committer 探测 rc=128(`fatal: unable to auto-detect email address`),
+    于是一字不写、随后 `git commit` 照样 rc=128。所以**任一**探测失败就写
+    兜底。写进去的 `user.*` 对两个 ident 都生效,但已注入的那一个仍然优先
+    —— 实测 author 保持 `Env <env@example.com>`,只有 committer 落到兜底上,
+    不会覆盖人类已经给出的身份。
+
     **只在探测失败时才写。** 这个目录人类可能真的留着继续用;无条件塞一份假
     身份进去,他之后的每个提交都会被错误归属 —— 那比原来响亮地失败更坏。
     取值照抄 `tests/conformance/harness.py` 里 `PairRepo`/`BareRepo` 的既有
@@ -35,9 +45,15 @@ def ensure_identity(target):
     `test_v1_shipped.py` 那处被剥成 {PAIR_ROLE, PATH} 的 env —— 仓库级身份
     既不依赖 HOME 也不依赖环境变量。
     """
-    probe = subprocess.run(("git", "var", "GIT_AUTHOR_IDENT"), cwd=target,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    if probe.returncode == 0:
+    # for...else:两条探测都 rc=0 才走 else 里的 return(一字不写);
+    # 任一条 rc≠0 就 break 出循环、落到下面写兜底。
+    for var in ("GIT_AUTHOR_IDENT", "GIT_COMMITTER_IDENT"):
+        probe = subprocess.run(("git", "var", var), cwd=target,
+                               stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL)
+        if probe.returncode != 0:
+            break
+    else:
         return
     for args in (("config", "user.email", "conformance@test"),
                  ("config", "user.name", "conformance")):
