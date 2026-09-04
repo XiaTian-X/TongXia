@@ -428,6 +428,11 @@ docstring 以及 ADR-022 的禁令直接矛盾。`:98` 的 `assertIn("互相点�
 
 ADR-006、ADR-015 里的同类表述按追加式纪律不改写,由 ADR-022 在顶层解释。
 
+**并且给这一类加了绊线**(`test_docs_consistency.py` 两条):入口文档开头
+必须有交付表述;手段词不得出现在目的槽位,散文与随包分发的 .py 都查。
+三份记录类文档豁免。三种失效方式都做过反向自证。这条此前**没有任何机器
+检查** —— ADR-022 的 sweep 之所以漏掉五处,正是因为它靠的是 grep 与记性。
+
 **为什么它值得排在前面:** 前三处不是历史记录,而是**活的分发物** ——
 `pyproject.toml` 的 `force-include` 把整个 skill 目录打进 wheel,
 `pair init` 又用 `copytree` 把它复制进每个消费项目,`cli/pair_bootstrap`

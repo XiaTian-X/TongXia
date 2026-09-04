@@ -30,6 +30,46 @@ NORMATIVE = ([SKILL / "SKILL.md", SKILL / "references" / "rules.md",
              + sorted((REPO / "docs").glob("*.md")))
 PROPOSALS = {"improvements.md"}
 
+# --- 定位口径 -------------------------------------------------------------
+# 目的层只有一种表述:共同把 PLAN 里的工作项交付出来。手段词(防漂移 /
+# 防点头 / 对抗)出现在目的槽位就是定位漂移 —— ADR-022 摆正过一次,
+# 而它自己的 sweep 漏了五处,其中三处会随 wheel 扩散到每个接入的项目。
+POSITION_ENTRIES = [REPO / "README.md", SKILL / "SKILL.md",
+                    REPO / "docs" / "README.md",
+                    REPO / "docs" / "design-philosophy.md",
+                    REPO / "docs" / "contributing.md"]
+# 定位要在开头,不能被挤到文档深处 —— 窗口就是这条的全部意义。
+POSITION_HEAD_LINES = 40
+DELIVERY_WORDS = ("交付", "做完", "做出来", "完成")
+
+# 豁免:这三份是记录,不是主张。理由见 test_手段词没有出现在目的槽位。
+POSITION_EXEMPT = {"design-decisions.md", "improvements.md", "dogfood-run-1.md"}
+
+MEANS = "防漂移|防点头|防互相点头|对抗"
+MEANS_IN_PURPOSE_SLOT = tuple(re.compile(p) for p in (
+    r"这个项目(?:在做|要做成)的事[^。\n]{0,20}(?:%s)" % MEANS,
+    r"(?:%s)[^。\n]{0,12}(?:正是|就是)这个项目" % MEANS,
+    r"(?:协议|项目)存在的(?:全部)?(?:理由|目的|意义)[^。\n]{0,12}(?:%s)" % MEANS,
+    r"从头到尾在(?:做|防)的事",
+))
+
+
+def _positioning_scope():
+    """查散文,也查随包分发的代码 —— 漏掉的四处里有三处正是在 .py 里。"""
+    for p in NORMATIVE:
+        if p.name not in POSITION_EXEMPT:
+            yield p
+    for p in [SKILL / "scripts" / "pair.py", SKILL / "scripts" / "drive.py",
+              REPO / "cli" / "pair_bootstrap" / "__init__.py"]:
+        yield p
+    for p in sorted((SKILL / "references").glob("*.md")):
+        yield p
+    for p in sorted((REPO / "tests" / "conformance").glob("*.py")):
+        # 本文件除外:它必须原样含有这些句式才能拿它们去查别人。
+        # 同 mutation_check.py 必须含有被变异的源码片段,是同一类自指豁免。
+        if p.resolve() != Path(__file__).resolve():
+            yield p
+
 
 # 文档里用 `文件.py:行号` 引用过的源码文件。basename 必须唯一 —— 重名了就
 # 认不出引用指的是哪一个,下面的 setUpModule 级断言会直接红。
@@ -270,6 +310,70 @@ class TestDocsConsistency(unittest.TestCase):
                   + "\n  ".join(lines)
                   + "\n\n逐条核对上面每一处指到的内容,改对之后更新 "
                     "CITED_LINE_COUNTS。\n不核对就只改数字,这条检查等于没有。")
+
+    # --- 定位口径 -----------------------------------------------------
+    def test_入口文档都写明了交付目的(self):
+        """定位的**正向锚**:每个入口都得在开头说清楚这套协议是干什么的。
+
+        ADR-022 把层级摆正(目的=共同交付,防点头/防漂移=手段),但那一轮是
+        人工 sweep。这条钉的是"目的层的话没被删掉、没被挤到文档深处"。
+
+        反向自证:删掉 design-philosophy 开头那句交付表述,本条变红。
+        """
+        bad = []
+        for path in POSITION_ENTRIES:
+            head = "\n".join(
+                path.read_text(encoding="utf-8").splitlines()[:POSITION_HEAD_LINES])
+            if "PLAN.md" in head and any(w in head for w in DELIVERY_WORDS):
+                continue
+            bad.append(_rel(path))
+        self.assertFalse(
+            bad,
+            "这些入口文档的前 %d 行里没有交付目的的表述:\n  %s\n\n"
+            "每个入口都要在开头说明:两个 agent 共同把 `PLAN.md` 里的工作项"
+            "交付出来。\n判据很松 —— 提到 PLAN.md,并出现 %s 之一。"
+            % (POSITION_HEAD_LINES, "\n  ".join(bad), "/".join(DELIVERY_WORDS)))
+
+    def test_手段词没有出现在目的槽位(self):
+        """定位的**反向绊线**。
+
+        ADR-022 的 sweep 漏掉了 `docs/contributing.md` 的第一句
+        ("这个项目在做的事,一句话概括:防漂移")——因为那轮搜的是"防点头",
+        没搜"防漂移":两个不同的手段被放进同一个槽位,只查了一个。
+        四处活的分发物(drive.py / cli / cmd_whose_turn / test_v1_shipped)
+        同样漏了一整轮,而前三处会被打进 wheel、再复制进每个接入的项目。
+
+        **这和 ADR-014 / ADR-024「不解析散文」不冲突,因为被查的东西不一样。**
+        那两条管的是 **agent 为了过门禁而产出的文字** —— 换个说法就绕过去,
+        而且会把协议绑死在一种语言上。这里查的是**本仓库自己的文档**,
+        由本仓库的测试跑,没有人在试图绕过它:失效方式是**忘了改**,不是规避。
+        同 `CITED_LINE_COUNTS` 一样,**它是绊线,不是校验器** —— 换一种没列进
+        表里的句式照样能漂,别把它读成"定位已经有脚本守着了"。
+
+        **豁免的三份是记录,不是主张:** design-decisions.md 里的既有 ADR
+        按追加式纪律不改写(由 ADR-022 在顶层解释)、improvements.md 描述的是
+        这个问题本身、dogfood-run-1.md 是运行报告(已在头部加按语)。
+
+        反向自证:把 contributing.md 开篇改回旧写法、把 drive.py 里那句旧口径
+        塞回去(那是随 wheel 分发的那一类),两次都变红。
+        """
+        hits = []
+        for path in _positioning_scope():
+            text = path.read_text(encoding="utf-8")
+            for rx in MEANS_IN_PURPOSE_SLOT:
+                for m in rx.finditer(text):
+                    line = text[:m.start()].count("\n") + 1
+                    hits.append("%s:%d  %s" % (_rel(path), line,
+                                               m.group(0).replace("\n", " ")))
+        self.assertFalse(
+            hits,
+            "手段被放进了目的槽位:\n  %s\n\n"
+            "目的是**两个 agent 共同把 PLAN 里的工作项交付出来**;\n"
+            "防漂移、防点头、对抗性都是保障交付质量的手段(ADR-022)。\n"
+            "把这句话改成说同一个机制、但摆回手段层 —— 例如\n"
+            "  「两份判定迟早不一致,门禁看着还在、实际拦不住」。\n"
+            "如果这处是历史记录(既有 ADR / 运行报告),把它加进豁免名单,\n"
+            "并说明为什么它是记录而不是主张。" % "\n  ".join(hits))
 
     # --- 散文里的计数 -------------------------------------------------
     def test_散文里的_ADR_与不变量计数与代码一致(self):

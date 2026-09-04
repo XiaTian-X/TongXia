@@ -275,6 +275,13 @@ INSTALL.md 的 pair.py:2352-2359   现在指到:def put(rel, content): / ...
 
 ## 文档纪律
 
+- **定位口径有绊线守着。** 入口文档(README、SKILL.md、docs/README、
+  design-philosophy、本文)的**开头**必须写明目的:两个 agent 共同把
+  `PLAN.md` 里的工作项交付出来;而"防漂移""防点头""对抗"这类**手段词
+  不能出现在目的槽位**(见 [ADR-022](design-decisions.md))。
+  `test_docs_consistency.py` 的两条检查会红。既有 ADR、improvements、
+  运行报告豁免 —— 它们是记录,不是主张。
+  **它是绊线不是校验器:** 换一种没列进表里的句式照样能漂。
 - **全部 md。** 目录见 [docs/README.md](README.md)。
 - **一件事只在一个地方说清楚,别处链过去。** 现在的分工:
   为什么 → `design-philosophy.md`;是什么 → `protocol-spec.md`;
