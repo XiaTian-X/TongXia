@@ -5,7 +5,7 @@
 单文件,仅依赖 Python 3 标准库。用法:
 
     python3 pair.py init [目标目录]     # 初始化(结对开始之前跑)
-    python3 pair.py verify-setup        # 另一方开工前的只读校验
+    python3 pair.py verify-setup --drafter self|other  # 另一方开工前的只读校验
     python3 pair.py status
     python3 pair.py claim W1
     python3 pair.py handoff "说明"
@@ -899,7 +899,7 @@ PHASE_BRIEF = {
 
   【裁决必须带证据】先找问题,再决定通过与否。该挑的问题要真挑出来:
   敷衍的"看起来不错"会让两份努力合起来仍是废的。通过 -> 交出你具体查过
-  哪些地方、为什么认为那里没问题;打回 -> 指到 路径:行号。为了显得没在
+  哪些地方、为什么认为那里没问题;打回 -> 指到路径:行号。为了显得没在
   点头而制造一次打回,同样失真。
 
   详情写进:%(review_file)s
@@ -923,7 +923,7 @@ PHASE_BRIEF = {
 
   【裁决必须带证据】先找问题,再决定通过与否。该挑的问题要真挑出来:
   敷衍的"看起来不错"会让两份努力合起来仍是废的。通过 -> 交出你具体查过
-  哪些地方、为什么认为那里没问题;打回 -> 指到 路径:行号。为了显得没在
+  哪些地方、为什么认为那里没问题;打回 -> 指到路径:行号。为了显得没在
   点头而制造一次打回,同样失真。
 
   详情写进:%(review_file)s
@@ -1062,7 +1062,7 @@ def cmd_status(root, cfg, args):
         print()
         print(">>> 尚未通过开工前校验。<<<")
         print("结对的一方(通常是还没动手的那个)需要先跑:")
-        print("  python3 %s verify-setup" % PROG_HINT)
+        print("  python3 %s verify-setup --drafter self|other" % PROG_HINT)
         print("在此之前不能认领工作项。")
 
     # 轮到自己就写,与后面还打不打印阶段简报无关 —— PLAN 全部完成时
@@ -1182,7 +1182,8 @@ def cmd_claim(root, cfg, args):
             % (state["item"], state["phase"]))
     if cfg["require_setup_verification"] and not state["setup_verified"]:
         die("尚未通过开工前校验,不能认领工作项。\n"
-            "请让结对的另一方先跑:python3 %s verify-setup" % PROG_HINT)
+            "请让结对的另一方先跑:python3 %s verify-setup --drafter self|other"
+            % PROG_HINT)
 
     items = parse_plan(root, cfg)
     if not items:
@@ -2409,7 +2410,7 @@ def cmd_init(root, cfg, args):
     print("  1. 填写 docs/PLAN.md 的工作项(格式:- [ ] **W1** [feature] — 标题)")
     print("  2. 填写 docs/CONTRACT.md —— 这是承重墙,别偷懒")
     print("  3. 提交,然后让结对的一方跑:")
-    print("       python3 %s verify-setup" % PROG_HINT)
+    print("       python3 %s verify-setup --drafter self|other" % PROG_HINT)
     print()
     return 0
 
