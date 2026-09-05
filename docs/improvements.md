@@ -515,7 +515,7 @@ ADR-006、ADR-015 里的同类表述按追加式纪律不改写,由 ADR-022 在�
 
 ### 1. `2a32b5f` 新增的基线预检闸零测试覆盖
 
-`mutation_check.py:593` 的 `precheck_no_baseline` 与 `:463` 的
+`mutation_check.py:596` 的 `precheck_no_baseline` 与 `:466` 的
 `isolated_copy`,在 `tests/conformance/test_mutation_tooling.py` 里
 **0 命中**;作为对照,同一次提交要守的另一道闸 `baseline_verified` 有
 **5 处**(`:90`、`:91`、`:94`、`:96`、`:99`)。14 条全绿**不等于**新闸被测住:
@@ -613,7 +613,7 @@ rc=0 但 `_ids` 抓到了 FAIL 行也要拒。这条最容易被写漏,因为直
 
 ### 2. `MAX_CACHED = 1` 与缓存里实际抓手数漂移
 
-三方口径一致:`mutation_check.py:357` 的 `MAX_CACHED = 1`、`:351-356` 的
+三方口径一致:`mutation_check.py:360` 的 `MAX_CACHED = 1`、`:354-359` 的
 设计注释、`docs/contributing.md:71-74` 的"每个变异点只记**一个**抓手"。
 但实测 `tests/conformance/mutation-cache.json` 里 70 条的抓手个数分布是
 `{1: 46, 2: 9, 3: 7, 4: 8}`,即 **24/70 条有 2~4 个抓手**,与"只记一个"不符。
@@ -754,7 +754,7 @@ wheel 与 `pair init` 扩散到消费项目,不像本仓文档只影响这里。
 覆盖范围内,改它会让刚在 `ea5344e` 刷新的基线指纹重新失配,需重跑
 约 70 秒并追加一次缓存提交,不划算。
 
-### 8. `mutation_check.py:369-372` 的注释把归因前提说得过强
+### 8. `mutation_check.py:372-375` 的注释把归因前提说得过强
 
 那段注释写的是:预检的失败集"为空则两条路径的 rc≠0 都**必然**由变异
 引起"。成立需要的条件比"必然"多:
