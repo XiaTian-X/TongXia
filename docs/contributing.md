@@ -194,7 +194,7 @@ committer 探测 rc=128,只探一条就会一字不写、随后 commit 照样失
 文件的行数,一变就红,并把每一处引用**当前指到的内容**打出来 ——
 
 ```
-INSTALL.md 的 pair.py:2352-2359   现在指到:def put(rel, content): / ...
+INSTALL.md 的 pair.py:2367-2374   现在指到:def put(rel, content): / ...
 ```
 
 逐条看一眼、改对,再更新 `CITED_LINE_COUNTS`。

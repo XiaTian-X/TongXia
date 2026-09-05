@@ -406,12 +406,12 @@ docstring 以及 ADR-022 的禁令直接矛盾。`:98` 的 `assertIn("互相点�
 原因只是一次散文替换。
 
 **建议:** 改钉不会随口径漂移的结构句 —— `cmd_report` 打印的"这是手段层
-最该警惕的失效模式"那段机制描述(`pair.py:2041-2043`)是更稳的锚;
+最该警惕的失效模式"那段机制描述(`pair.py:2056-2058`)是更稳的锚;
 同步 `:4` 的 docstring。
 
 ### 3. 四处"防漂移正是这个项目从头到尾在做的事"的口径同步  ✅ 已解决
 
-- `.agents/skills/pair-protocol/scripts/pair.py:1875-1876`
+- `.agents/skills/pair-protocol/scripts/pair.py:1890-1891`
   (`cmd_whose_turn` 的 docstring)
 - `.agents/skills/pair-protocol/scripts/drive.py:10-11`
 - `cli/pair_bootstrap/__init__.py:12-13`
@@ -705,7 +705,7 @@ GIT_AUTHOR_IDENT` 之外再探 `git config --get commit.gpgsign`,只在它为
 **已解决:** 那一次就是行号引用与 `--drafter` 提示这一轮 —— `pair.py`
 本来就要改、指纹本来就要重刷,边际成本归零,两处空格一并去掉。
 
-### 6. `pair.py:1799` 与 `:1787-1797` 两个 `if` 无互斥,同屏打印相反指令
+### 6. `pair.py:1814` 与 `:1787-1797` 两个 `if` 无互斥,同屏打印相反指令
 
 `handoff` 收尾处有两个**独立的、非 elif 的** `if`:
 
@@ -825,7 +825,7 @@ rc≠0 **不是**变异引起的,却会被记成 `caught` —— 高估了测试
 在当前文档上实测,严格的"引用 + 的 + 片段"形式共 5 处命中、**2 处误伤**。
 误伤率这么高的检查会逼人把引用改写成迁就正则的样子,那比漏检更坏。
 
-**真正的解法是取消坐标**:把 `pair.py:1799` 换成脚本能用 `ast` 解析的
+**真正的解法是取消坐标**:把 `pair.py:1814` 换成脚本能用 `ast` 解析的
 符号锚点(函数/类名),行号就永远不会过期。代价是 23 处引用要改写,而且
 有几处指的是函数体内部的某一行注释、某一句 `print`,符号锚点表达不了 ——
 这是一笔单独的账,没有随手做。
@@ -922,7 +922,7 @@ commit message `"chore: 装上结对协议"` **逐字相同**,git 命令序列�
 (`:22-60`),`git init` 之后、`add`/`commit` 之前调用(`:80-84`),写仓库级
 `user.name=conformance` / `user.email=conformance@test`,取值照抄
 `harness.py:204-205` 与 `:376-377`。一处改动解决两级失败,因为
-`pair.py:2832` 的 `cwd=root` 来自 `repo_root()`(`:259-265`,
+`pair.py:2847` 的 `cwd=root` 来自 `repo_root()`(`:259-265`,
 `git rev-parse --show-toplevel` 从进程 cwd 求得),而 `test_v1_shipped.py:73`
 的 `cwd=str(proj)` 就是 make-demo 的输出目录;仓库级身份既不依赖 `HOME`
 也不依赖环境变量,所以能穿过那处 env 剥离。

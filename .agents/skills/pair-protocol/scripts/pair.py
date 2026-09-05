@@ -988,12 +988,17 @@ def _brief_vars(cfg, state, phase):
     }
 
 
-def render_brief(me, state, green):
+def render_brief(me, state, green, mem=""):
     """回合简报的正文。
 
     标题行 + 空行 + 四个 `- 字段: 值`(半角冒号加一个空格),末尾一个换行。
     字段顺序固定:角色 / 工作项 / 阶段 / 测试。工作项为空时写 `(无)`,
     类型为空时按 feature 算。测试只有 GREEN / RED 两个取值。
+
+    `mem` 是 `memory_brief` 的返回值 —— **调用方算好了传进来,这里不自己算**。
+    契约的「不做」要求简报与终端来自同一次取值:两处各算一遍,就有了两个
+    可能不一致的答案,而这一节的全部意义是"可对质"。空串表示这一次终端
+    没有注入记忆块,那时记忆段落连同它前面那个空行一起省略。
 
     格式是逐字节钉死的 —— 它是给人类事后对质用的凭据,不是终端输出的副本。
     """
@@ -1003,7 +1008,7 @@ def render_brief(me, state, green):
         # 部分一律跟着它走。不这样写,v0 迁移过来的状态(没有 item_type 这个键)
         # 会写出裸 ID,而契约只给了 `<ID> [<类型>]` 和 `(无)` 两种形态。
         item = "%s [%s]" % (item, state["item_type"] or "feature")
-    return "".join(
+    head = "".join(
         line + "\n" for line in [
             "# 回合简报",
             "",
@@ -1012,6 +1017,8 @@ def render_brief(me, state, green):
             "- 阶段: %s" % state["phase"],
             "- 测试: %s" % ("GREEN" if green else "RED"),
         ])
+    # 终端把记忆块包在两条 `=` 分隔线和一行标题里;简报只要内容本身。
+    return head + ("\n" + mem.rstrip("\n") + "\n" if mem else "")
 
 
 def write_brief(root, text):
@@ -1065,12 +1072,20 @@ def cmd_status(root, cfg, args):
         print("  python3 %s verify-setup --drafter self|other" % PROG_HINT)
         print("在此之前不能认领工作项。")
 
-    # 轮到自己就写,与后面还打不打印阶段简报无关 —— PLAN 全部完成时
-    # 这个函数会提前 return,而契约要求那种情况下简报照写。
-    if me == owner:
-        write_brief(root, render_brief(me, state, green))
+    # 记忆块**只算这一次**,简报与终端共用它 —— 契约的「不做」要求两处来自
+    # 同一次取值。而且只在终端真的会打印它的那条路径上算:PLAN 全部完成时
+    # status 提前收尾,终端不打印记忆注入,简报也就没有记忆段落
+    #(「同一次取值」优先于「轮到自己就写」)。
+    all_done = plan_all_done(root, cfg)
+    mem = ("" if all_done or me != owner
+           else memory_brief(root, cfg, state, phase))
 
-    if plan_all_done(root, cfg):
+    # 轮到自己就写,与后面还打不打印阶段简报无关 —— PLAN 全部完成时
+    # 这个函数会提前 return,而契约要求那种情况下简报照写(只是没有记忆段落)。
+    if me == owner:
+        write_brief(root, render_brief(me, state, green, mem))
+
+    if all_done:
         print()
         print(">>> %s 里的工作项已全部完成。<<<" % cfg["plan_file"])
         print("请向人类报告项目已完成,不要继续认领新工作项。")
@@ -1093,7 +1108,7 @@ def cmd_status(root, cfg, args):
 
     # 记忆层召回。status 是协议强制的第一条命令,也是唯一能跨 harness
     # 保证一定被执行的时刻 —— 存了没人读等于没存,所以召回挂在这里。
-    mem = memory_brief(root, cfg, state, phase)
+    # `mem` 在上面已经算过,简报用的是同一份。
     if mem:
         print("=" * 52)
         print(" 你不在场时留下的东西")
