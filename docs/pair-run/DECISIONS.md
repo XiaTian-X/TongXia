@@ -84,3 +84,9 @@
 - 理由: 上一条只记了 dev 方向(跑 `mutation_check.py` 刷新 `mutation-cache.json`,落进 tester 独占路径而被判越界)。**反方向同样成立,而且更隐蔽:** tester 在**只读评审回合**跑同一条命令复验,缓存改动留在工作区,下一个回合 dev 的 `handoff` 做 `git add -A`,边界检查照样把它算到 dev 头上、拒绝交接 —— 而 dev 完全不知道那个改动是谁造成的,拒绝文案还会引导它去"撤销"。本轮 review-impl 真的撞上了一次,靠 tester 主动 `git checkout` 还原才没有卡死对方的完成回合。**还有一处时序值得记:** `full_test_cmd` 在 `pair.py:1787` 跑,位置在 `git commit`(`:1782`)**之后**,所以工作项完成那一次跑出来的缓存改动进不了该次提交,必然以脏工作区的形态留给下一个人。
 - 已否决: 让评审回合别跑验证命令 —— 评审要求"证据是跑出来的",不跑就退回读代码,而这一轮两次打回都证明读代码不够。也否决了在评审回合顺手提交缓存:只读评审回合的可写路径里没有 `tests/`,提交它本身就是越界。
 - 影响路径: `tests/conformance/mutation-cache.json`, `.pair/config.json`, `.agents/skills/pair-protocol/scripts/pair.py`
+
+## W3 — 截断路径零测试:这是 W2 的遗留缺口,趁协议停转前把它落进记录
+
+- 理由: 契约「简报的记忆段落」有一条「**截断**」:注入内容若已被截断(`MAX_NOTE_INJECT_CHARS` / `MAX_DECISION_INJECT_CHARS` / 决策条数上限),简报写的是**截断之后**的那份。全仓 grep 不到任何用例碰这三个常量。当前实现下它是**结构性成立**的(简报与终端拿的是同一个 `mem` 值),所以不是缺陷 —— 但"结构性成立"正是 W2 那条决策记录说的"靠评审读代码核对不算防护":换一条取值路径就没了。之所以现在写进来:它是 W2 的遗留,双方都同意不塞进 W3(不在 W3 的验收标准与契约小节里,规则 5 也不允许),tester 报给了人类,但**报告不落文件就活不过这一轮** —— W3 通过后 PLAN 全部勾选、协议停止轮转,两份工作项笔记随之作废,而决策记录会被 `status` 按影响路径推给下一个动这些文件的人。
+- 已否决: 硬塞进 W3 的验收范围 —— 会让工作项范围含糊,而"要不要扩大范围"是人类的决定;这一条 tester 在 spec 笔记里论证过,我同意。也否决了只留在 `--uncovered` 与聊天报告里 —— 那正是这次要防的失效方式。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_brief.py`, `docs/pair-run/CONTRACT.md`
