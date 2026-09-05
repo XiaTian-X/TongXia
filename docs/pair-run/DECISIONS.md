@@ -60,3 +60,9 @@
 - 理由: 绊线红的时候只说"行数变了,逐条核对每一处引用"。本轮 tester 按文件名 grep 列出三处 `mutation_check.py:<行号>`,实际有五处 —— 漏掉的两处是同一行里省略文件名的**续引**(形如 ``​`mutation_check.py:596` 的 X 与 `:466` 的 Y``)。按 `mutation_check.py:` grep 抓不到 ``​`:466`​``。这不是谁不仔细:绊线要求的"逐条"没有定义边界,而人和 grep 都会把续引读成上下文而不是引用。
 - 已否决: 禁止续引形式、要求每处都写全文件名 —— 那会让同一行里出现三四次相同的文件名,可读性代价大于收益,而且没有任何东西强制得了它。也否掉了让绊线自己列出全部引用 —— 它现在就会列(`test_被引文件的行数没变过` 的失败输出里有),但列的是**它自己解析出来的**那些,解析器同样按文件名匹配,漏的是同一批。
 - 影响路径: `tests/conformance/test_docs_consistency.py`, `docs/improvements.md`, `docs/contributing.md`
+
+## W3 — 跨边界常量第二次挡住 impl 回合;根因是 33 个"孤儿路径",不是冻结文件
+
+- 理由: 同一结构问题第二次让 dev 交不出 GREEN,这次卡住两处:`CITED_LINE_COUNTS`(tester 路径)与 `examples/demo-project/.gitignore`(**谁都够不着**)。按 `.pair/config.json` 的 roles 对 `git ls-files` 实算过一次:**冻结路径 6 个**(PLAN、CONTRACT、`.pair/*`、`.claude` —— 刻意设计),而**不属于任何角色、也没被冻结的"孤儿"有 33 个**,含 `README.md`、`INSTALL.md`、`pyproject.toml`、`cli/pair_bootstrap/__init__.py` 与整个 `examples/`。本轮全部三次卡顿(`INSTALL.md`、`examples/.gitignore`、`improvements.md` 行号)**都出自孤儿,没有一次出自冻结**。所以症结不是"文档只许人类改",是 roles 配置压根没覆盖全仓,而缺口只在第 N 个回合突然发作。
+- 已否决: 放宽 `test_gitignore_跟得上_GITIGNORE_LINES` 或 `CITED_LINE_COUNTS` 让它别红 —— 拿测试迁就归属问题,两条检查本身都是对的。也否决了在本轮顺手改 roles 配置:`.pair/` 是冻结路径,agent 改不了,且扩大范围是人类的决定。
+- 影响路径: `.pair/config.json`, `tests/conformance/test_docs_consistency.py`, `tests/conformance/test_v1_shipped.py`, `examples/`, `INSTALL.md`
