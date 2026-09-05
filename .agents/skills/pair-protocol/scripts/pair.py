@@ -1083,7 +1083,15 @@ def cmd_status(root, cfg, args):
     # 轮到自己就写,与后面还打不打印阶段简报无关 —— PLAN 全部完成时
     # 这个函数会提前 return,而契约要求那种情况下简报照写(只是没有记忆段落)。
     if me == owner:
-        write_brief(root, render_brief(me, state, green, mem))
+        try:
+            write_brief(root, render_brief(me, state, green, mem))
+        except OSError as exc:
+            # 只兜 OSError(契约「边界」)。简报是可观测性、不是门禁:它写不出来
+            # 该报告,但不该连累 status —— status 是每回合的第一条命令,它挂了
+            # 整个回合就开不了工。try 只裹住写这一下,后面的记忆注入不受影响。
+            # 换行压掉:契约要求标准输出**恰好多一行**。
+            print("[简报] 写不出 %s:%s(不影响本回合)"
+                  % (BRIEF_REL, str(exc).replace("\n", " ")))
 
     if all_done:
         print()
@@ -2246,7 +2254,7 @@ DECISIONS_SKELETON = """# 决策记录（追加式 — 只能往后加，不能�
 # 不忽略的话,它会落在**对方**的路径下,让两个角色互相把对方卡在越界上。
 # 这与目标项目用什么语言无关。
 GITIGNORE_LINES = [".pair/.last-test.log", ".pair/.last-full-test.log",
-                   ".pair/whoami", ".pair/turns/",
+                   ".pair/whoami", ".pair/turns/", BRIEF_REL,
                    "__pycache__/", "*.pyc"]
 
 
