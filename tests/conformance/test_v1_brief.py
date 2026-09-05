@@ -270,3 +270,43 @@ class TestBriefMemory(PairTestCase):
             terminal_memory(r.text),
             "idle 且无相干决策时终端不该注入记忆块 —— 这条用例的前提不成立了")
         self.assertEqual(self.repo.read(BRIEF), IDLE_BRIEF)
+
+    def test_status_提前收尾时简报也没有记忆段落(self):
+        """契约把「没有记忆内容」收窄成**两条**路径:idle,和 `status` 提前
+        收尾(PLAN 全部勾选)。上一条测了 idle,这条测另一条。
+
+        **场景必须能区分。** W1 的 `test_工作项全部完成时仍然写` 用的是
+        idle 空仓库 —— 那里 `memory_brief` 本来就返回空串,守卫在不在都一样,
+        所以它拦不住这个偏离。这里先 `claim` 出一个工作项、写上笔记,让
+        "正常情况下终端**会**注入记忆块"成立,再把 PLAN 全部勾掉。
+
+        拿掉实现里那个 `all_done` 守卫,简报里就会有记忆段落、而终端里没有
+        —— 同时违反契约的「逐字一致」与「同一次取值」,且**红绿一声不吭**。
+        这条用例是补上的那道持续防护:评审能读一次代码,读不了下一次重构。
+        """
+        self.repo.advance_to("spec")
+        self.repo.write("docs/notes/W1.md", "试过直接改 X,不行,因为 Y。")
+
+        # 先确认这个场景确实**有**记忆内容 —— 否则下面断言"没有"是恒真的
+        r = self.repo.run("status", role="tester")
+        self.assertAccepted(r)
+        self.assertIsNotNone(
+            terminal_memory(r.text),
+            "前提不成立:这个场景本该有记忆内容,这条用例就区分不了什么了")
+
+        self.repo.set_plan(PLAN_ALL_DONE)       # 人类把工作项全勾掉
+        r = self.repo.run("status", role="tester")
+        self.assertAccepted(r)
+        self.assertIsNone(
+            terminal_memory(r.text),
+            "PLAN 全部完成时 status 提前收尾,终端不该再注入记忆块")
+        self.assertEqual(
+            self.repo.read(BRIEF),
+            "# 回合简报\n"
+            "\n"
+            "- 角色: tester\n"
+            "- 工作项: W1 [feature]\n"
+            "- 阶段: spec\n"
+            "- 测试: GREEN\n",
+            "终端这一次没有注入记忆块,简报却写了记忆段落 —— "
+            "违反「逐字一致」与「同一次取值」")

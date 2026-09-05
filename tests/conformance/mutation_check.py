@@ -239,6 +239,12 @@ MUTATIONS = [
     # 锚在这一行而不是 `mem = ...` 整句:契约要求简报与终端**同一次取值**,
     # 所以这次取值被提到了 write_brief 之前、写成三元式。拆掉它,记忆召回
     # 对终端和简报**同时**失效 —— 抓手比原来还多。
+    # 拿掉它,PLAN 全部完成那一次简报里有记忆段落、终端里没有 —— 同时违反
+    # 契约的「逐字一致」与「同一次取值」。W2 的 review-test 打回换来的用例守它。
+    ("拆掉简报的提前收尾守卫",
+     '    mem = ("" if all_done or me != owner',
+     '    mem = ("" if me != owner'),
+
     ("拆掉 status 记忆召回",
      "           else memory_brief(root, cfg, state, phase))",
      '           else "")'),

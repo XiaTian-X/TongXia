@@ -82,7 +82,7 @@ CITED = {p.name: p for r in (SKILL / "scripts", REPO / "tests" / "conformance",
 CITED_LINE_COUNTS = {
     "pair.py": 2918,
     "harness.py": 401,
-    "mutation_check.py": 684,
+    "mutation_check.py": 690,
     "make-demo.py": 94,
     "drive.py": 212,
     "__init__.py": 102,

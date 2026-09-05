@@ -1,5 +1,5 @@
 {
-  "baseline": "1bf3a2f58ab32ce9",
+  "baseline": "ecdd306a19f3b6a7",
   "catchers": {
     "只认 impl 阶段的异议,漏掉评审打回": [
       "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
@@ -212,6 +212,9 @@
     ],
     "拆掉第二次打回强制": [
       "test_v1_memory.TestRebound.test_第二次打回不留结论被拒绝"
+    ],
+    "拆掉简报的提前收尾守卫": [
+      "test_v1_brief.TestBriefMemory.test_status_提前收尾时简报也没有记忆段落"
     ],
     "拆掉结论侧的围栏剥离": [
       "test_v1_documents.TestSetupReportNamesSections.test_把契约粘进围栏不算点名"
