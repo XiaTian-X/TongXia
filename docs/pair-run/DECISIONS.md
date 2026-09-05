@@ -54,3 +54,9 @@
 - 理由: review-test 打回一次,证据是跑出来的:把 `pair.py` 里 `mem = ("" if all_done or me != owner …)` 的 `all_done` 守卫拿掉,279 条全绿 —— 契约「`status` 提前结束时……简报同样没有记忆段落」当时零测试守着。tester 在 spec 笔记里点名过这个坑,又在 review-impl 回合实测核过一次,判定"已核对"就放行了。**那是一次性的**:下一个重构 `cmd_status` 的人不会被一次评审拦住,而红绿会一声不吭。已补 `test_status_提前收尾时简报也没有记忆段落`(拿掉守卫时 280 条里唯一变红的一条)与变异点「拆掉简报的提前收尾守卫」。**造这类用例的关键是场景要能区分** —— W1 的 `test_工作项全部完成时仍然写` 用 idle 空仓库,`memory_brief` 本来就返回空串,守卫在不在都一样;要先 claim 出工作项并写笔记,让"正常情况下终端会注入"成立,再把 PLAN 勾完。
 - 已否决: 以"验收标准里没有这一情形"为由不写 —— 定稿后的契约把「没有记忆内容」收窄成两条路径(idle、提前收尾),验收标准的"没有时"两条都包含。也否决了以"评审已核对"替代用例:评审是一次性的,防护是持续的。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_brief.py`, `tests/conformance/mutation_check.py`
+
+## W2 — 行号引用的续引形式对 grep 隐形,「逐条核对」抓不全
+
+- 理由: 绊线红的时候只说"行数变了,逐条核对每一处引用"。本轮 tester 按文件名 grep 列出三处 `mutation_check.py:<行号>`,实际有五处 —— 漏掉的两处是同一行里省略文件名的**续引**(形如 ``​`mutation_check.py:596` 的 X 与 `:466` 的 Y``)。按 `mutation_check.py:` grep 抓不到 ``​`:466`​``。这不是谁不仔细:绊线要求的"逐条"没有定义边界,而人和 grep 都会把续引读成上下文而不是引用。
+- 已否决: 禁止续引形式、要求每处都写全文件名 —— 那会让同一行里出现三四次相同的文件名,可读性代价大于收益,而且没有任何东西强制得了它。也否掉了让绊线自己列出全部引用 —— 它现在就会列(`test_被引文件的行数没变过` 的失败输出里有),但列的是**它自己解析出来的**那些,解析器同样按文件名匹配,漏的是同一批。
+- 影响路径: `tests/conformance/test_docs_consistency.py`, `docs/improvements.md`, `docs/contributing.md`
