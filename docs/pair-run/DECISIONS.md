@@ -42,3 +42,9 @@
 - 理由: `test_docs_consistency.py` 的 `CITED_LINE_COUNTS` 钉的是被引文件的**行数快照**,而被引文件横跨两个角色:`pair.py` 归 dev,`mutation_check.py` 和这个常量本身归 tester。任一方改自己的文件,失配都出现在**对方**路径里,自己无权修。本轮双向各撞一次:dev 改实现→常量失配、它改不了;tester 换变异点锚点→`docs/improvements.md` 三处引用失配、tester 改不了。绊线是单人维护视角下设计的,没有预见角色切分。临时解法是通过异议/评审互相把核准过的数字递过去,代价是每个 impl 回合都要多一次往返。另有一处更糟:`INSTALL.md` 在仓库根,不属于任何角色,双方都改不了,只能靠人类。
 - 已否决: 把改动压成行数不变来绕过绊线 —— 那是拿代码和文档去迁就一条检查,评审该打回的正是这种东西。也否决了直接把 `pair.py` 从 `CITED_LINE_COUNTS` 里摘掉 —— 那要动 tester 的文件、且超出 W2 范围,属于人类排期的事,不在这一轮顺手做。
 - 影响路径: `tests/conformance/test_docs_consistency.py`, `tests/conformance/mutation_check.py`, `docs/improvements.md`, `INSTALL.md`
+
+## W2 — 「靠评审读代码核对」不算防护,该补测试的要补测试
+
+- 理由: 契约定稿时加的「status 提前收尾时简报同样没有记忆段落」这一条,实现里靠 `all_done` 守卫满足,但零测试。把守卫拿掉,279 条一条不红 —— 契约被违反而红绿一声不吭。tester 在 spec 笔记里点名了这个坑并承诺"在 review-impl 回合按同一次取值核对",它也确实核对了、实现也确实对。但评审是一次性的,防护是持续的:下一个动 `cmd_status` 的人把守卫改回去,没有任何东西会响。dogfood-run-1 的第二次打回是同一个形状(「打回换来的修复没有测试守着」),这是本项目第二次撞它。
+- 已否决: 以「W2 的验收标准里没有这一情形」为由不补 —— 定稿后的契约把「没有记忆内容」收窄成两条路径(idle、status 提前收尾),验收标准的「没有时整段省略」两条都涵盖。也否掉了 approve 之后开新工作项补 —— 跨工作项补测试会让 W2 带着一个不设防的契约条款完成,这条在 run-1 里已经论证过一次。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_brief.py`

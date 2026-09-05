@@ -1,13 +1,13 @@
 {
   "round": 0,
-  "phase": "review-test",
+  "phase": "spec",
   "item": "W2",
   "item_type": "feature",
-  "last_actor": "tester",
-  "changes_count": 1,
+  "last_actor": "dev",
+  "changes_count": 2,
   "completed_items": [],
   "setup_verified": true,
   "deadlock_hits": [],
   "contract_sha": "eb6c0166a2d8d3fd0411dc7799fb202ce016c3f4",
-  "after_rebound": false
+  "after_rebound": true
 }
