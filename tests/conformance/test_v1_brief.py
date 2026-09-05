@@ -346,7 +346,14 @@ class TestBriefWriteFailure(PairTestCase):
         p.mkdir(parents=True)
 
     def test_写失败时退出码不变而且其余输出逐字节一致(self):
-        """三条契约要求一次钉住:退出码不变、多出恰好一行、其余逐字节一致。
+        """四条契约要求一次钉住:退出码不变、**落在标准输出**、多出恰好
+        一行、其余逐字节一致。
+
+        **用 `.out` 而不是 `.text`。** `Result.text` 是 `out + err`
+        (`harness.py:189`),两条流拼在一起 —— 拿它断言,实现把警告写到
+        stderr 也照样绿,而契约「输出」那一栏的主语就是**标准输出**。
+        选 stdout 不是随意的:有的 harness 会折叠或分流 stderr,警告落在
+        那里等于没警告,而这一节的全部意义就是"写不出来这件事要被看见"。
 
         期望值用**同一个仓库上一次成功的输出**,不写死字符串 —— 和记忆段落
         那批同一套办法。写死期望值会把这条用例焊死在当前的 status 文案上,
@@ -367,7 +374,7 @@ class TestBriefWriteFailure(PairTestCase):
         self.assertEqual(bad.code, ok.code,
                          "写简报失败改变了 status 的退出码 —— 它是可观测性,不是门禁")
 
-        lines = bad.text.split("\n")
+        lines = bad.out.split("\n")
         warn = [i for i, ln in enumerate(lines) if ln.startswith("[简报]")]
         self.assertEqual(
             len(warn), 1,
@@ -376,8 +383,13 @@ class TestBriefWriteFailure(PairTestCase):
 
         del lines[warn[0]]
         self.assertEqual(
-            "\n".join(lines), ok.text,
+            "\n".join(lines), ok.out,
             "除了那一行警告,其余输出该与成功时逐字节一致")
+        # 只查 stdout 还不够:两条流都多写一行时,上面几条照样过。
+        self.assertEqual(
+            bad.err, ok.err,
+            "标准错误也多了东西 —— 警告该只落在标准输出上,"
+            "要么它写错了流,要么两条流都写了")
 
     def test_写失败时不影响记忆注入(self):
         """契约把"其余输出"逐项点了名:头部、阶段简报、**记忆注入**。
@@ -393,7 +405,7 @@ class TestBriefWriteFailure(PairTestCase):
         self._break_brief()
         bad = self.repo.run("status", role="tester")
         self.assertAccepted(bad)
-        mem = terminal_memory(bad.text)
+        mem = terminal_memory(bad.out)
         self.assertIsNotNone(mem, "写简报失败把终端的记忆注入一起带走了")
         self.assertIn("试过直接改 X", mem)
 
