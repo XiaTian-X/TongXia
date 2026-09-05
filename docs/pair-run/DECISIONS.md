@@ -72,3 +72,9 @@
 - 理由: `contributing.md` 写死"改动强制逻辑后两个都要跑",而 `mutation_check.py` 跑完会刷新 `tests/conformance/mutation-cache.json` 的基线指纹 —— 那是 `tests/conformance/**`,tester 的独占路径。dev 照纪律跑完,`handoff` 立刻判越界:「dev 在 impl 阶段只能写 …」。撤销缓存改动才能交接,于是 dev 每次跑变异检查都要顺手 `git checkout` 一次,而缓存的意义(快路径)对 dev 这一侧实际是废的。这是本轮同一类问题的**第三个形态**:前两个是孤儿路径(W3 决策条目)与行号绊线(W2 决策条目),这一个不同 —— 它不是"谁都够不着",是**协议要求你做的事本身会越界**。
 - 已否决: 让 dev 别跑变异检查 —— 那等于让"改了强制逻辑要跑两个"这条纪律对 dev 永久失效,而 dev 正是唯一会改强制逻辑的角色。也否决了把 `mutation-cache.json` 加进 `ignore_paths` —— 边界检查会整个跳过它,tester 对它的改动也就不再受任何约束,拿掉一条真防护去换一次方便。
 - 影响路径: `tests/conformance/mutation-cache.json`, `tests/conformance/mutation_check.py`, `.pair/config.json`, `docs/contributing.md`
+
+## W3 — 脚手架把 stdout 与 stderr 拼在一起,契约里"标准输出"那半句因此不设防
+
+- 理由: 契约「写入失败时的 status」写明"**标准输出**多出恰好一行"。但 `harness.py:189-190` 的 `Result.text` 返回 `self.out + self.err`,而两条用例用的都是 `.text` —— 把实现里的 `print` 换成 `sys.stderr.write`,284 条全绿。这不是用例写坏,是**脚手架的默认取值抹掉了契约要区分的那个维度**:`.text` 用起来最顺手,于是所有人默认用它,而任何"这句话打到哪条流"的契约条款都会自动失去防护。流的选择不是细节 —— 有的 harness 折叠或不展示 stderr,警告落在那里等于没警告,而这一节的全部意义就是"写不出来要被看见"。
+- 已否决: 让 `Result.text` 不再拼接、只返回 stdout —— 全仓大量用例用 `.text` 做宽松断言(`assertIn` 拒绝理由等),改默认值会把它们一起打散,是拿一次修复去换一批误伤。正确的做法是在**需要区分流**的用例里显式用 `.out` / `.err`,`Result` 已经分开存好了。
+- 影响路径: `tests/conformance/harness.py`, `tests/conformance/test_v1_brief.py`, `.agents/skills/pair-protocol/scripts/pair.py`
