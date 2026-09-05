@@ -33,7 +33,7 @@ Goose、OpenCode、Amp、Factory、Junie、Kiro 等都从这里扫描)。**Claud
   (`.agents/skills/pair-protocol/`)—— `cli/pair_bootstrap/__init__.py:65` 用的是
   `shutil.copytree(skill, dest, dirs_exist_ok=True)`;覆盖完它再转调 `pair.py init`。
 - **`pair.py init`**(协议自己的初始化)**完全不碰协议目录** —— `grep -n copytree pair.py`
-  零命中;它铺的是项目侧文件,且对已存在的文件一律跳过(`pair.py:2367-2374` 的 `put()`)。
+  零命中;它铺的是项目侧文件,且对已存在的文件一律跳过(`pair.py:2375-2382` 的 `put()`)。
 
 两个 `init` 都**不会更新已经存在的 `docs/DECISIONS.md`**。所以按上面那条手工路径
 (`cp -R` + `pair.py init`)接入的存量项目要注意:新的 `SKILL.md`、`rules.md`、
