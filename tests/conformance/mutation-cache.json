@@ -1,5 +1,5 @@
 {
-  "baseline": "ecdd306a19f3b6a7",
+  "baseline": "74997378fef0361c",
   "catchers": {
     "只认 impl 阶段的异议,漏掉评审打回": [
       "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
