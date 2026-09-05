@@ -5,7 +5,8 @@
 简报只活在那一次终端输出里,agent 说"我没看到那条决策"时人类无从对质。
 
 头部四行和"不添乱"是 W1(TestBriefHeader);记忆段落是 W2
-(TestBriefMemory);写不成时的降级是 W3。
+(TestBriefMemory);写不成时的降级与 init 的忽略是 W3
+(TestBriefWriteFailure / TestBriefGitignore)。
 
 头部的四个字段全都必须**随状态变化**,所以这里逐个字段都有一条能把它写死的
 反例:角色写死 tester 就过不了 dev 那条,测试写死 GREEN 就过不了 RED 那条。
@@ -13,8 +14,9 @@
 """
 
 import json
+import unittest
 
-from harness import PairTestCase
+from harness import BareRepo, PairTestCase
 
 BRIEF = ".pair/.last-brief.md"
 
@@ -310,3 +312,118 @@ class TestBriefMemory(PairTestCase):
             "- 测试: GREEN\n",
             "终端这一次没有注入记忆块,简报却写了记忆段落 —— "
             "违反「逐字一致」与「同一次取值」")
+
+
+# 能过 init 的最小 Python 项目。照抄 test_v1_setup.py 的 PY_PROJECT ——
+# 那边测的是接入流程,这里只借它跑一次 init 看产物。
+PY_PROJECT = {
+    "pyproject.toml": "[project]\nname = \"demo\"\n",
+    "src/__init__.py": "",
+    "tests/__init__.py": "",
+    "tests/test_ok.py": ("import unittest\n\n"
+                         "class T(unittest.TestCase):\n"
+                         "    def test_ok(self):\n        self.assertTrue(True)\n"),
+}
+
+
+class TestBriefWriteFailure(PairTestCase):
+    """写简报失败时的降级(W3)。
+
+    契约把它定成**可观测性,不是门禁**:不许因为写简报失败而让 `status` 失败。
+    简报是给人类事后对质用的,它写不出来是件该报告的事,但不该连累 `status` ——
+    `status` 是每回合的第一条命令,它挂了整个回合就开不了工。
+
+    构造失败的办法是把 `.pair/.last-brief.md` 做成**目录**:写它会抛
+    `IsADirectoryError`,那是 `OSError` 的子类,正落在契约「边界」写明的
+    承诺范围内。比 chmod 只读可靠 —— 后者在 root 下不生效。
+    """
+
+    def _break_brief(self):
+        """把简报路径换成一个目录,让下一次写入抛 IsADirectoryError。"""
+        p = self.repo.dir / BRIEF
+        if p.exists():
+            p.unlink()
+        p.mkdir(parents=True)
+
+    def test_写失败时退出码不变而且其余输出逐字节一致(self):
+        """三条契约要求一次钉住:退出码不变、多出恰好一行、其余逐字节一致。
+
+        期望值用**同一个仓库上一次成功的输出**,不写死字符串 —— 和记忆段落
+        那批同一套办法。写死期望值会把这条用例焊死在当前的 status 文案上,
+        而契约管的是"失败那次和成功那次的**差**只有一行"。
+
+        **不断言那一行出现在第几行。** 契约只说"多出恰好一行,以 `[简报]`
+        开头",没有规定位置;断言位置就是断言契约没写的东西。所以这里的做法
+        是把它挑出来删掉再比对,天然不依赖位置。
+        """
+        self.repo.advance_to("spec")
+        ok = self.repo.run("status", role="tester")
+        self.assertAccepted(ok)
+        self.assertTrue(self.repo.exists(BRIEF), "前提不成立:这一次本该写出简报")
+
+        self._break_brief()
+        bad = self.repo.run("status", role="tester")
+
+        self.assertEqual(bad.code, ok.code,
+                         "写简报失败改变了 status 的退出码 —— 它是可观测性,不是门禁")
+
+        lines = bad.text.split("\n")
+        warn = [i for i, ln in enumerate(lines) if ln.startswith("[简报]")]
+        self.assertEqual(
+            len(warn), 1,
+            "契约要求标准输出多出**恰好一行**以 `[简报]` 开头,实际 %d 行:\n%s"
+            % (len(warn), bad.text))
+
+        del lines[warn[0]]
+        self.assertEqual(
+            "\n".join(lines), ok.text,
+            "除了那一行警告,其余输出该与成功时逐字节一致")
+
+    def test_写失败时不影响记忆注入(self):
+        """契约把"其余输出"逐项点了名:头部、阶段简报、**记忆注入**。
+
+        记忆注入是三者里唯一在 `write_brief` **之后**才打印的(简报与终端
+        共用同一次取值),所以它是最容易被一次异常顺手带走的那一个 ——
+        实现若把 `write_brief` 和后面的召回裹进同一个 try,这条会红。
+        """
+        self.repo.advance_to("spec")
+        self.repo.write("docs/notes/W1.md", "试过直接改 X,不行,因为 Y。")
+        self.assertAccepted(self.repo.run("status", role="tester"))
+
+        self._break_brief()
+        bad = self.repo.run("status", role="tester")
+        self.assertAccepted(bad)
+        mem = terminal_memory(bad.text)
+        self.assertIsNotNone(mem, "写简报失败把终端的记忆注入一起带走了")
+        self.assertIn("试过直接改 X", mem)
+
+
+class TestBriefGitignore(unittest.TestCase):
+    """`init` 之后的 `.gitignore`(W3)。
+
+    简报落在 `.pair/` 下,而 `.pair` 是冻结路径。不忽略它,新接入的项目
+    第一次 `status` 写出的那份简报就会变成一个谁都提交不了、也删不干净的
+    改动(下一次 status 又会生成)。W1 的 `test_写过简报之后交接不被拒`
+    守的是本仓库这一侧,这里守的是 `init` **发给新项目**的那一份。
+    """
+
+    def _repo(self):
+        r = BareRepo(PY_PROJECT)
+        self.addCleanup(r.cleanup)
+        return r
+
+    def test_init_之后_gitignore_含简报(self):
+        repo = self._repo()
+        r = repo.run("init")
+        self.assertEqual(r.code, 0, r)
+        self.assertIn(".pair/.last-brief.md", repo.read(".gitignore"))
+
+    def test_重复跑_init_不重复追加(self):
+        """契约点名了幂等。`init` 自称可以反复跑,一份每跑一次就长一行的
+        `.gitignore` 会让那句话变成谎话。"""
+        repo = self._repo()
+        self.assertEqual(repo.run("init").code, 0)
+        self.assertEqual(repo.run("init").code, 0)
+        self.assertEqual(
+            repo.read(".gitignore").count(".pair/.last-brief.md"), 1,
+            "重复跑 init 把简报那一行追加了不止一次")
