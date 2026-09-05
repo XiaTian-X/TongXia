@@ -66,3 +66,9 @@
 - 理由: 同一结构问题第二次让 dev 交不出 GREEN,这次卡住两处:`CITED_LINE_COUNTS`(tester 路径)与 `examples/demo-project/.gitignore`(**谁都够不着**)。按 `.pair/config.json` 的 roles 对 `git ls-files` 实算过一次:**冻结路径 6 个**(PLAN、CONTRACT、`.pair/*`、`.claude` —— 刻意设计),而**不属于任何角色、也没被冻结的"孤儿"有 33 个**,含 `README.md`、`INSTALL.md`、`pyproject.toml`、`cli/pair_bootstrap/__init__.py` 与整个 `examples/`。本轮全部三次卡顿(`INSTALL.md`、`examples/.gitignore`、`improvements.md` 行号)**都出自孤儿,没有一次出自冻结**。所以症结不是"文档只许人类改",是 roles 配置压根没覆盖全仓,而缺口只在第 N 个回合突然发作。
 - 已否决: 放宽 `test_gitignore_跟得上_GITIGNORE_LINES` 或 `CITED_LINE_COUNTS` 让它别红 —— 拿测试迁就归属问题,两条检查本身都是对的。也否决了在本轮顺手改 roles 配置:`.pair/` 是冻结路径,agent 改不了,且扩大范围是人类的决定。
 - 影响路径: `.pair/config.json`, `tests/conformance/test_docs_consistency.py`, `tests/conformance/test_v1_shipped.py`, `examples/`, `INSTALL.md`
+
+## W3 — 协议强制 dev 跑的验证命令,产出落在 tester 的独占路径里
+
+- 理由: `contributing.md` 写死"改动强制逻辑后两个都要跑",而 `mutation_check.py` 跑完会刷新 `tests/conformance/mutation-cache.json` 的基线指纹 —— 那是 `tests/conformance/**`,tester 的独占路径。dev 照纪律跑完,`handoff` 立刻判越界:「dev 在 impl 阶段只能写 …」。撤销缓存改动才能交接,于是 dev 每次跑变异检查都要顺手 `git checkout` 一次,而缓存的意义(快路径)对 dev 这一侧实际是废的。这是本轮同一类问题的**第三个形态**:前两个是孤儿路径(W3 决策条目)与行号绊线(W2 决策条目),这一个不同 —— 它不是"谁都够不着",是**协议要求你做的事本身会越界**。
+- 已否决: 让 dev 别跑变异检查 —— 那等于让"改了强制逻辑要跑两个"这条纪律对 dev 永久失效,而 dev 正是唯一会改强制逻辑的角色。也否决了把 `mutation-cache.json` 加进 `ignore_paths` —— 边界检查会整个跳过它,tester 对它的改动也就不再受任何约束,拿掉一条真防护去换一次方便。
+- 影响路径: `tests/conformance/mutation-cache.json`, `tests/conformance/mutation_check.py`, `.pair/config.json`, `docs/contributing.md`
