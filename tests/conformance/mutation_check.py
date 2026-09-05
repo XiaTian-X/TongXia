@@ -236,9 +236,12 @@ MUTATIONS = [
      "        if len(note) >= MIN_NOTE_PROMOTE_CHARS and not mine and not args.no_decision:",
      "        if False:"),
 
+    # 锚在这一行而不是 `mem = ...` 整句:契约要求简报与终端**同一次取值**,
+    # 所以这次取值被提到了 write_brief 之前、写成三元式。拆掉它,记忆召回
+    # 对终端和简报**同时**失效 —— 抓手比原来还多。
     ("拆掉 status 记忆召回",
-     "    mem = memory_brief(root, cfg, state, phase)",
-     '    mem = ""'),
+     "           else memory_brief(root, cfg, state, phase))",
+     '           else "")'),
 
     ("拆掉 inbox 散文内容",
      "    for rel in changed:\n        text = _read(root / rel).strip()",

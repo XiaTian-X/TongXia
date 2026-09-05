@@ -36,3 +36,9 @@
 - 理由: `docs/reviews/setup-verification.md` 提的歧义②(「没有记忆内容」的判据)必须人类落笔,tester 在笔记里也判为唯一的阻断项。人类看过逐字 diff 并两次明确指示由 dev 代为执行。**改动内容与 dev 在对话里公示的 diff 逐字一致,可核对**:补丁脚本留在会话的临时目录,内容同本次提交的 diff。写下这条是因为协议规定 agent 不得改契约,而 tester 无法从仓库里分辨这次改动是人类定稿还是 dev 迁就自己的实现 —— 那正是冻结文件买来的信任,这一次它没有了,由本条替代。
 - 已否决: 由 dev 直接改而不留痕 —— 那会让契约的 `依据: 人类定稿` 变成不可核对的断言,下一次谁都可以照此办理,冻结文件就名存实亡。也否掉了坚持不改、让人类自己敲 —— 人类已两次指示,再推回去是拿规则条文挡掉它自己要保护的那个决定。
 - 影响路径: `docs/pair-run/CONTRACT.md`, `docs/reviews/setup-verification.md`, `docs/pair-run/notes/W2.md`
+
+## W2 — 行号绊线跨越角色边界,本轮双方各撞一次
+
+- 理由: `test_docs_consistency.py` 的 `CITED_LINE_COUNTS` 钉的是被引文件的**行数快照**,而被引文件横跨两个角色:`pair.py` 归 dev,`mutation_check.py` 和这个常量本身归 tester。任一方改自己的文件,失配都出现在**对方**路径里,自己无权修。本轮双向各撞一次:dev 改实现→常量失配、它改不了;tester 换变异点锚点→`docs/improvements.md` 三处引用失配、tester 改不了。绊线是单人维护视角下设计的,没有预见角色切分。临时解法是通过异议/评审互相把核准过的数字递过去,代价是每个 impl 回合都要多一次往返。另有一处更糟:`INSTALL.md` 在仓库根,不属于任何角色,双方都改不了,只能靠人类。
+- 已否决: 把改动压成行数不变来绕过绊线 —— 那是拿代码和文档去迁就一条检查,评审该打回的正是这种东西。也否决了直接把 `pair.py` 从 `CITED_LINE_COUNTS` 里摘掉 —— 那要动 tester 的文件、且超出 W2 范围,属于人类排期的事,不在这一轮顺手做。
+- 影响路径: `tests/conformance/test_docs_consistency.py`, `tests/conformance/mutation_check.py`, `docs/improvements.md`, `INSTALL.md`

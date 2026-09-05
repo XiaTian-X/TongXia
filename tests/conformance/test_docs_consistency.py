@@ -80,9 +80,9 @@ CITED = {p.name: p for r in (SKILL / "scripts", REPO / "tests" / "conformance",
 # 被引文件的行数。变了就说明所有指向它的行号引用都可能错位 —— 见
 # test_被引文件的行数没变过。**改这里之前先逐条核对引用,别只改数字。**
 CITED_LINE_COUNTS = {
-    "pair.py": 2903,
+    "pair.py": 2918,
     "harness.py": 401,
-    "mutation_check.py": 681,
+    "mutation_check.py": 684,
     "make-demo.py": 94,
     "drive.py": 212,
     "__init__.py": 102,
