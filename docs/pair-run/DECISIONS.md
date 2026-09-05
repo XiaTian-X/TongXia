@@ -78,3 +78,9 @@
 - 理由: 契约「写入失败时的 status」写明"**标准输出**多出恰好一行"。但 `harness.py:189-190` 的 `Result.text` 返回 `self.out + self.err`,而两条用例用的都是 `.text` —— 把实现里的 `print` 换成 `sys.stderr.write`,284 条全绿。这不是用例写坏,是**脚手架的默认取值抹掉了契约要区分的那个维度**:`.text` 用起来最顺手,于是所有人默认用它,而任何"这句话打到哪条流"的契约条款都会自动失去防护。流的选择不是细节 —— 有的 harness 折叠或不展示 stderr,警告落在那里等于没警告,而这一节的全部意义就是"写不出来要被看见"。
 - 已否决: 让 `Result.text` 不再拼接、只返回 stdout —— 全仓大量用例用 `.text` 做宽松断言(`assertIn` 拒绝理由等),改默认值会把它们一起打散,是拿一次修复去换一批误伤。正确的做法是在**需要区分流**的用例里显式用 `.out` / `.err`,`Result` 已经分开存好了。
 - 影响路径: `tests/conformance/harness.py`, `tests/conformance/test_v1_brief.py`, `.agents/skills/pair-protocol/scripts/pair.py`
+
+## W3 — 验证命令的副作用落在谁的路径是随机的,两个方向都会卡住对方
+
+- 理由: 上一条只记了 dev 方向(跑 `mutation_check.py` 刷新 `mutation-cache.json`,落进 tester 独占路径而被判越界)。**反方向同样成立,而且更隐蔽:** tester 在**只读评审回合**跑同一条命令复验,缓存改动留在工作区,下一个回合 dev 的 `handoff` 做 `git add -A`,边界检查照样把它算到 dev 头上、拒绝交接 —— 而 dev 完全不知道那个改动是谁造成的,拒绝文案还会引导它去"撤销"。本轮 review-impl 真的撞上了一次,靠 tester 主动 `git checkout` 还原才没有卡死对方的完成回合。**还有一处时序值得记:** `full_test_cmd` 在 `pair.py:1787` 跑,位置在 `git commit`(`:1782`)**之后**,所以工作项完成那一次跑出来的缓存改动进不了该次提交,必然以脏工作区的形态留给下一个人。
+- 已否决: 让评审回合别跑验证命令 —— 评审要求"证据是跑出来的",不跑就退回读代码,而这一轮两次打回都证明读代码不够。也否决了在评审回合顺手提交缓存:只读评审回合的可写路径里没有 `tests/`,提交它本身就是越界。
+- 影响路径: `tests/conformance/mutation-cache.json`, `.pair/config.json`, `.agents/skills/pair-protocol/scripts/pair.py`
