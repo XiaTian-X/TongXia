@@ -96,3 +96,15 @@
 - 理由: 第三轮开工前把不属于任何角色的 33 个文件划给了 dev(仓库根的 6 份 md、各家入口文件、`cli/`、`pyproject.toml`、`examples/`、根 `.gitignore`),并把 `tests/conformance/mutation-cache.json` 放进 `ignore_paths`。实测划归后**孤儿 0、角色重叠 0**。这是 W6 的硬前置:它要迁移的引用有几处在 `INSTALL.md` 与 `README.md`,那两份此前谁都改不了。顺带删掉了 `roles.dev` 里的 `!docs/DECISIONS.md` —— 它排除的文件已不存在(`decisions_file` 早已是 `docs/pair-run/DECISIONS.md`,而那条路径不被 `docs/*.md` 匹配),是旧配置残留;删后实测 `decisions_file` 仍不被 dev 匹配。
 - 已否决: 把这些路径划进 `shared_paths` —— 那个键被五处逻辑依赖(`dispute-evidence` 强制点、评审文件命名、打回的位置引用、异议举证、`verify-setup` 的记忆层检查),并进去会让"写了一份提案/文档"被算成"异议落到纸面"。也**推翻了 `## W3 — 协议强制 dev 跑的验证命令…` 那条里对 `ignore_paths` 的否决**:它当时的理由是"tester 对缓存的改动不再受任何约束,拿掉一条真防护"。复查认为那条防护并不存在 —— 提议中的留痕防不住伪造,而缓存另有基线指纹保护;`ignore_paths` 的 `continue` 落在角色与阶段判断之前,本就是为副产物设计的位置。
 - 影响路径: `.pair/config.json`, `pyproject.toml`, `.gitignore`, `examples/`, `cli/`, `tests/conformance/mutation-cache.json`
+
+## SETUP — 第三轮契约由 dev 代笔定稿，人类授权，双方结论都已到齐
+
+- 理由: 契约头写着"变更需双方同意后由人类修改",本次是**人类明确授权 dev 代笔**("你来审查规划一下")。九处改动全部来自两份独立的开工前审查结论:tester(`0472b88`)五处、dev 五处、其中两处独立撞上(行内代码豁免会让 W6 恒真、`improvements.md` 的口径)。**唯一的分歧被证伪**:tester 认为孤儿的两个定义会让共享路径误报,实测 `writable_paths` 里 `shared` 对每个阶段都在 `allowed` 中,共享文件永远进不了 `violations`,后果不可达 —— 措辞仍按 tester 说的统一了,但不是阻断级。九处里 tester 独有 1 处(符号重名 `Class.method`),dev 独有 4 处(记忆层必然是孤儿、`artifact_paths` 残留、末尾"请撤销"那句、路径粒度与区间形式)。
+- 已否决: 让人类逐条落笔 —— 九处里没有一处是双方分歧,人类的角色是裁决冲突不是当打字员,而每轮开工都要人类手抄契约正是 P1-9 要消灭的东西。也否决了 dev 只改契约不改 PLAN:W4/W6 的验收标准逐字复述了被改的那几条(排除集、旧形式、豁免范围),只改一边就是给下一轮埋一个两份规格打架。
+- 影响路径: `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `docs/reviews/setup-verification.md`
+
+## SETUP — 开工前校验的报告路径对两个角色是同一个文件名，dev 因此覆盖了 tester 的结论
+
+- 理由: `SETUP_REPORT_REL` 是**全局唯一的固定文件名**,两个角色的开工前结论写同一份文件。dev 的 `verify-setup` 在后台跑的那两分钟里 tester 提交了自己的结论(`0472b88`),dev 没看见就整份覆盖(`2ff494f`),之后从 git 逐字节还原、两份并存(`e935350`)。**没有内容丢失,但这是一次真的越写。** 对照:`docs/reviews/` 下所有别的文件都带 `<ID>-<阶段>` 前缀,由 `check_review_names` 强制并检查,唯独这一份不受管。它和本轮 W4 是同一类东西 —— **边界的缺口只在真撞上的那一刻才发作**,这次撞上的是 dev 自己。
+- 已否决: 现在就改成 `setup-verification-<角色>.md` —— 不在本轮 PLAN 里,而"要不要扩大范围"是人类的决定;`verify-setup` 读的是固定路径,改它要同时动 `SETUP_REPORT_REL` 与文案,属于新工作项。也否决了只在聊天里报一句:上一条 W3 决策刚记过"报告不落文件就活不过这一轮"。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/reviews/setup-verification.md`, `docs/improvements.md`
