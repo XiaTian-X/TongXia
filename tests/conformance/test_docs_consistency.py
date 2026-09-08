@@ -455,9 +455,6 @@ class TestDocsConsistency(unittest.TestCase):
                 % (name, PAIR_SRC.count(old)))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class TestSymbolReferences(unittest.TestCase):
     """W6:文档里引用源码位置必须用符号形式,不用行号。
@@ -522,10 +519,13 @@ class TestSymbolReferences(unittest.TestCase):
 
     def test_区间形式也被拒且按起始行给建议(self):
         rel = ".agents/skills/pair-protocol/scripts/pair.py"
-        bad = self._one("见 `%s:2375-2382`" % rel)
+        # 2375 在 cmd_init.put 内,2390 已经出了 put、落在外层 cmd_init ——
+        # **起止必须落在不同符号**,否则取起始行还是取结束行都一样,
+        # 这条断言就守不住它声称守的东西(dev 在 review-test 里用变异证明了)。
+        bad = self._one("见 `%s:2375-2390`" % rel)
         self.assertEqual(len(bad), 1, bad)
         self.assertIn("cmd_init.put", bad[0],
-                      "应按**起始行**所在的最内层符号给建议")
+                      "应按**起始行**所在的最内层符号给建议,而不是结束行的")
 
     def test_历史快照豁免且不校验_sha(self):
         """运行报告记的是当时的状态,改写它等于篡改历史;
@@ -536,3 +536,6 @@ class TestSymbolReferences(unittest.TestCase):
     def test_目标文件不存在时不算引用(self):
         """rules.md 拿 `src/auth.py:42` 举例,那是虚构项目,没有符号可迁移。"""
         self.assertEqual(self._one("见 `src/auth.py:42`"), [])
+
+if __name__ == "__main__":
+    unittest.main()
