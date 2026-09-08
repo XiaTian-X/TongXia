@@ -68,7 +68,7 @@
 - **dev → tester(W2)**:契约「`status` 提前收尾时简报同样没有记忆段落」
   零测试。拿掉 `all_done` 守卫,**279 条全绿**。
 - **dev → tester(W3)**:契约点名警告落在**标准输出**,而两条用例用的是
-  `Result.text`(= `out + err`,`harness.py:189`)。把 `print` 换成
+  `Result.text`(= `out + err`,`tests/conformance/harness.py:189@221edab`)。把 `print` 换成
   `sys.stderr.write`,**284 条全绿**。
 
 第二条的根因值得单独记:**脚手架的默认取值抹掉了契约要区分的维度。**

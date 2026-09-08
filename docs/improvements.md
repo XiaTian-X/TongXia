@@ -934,8 +934,8 @@ dev 只能改块外。这需要一个 Rust 感知的 diff 分析器 —— 成�
 
 ### 1. `test_v1_review_evidence.py` 的类名与断言已经跟不上 ADR-023
 
-`tests/conformance/test_v1_review_evidence.py:104-112` 的
-`TestBriefAsksForDisagreement`,docstring 写的是"评审简报是正向要求,
+`tests/conformance/test_v1_review_evidence.py#TestBriefAsksForDisagreement`
+的 docstring 写的是"评审简报是正向要求,
 不是负向禁止 —— 这是实证里真正起作用的那一半",三个断言是
 `裁决必须带证据`、`先找问题`、`--checked`。ADR-023 把正向要求的形式从
 "配额"改成"证据"之后,这三个字符串在新简报里**全都还在**,所以它照样绿,
@@ -947,24 +947,24 @@ dev 只能改块外。这需要一个 Rust 感知的 diff 分析器 —— 成�
 
 ### 2. `test_v1_report.py` 钉住的是散文,不是机制
 
-`tests/conformance/test_v1_report.py:4` 的模块 docstring 仍是旧口径
+`tests/conformance/test_v1_report.py` 的模块 docstring 仍是旧口径
 ("这个命令**唯一的存在理由**"),与 `pair.py` 里 `cmd_report` 的新
-docstring 以及 ADR-022 的禁令直接矛盾。`:98` 的 `assertIn("互相点头", out)`
+docstring 以及 ADR-022 的禁令直接矛盾。`tests/conformance/test_v1_report.py#TestNoddingIsFlagged.test_打回率为零被标红`
+里的 `assertIn("互相点头", out)`
 把一句人类可见的散文钉成了断言:本轮它之所以还绿,只因为改写**恰好保留了
 那四个字**。今后任何一次口径重框都会让它以"功能回归"的面貌变红,而真实
 原因只是一次散文替换。
 
 **建议:** 改钉不会随口径漂移的结构句 —— `cmd_report` 打印的"这是手段层
-最该警惕的失效模式"那段机制描述(`pair.py:2064-2066`)是更稳的锚;
-同步 `:4` 的 docstring。
+最该警惕的失效模式"那段机制描述(`.agents/skills/pair-protocol/scripts/pair.py#cmd_report`)
+是更稳的锚;同步模块 docstring。
 
 ### 3. 四处"防漂移正是这个项目从头到尾在做的事"的口径同步  ✅ 已解决
 
-- `.agents/skills/pair-protocol/scripts/pair.py:1898-1899`
-  (`cmd_whose_turn` 的 docstring)
-- `.agents/skills/pair-protocol/scripts/drive.py:10-11`
-- `cli/pair_bootstrap/__init__.py:12-13`
-- `tests/conformance/test_v1_shipped.py:125`
+- `.agents/skills/pair-protocol/scripts/pair.py#cmd_whose_turn` 的 docstring
+- `.agents/skills/pair-protocol/scripts/drive.py` 的模块 docstring
+- `cli/pair_bootstrap/__init__.py` 的模块 docstring
+- `tests/conformance/test_v1_shipped.py#TestDriverHasNoProtocolLogic`
 
 **已改。** 四处都换成了"两份判定迟早不一致,门禁看着还在、实际拦不住" ——
 说的是同一个机制,但把它摆回手段层。改动逐处保持行数不变,所以
@@ -1064,10 +1064,10 @@ ADR-006、ADR-015 里的同类表述按追加式纪律不改写,由 ADR-022 在�
 
 ### 1. `2a32b5f` 新增的基线预检闸零测试覆盖
 
-`mutation_check.py:596` 的 `precheck_no_baseline` 与 `:466` 的
-`isolated_copy`,在 `tests/conformance/test_mutation_tooling.py` 里
-**0 命中**;作为对照,同一次提交要守的另一道闸 `baseline_verified` 有
-**5 处**(`:90`、`:91`、`:94`、`:96`、`:99`)。14 条全绿**不等于**新闸被测住:
+`tests/conformance/mutation_check.py#precheck_no_baseline` 与
+`tests/conformance/mutation_check.py#isolated_copy`,在
+`tests/conformance/test_mutation_tooling.py` 里**0 命中**;作为对照,
+同一次提交要守的另一道闸 `baseline_verified` 有 **5 处**命中。14 条全绿**不等于**新闸被测住:
 下一次重构可以把它整个删掉,套件照样 14/14。
 
 它守的正是本项目最怕的失败模式:基线本来就红的环境里,回退路径的判据只有
@@ -1133,7 +1133,8 @@ rc=0 但 `_ids` 抓到了 FAIL 行也要拒。这条最容易被写漏,因为直
 "rc=0 就是绿";而它恰好是并行运行器最可能出现的形态(某一片失败,
 汇总行却仍然打印)。
 
-**层 B —— 同构条件的源码断言。** 照 `test_v1_shipped.py:136-145` 的
+**层 B —— 同构条件的源码断言。** 照 `tests/conformance/test_v1_shipped.py#TestDriverHasNoProtocolLogic.test_不碰_git`
+的
 `test_不碰_git` 先例(读源码 `re.findall` 断言意图),钉三条:
 `precheck_no_baseline` 的函数体里出现 `isolated_copy(`;出现
 `PAIR_MUTATION_RUN`;`isolated_copy` 的 ignore 模式里有 `".git"`。
@@ -1162,8 +1163,8 @@ rc=0 但 `_ids` 抓到了 FAIL 行也要拒。这条最容易被写漏,因为直
 
 ### 2. `MAX_CACHED = 1` 与缓存里实际抓手数漂移
 
-三方口径一致:`mutation_check.py:360` 的 `MAX_CACHED = 1`、`:354-359` 的
-设计注释、`docs/contributing.md:71-74` 的"每个变异点只记**一个**抓手"。
+三方口径一致:`tests/conformance/mutation_check.py#MAX_CACHED`(值为 1)、
+紧挨它上方那段设计注释、`docs/contributing.md:71-74` 的"每个变异点只记**一个**抓手"。
 但实测 `tests/conformance/mutation-cache.json` 里 70 条的抓手个数分布是
 `{1: 46, 2: 9, 3: 7, 4: 8}`,即 **24/70 条有 2~4 个抓手**,与"只记一个"不符。
 
@@ -1196,14 +1197,14 @@ rc=0 但 `_ids` 抓到了 FAIL 行也要拒。这条最容易被写漏,因为直
 ### 3. `make-demo.py` 仍残留一处环境依赖:`commit.gpgsign`
 
 `6f7afe0` 给 `examples/make-demo.py` 补了条件式的提交者身份兜底(见"已解决"
-一节),但**有意没有**照抄 `tests/conformance/harness.py:206` 的
+一节),但**有意没有**照抄 `tests/conformance/harness.py#PairRepo.__init__` 里那句
 `config commit.gpgsign false`。理由是那一行属于测试脚手架:它要保证整套
 conformance 用例不受宿主机 GPG 配置影响;而 `make-demo.py` 面向用户,强关签名会让真想
 签名提交的人在样板项目里**静默失去签名** —— 与本次修复要避免的"静默错误
 归属"是同一类坏结果。
 
 **代价(已知边界):** 在配了 `commit.gpgsign=true` 又没有可用 GPG key 的
-机器上,`make-demo.py:84` 的 `git commit` 仍会失败,`test_v1_shipped` 那条
+机器上,`examples/make-demo.py#main` 里的 `git commit` 仍会失败,`test_v1_shipped` 那条
 照样红。本机 `git log --format='%G?' | sort -u` 只输出 `N`(历史提交无一
 签名),266/266 全绿,所以本机不需要它。**这里刻意不写提交个数** ——
 每轮都会新增提交,任何写死的计数当天就过期(上一版写的那个数字在它
@@ -1254,17 +1255,17 @@ GIT_AUTHOR_IDENT` 之外再探 `git config --get commit.gpgsign`,只在它为
 **已解决:** 那一次就是行号引用与 `--drafter` 提示这一轮 —— `pair.py`
 本来就要改、指纹本来就要重刷,边际成本归零,两处空格一并去掉。
 
-### 6. `pair.py:1822` 与 `:1787-1797` 两个 `if` 无互斥,同屏打印相反指令
+### 6. `cmd_handoff` 收尾处两个 `if` 无互斥,同屏打印相反指令
 
 `handoff` 收尾处有两个**独立的、非 elif 的** `if`:
 
-- `:1787` 的 `if full_failed:` 打印门禁绿但全量红的横幅,里面写着
+- `if full_failed:` 打印门禁绿但全量红的横幅,里面写着
   **不要告诉人类"完成"**;
-- `:1799` 的 `if plan_all_done(root, cfg):` 打印"PLAN 里的工作项已全部
+- 紧随其后的 `if plan_all_done(root, cfg):` 打印"PLAN 里的工作项已全部
   完成。项目结束。"与"请向人类报告完成,不要继续轮转。"
 
 于是"最后一个工作项完成 + 全量红"那一次交接里,agent 会在同一屏先读到
-不要告诉人类完成、五行后读到请向人类报告完成,而退出码是 `:1806` 的
+不要告诉人类完成、五行后读到请向人类报告完成,而退出码是收尾那句
 `2 if full_failed else 0` —— 也就是 2。**两条指令互相否定,退出码站在
 前者那边。**
 
@@ -1303,17 +1304,18 @@ wheel 与 `pair init` 扩散到消费项目,不像本仓文档只影响这里。
 覆盖范围内,改它会让刚在 `ea5344e` 刷新的基线指纹重新失配,需重跑
 约 70 秒并追加一次缓存提交,不划算。
 
-### 8. `mutation_check.py:372-375` 的注释把归因前提说得过强
+### 8. `mutation_check.py` 里解释归因前提的那段注释说得过强
 
 那段注释写的是:预检的失败集"为空则两条路径的 rc≠0 都**必然**由变异
 引起"。成立需要的条件比"必然"多:
 
 - 预检是**一次**采样 —— 一个副本、一个时刻;
 - 而 `check_one` 之后要在 70 个**另建的**副本里各跑一次;
-- 运行器还不同:预检用并行 `run.py -j <jobs>`(`:614-617`),而
+- 运行器还不同:预检用并行 `run.py -j <jobs>`(在
+  `tests/conformance/mutation_check.py#precheck_no_baseline` 里),而
   `check_one` 的判定用串行 `unittest`(快路径 `unittest -q <ids>`,回退
   路径 `unittest discover -f`);
-- `loaded`(`:422-423`)校验的是"请求了几个就跑了几个",挡不住"同一个
+- `loaded` 校验的是"请求了几个就跑了几个",挡不住"同一个
   测试在预检副本里绿、在某个 `check_one` 副本里红"。
 
 所以一个负载敏感或时序敏感的测试完全可以预检绿、某个副本红。此时
@@ -1374,10 +1376,14 @@ rc≠0 **不是**变异引起的,却会被记成 `caught` —— 高估了测试
 在当前文档上实测,严格的"引用 + 的 + 片段"形式共 5 处命中、**2 处误伤**。
 误伤率这么高的检查会逼人把引用改写成迁就正则的样子,那比漏检更坏。
 
-**真正的解法是取消坐标**:把 `pair.py:1822` 换成脚本能用 `ast` 解析的
-符号锚点(函数/类名),行号就永远不会过期。代价是 23 处引用要改写,而且
-有几处指的是函数体内部的某一行注释、某一句 `print`,符号锚点表达不了 ——
-这是一笔单独的账,没有随手做。
+**真正的解法是取消坐标**:把行号换成脚本能用 `ast` 解析的符号锚点
+(函数/类名),行号就永远不会过期。代价是全部引用要改写,而且有几处指的是
+函数体内部的某一行注释、某一句 `print`,符号锚点表达不了。
+
+**✅ 第三轮 W6 已落地**:引用形式改成 `` `<路径>#<符号>` ``,由
+`tests/conformance/test_docs_consistency.py` 的 `TestSymbolReferences` 强制;
+符号粒度不够的那几处按契约改成文字描述。旧的 `CITED_LINE_COUNTS` 绊线
+(以及它"改数字就能变绿"的逃逸口)一并移除。
 
 ### 12. `verify-setup` 在工作区干净时必然失败(空提交)
 
@@ -1411,6 +1417,23 @@ dev 的校验正在后台跑、没看见,写完就整份覆盖(`2ff494f`),事后
 改法:报告路径带角色名(`setup-verification-<角色>.md`),或让
 `check_review_names` 把这份也纳入。前者要同时动 `SETUP_REPORT_REL`
 与它在文案、`docs/`、SKILL 里的说明,是一个完整工作项,不是顺手改。
+
+### 14. 省掉文件名的裸 `:行号` 坐标不在符号检查的覆盖范围内
+
+W6 把带文件名的引用全部迁到了 `` `<路径>#<符号>` ``,但检查的正则要求
+引用里有 `.py` 文件名。`docs/improvements.md` 与 `docs/design-decisions.md`
+里还有 **66 处**只写 `` `:1787` `` / `` `:315-316` `` 的坐标 —— 它们承接
+上文的文件名,人读得懂,脚本看不见。
+
+它们和被迁走的那些是同一个病:被引文件上方插一行,下面每一处就都指向别处,
+而且**没有任何东西会红**。W6 之前它们至少还被行数绊线间接盯着一点(那条
+绊线按文件行数触发,不按引用形式),现在那条绊线已移除,这 66 处的防护
+**净减少了**。
+
+不在 W6 的验收标准里,所以本轮没做。修法有两种:让正则接受"承接上文文件名"
+的裸坐标(要跟踪上下文,容易误伤),或把这 66 处逐一补上文件名再迁移
+(机械但可靠)。后者更对,但那是一笔单独的账。
+
 
 ---
 
@@ -1490,11 +1513,13 @@ catchers;`:663-664` 的写盘条件带 `verified`,而 `verified` 在指纹失配
    `scutil --get HostName` 就没设置过。
 2. 第五轮交接时给的"选项 b:`GIT_AUTHOR_*`/`GIT_COMMITTER_*` 环境变量
    前缀"作为让基线变绿的手段 —— **不成立**。实测它对**直接调用**
-   `make-demo.py` 有效,但 `test_v1_shipped.py:73` 传的是整个 `env=` 字典
+   `make-demo.py` 有效,但 `tests/conformance/test_v1_shipped.py:73@c210ba6`
+   传的是整个 `env=` 字典
    (**整体替换**,不是合并),环境变量到不了 `pair.py`。只有仓库级配置
    (已采纳)或全局配置才行。
 
-**同源铁证(照抄既有约定的依据):** `harness.py:204` 与 `make-demo.py:83` 的
+**同源铁证(照抄既有约定的依据):** `tests/conformance/harness.py:204@d6bc8cf`
+与 `examples/make-demo.py:83@d6bc8cf` 的
 commit message `"chore: 装上结对协议"` **逐字相同**,git 命令序列同为
 `init → (config) → add -A → commit`。harness 就是 make-demo 的测试镜像,
 只是它多写了身份(`:200-201`)—— **这正是缺陷本身**:镜像的一半有身份,
@@ -1503,10 +1528,10 @@ commit message `"chore: 装上结对协议"` **逐字相同**,git 命令序列�
 **最终采纳的方案:** 在 `make-demo.py` 里加 `ensure_identity(target)`
 (`:22-60`),`git init` 之后、`add`/`commit` 之前调用(`:80-84`),写仓库级
 `user.name=conformance` / `user.email=conformance@test`,取值照抄
-`harness.py:204-205` 与 `:376-377`。一处改动解决两级失败,因为
-`pair.py:2855` 的 `cwd=root` 来自 `repo_root()`(`:259-265`,
-`git rev-parse --show-toplevel` 从进程 cwd 求得),而 `test_v1_shipped.py:73`
-的 `cwd=str(proj)` 就是 make-demo 的输出目录;仓库级身份既不依赖 `HOME`
+`tests/conformance/harness.py:204-205@8cc32c8` 与 `:376-377`。一处改动解决
+两级失败,因为 `.agents/skills/pair-protocol/scripts/pair.py:2855@e742a67` 的 `cwd=root`
+来自 `repo_root()`(`git rev-parse --show-toplevel` 从进程 cwd 求得),
+而 `tests/conformance/test_v1_shipped.py:73@c210ba6` 的 `cwd=str(proj)` 就是 make-demo 的输出目录;仓库级身份既不依赖 `HOME`
 也不依赖环境变量,所以能穿过那处 env 剥离。
 
 **两处有意偏离既有约定:**
@@ -1520,7 +1545,8 @@ commit message `"chore: 装上结对协议"` **逐字相同**,git 命令序列�
   生命周期完全在测试进程内;而且测试要的就是不受宿主机影响的确定身份。
   `make-demo.py` 不同:它面向用户,产出目录可能被长期留存,无条件写假身份
   会**静默把用户后续所有提交错误归属**,比响亮地 rc=128 更坏。
-- **没有照抄 `commit.gpgsign false`**(`harness.py:206` 有、`:377` 没有)。
+- **没有照抄 `commit.gpgsign false`**
+  (`tests/conformance/harness.py:206@8cc32c8` 有、`:377` 没有)。
   理由与代价见开放条目第 3 条。
 
 **验证:** 266/266 全绿(此前 265/266)。三组反向验证确认条件式真的是
