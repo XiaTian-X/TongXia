@@ -138,3 +138,9 @@
 - 理由: 五步纪律第 3 步(在 `MUTATIONS` 里补变异点)落在 tester 的路径,而 tester 通常是在**只读评审回合**才发现它缺了 —— 那时写不了 `tests/`。W3 时的处理是写进笔记并注明"建议归进后续的 cover 工作项",**而笔记随工作项作废,那个后续从没发生**。实测:`pair.py` 里 W3 的两条(写简报失败的 `OSError` 降级、`BRIEF_REL` 进 `GITIGNORE_LINES`)与 W4 的三条(孤儿清单、`ignore_paths` 覆盖清单、越界文案区分有无孤儿)**五条防护,71 个变异点里一个都没有**。缺口在累积,而每一轮都把它推给下一轮。**判据**:tester 在 **spec 回合**写用例时就同时补变异点 —— 那是唯一既能写 `tests/`、又知道这条防护该怎么拆掉的时刻。dev 在 impl 回合发现缺了,走 `request` 或异议把它递回来。
 - 已否决: 继续记进工作项笔记 —— 笔记随工作项作废,W3 那次就是这么丢的;这条同 W6 那次行号漂移的教训同源(把待办写进将要作废的地方 = 没写)。也否决了让 dev 补 —— `mutation_check.py` 在 tester 独占路径,它写不了,这正是问题的来源而不是解法。
 - 影响路径: `tests/conformance/mutation_check.py`, `.agents/skills/pair-protocol/scripts/pair.py`
+
+## W4 — ignore_paths 既是孤儿判据的排除项、又是另一段清单的来源，而"不能同时出现在两段里"没有用例
+
+- 理由: 契约把 `ignore_paths` 同时用在两处:孤儿判据里它是**排除项**(命中就不算孤儿),覆盖清单里它是**来源**(命中就要列出来)。两处的语义是相反的 —— 一段说"没人能写",一段说"人人都能写"。变异证明:把 `is_orphan` 里那句 `if matches_any(path, cfg["ignore_paths"]): return False` 去掉,`test_v1_paths` 10 条**一条都不红**,而输出里 `build/缓存.json` 同时出现在两段警告中,孤儿表头还自己写着"也不在 ignore_paths 里"。`TestIgnorePathsListing` 只断言它出现在"不受边界保护"那一段,没断言它**不在**孤儿清单里。补法一行:断言该文件在整份输出里只出现一次。同一节还有第二处不对称:契约要求 `ignore_paths` 清单"同样超过 10 个只列前 10 行",孤儿那一侧有 `TestOrphanTruncation` 守着,这一侧把 limit 调成 10000 也全绿。
+- 已否决: 拿这两条做第三次打回 —— `DEADLOCK_LIMIT = 3`,第三次 `handoff changes` 会停转并要求人类裁决,而这里没有分歧(前两次打回 tester 都受理了、改法也对)。死锁闸守的是"两个 agent 谈不拢",不是"还能再补两条用例";拿一个双方不会有争议的补充去触发它,是把闸用歪,而且会把一个非冲突推到人类面前。也否决了只写进 `--uncovered` 就算完 —— 那只在提交正文里,而这两条值得活过 W4。前两次打回是另一个种类:断言**声称**守着契约却守不住(区间用例起止同符号、剩余数断言被表头满足),那比没有用例更坏,必须打回。
+- 影响路径: `tests/conformance/test_v1_paths.py`, `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`

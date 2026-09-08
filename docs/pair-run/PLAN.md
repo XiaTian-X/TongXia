@@ -81,7 +81,7 @@ W2/W3 条目里。
     `docs/contributing.md` 的说明一并移除
   - 对应契约:`docs/pair-run/CONTRACT.md` → 文档里的代码引用
 
-- [ ] **W4** [feature] — 把边界的两个缺口摆出来,并在撞上时说清楚
+- [x] **W4** [feature] — 把边界的两个缺口摆出来,并在撞上时说清楚
   - 验收标准:三条。①**孤儿清单** —— 被 git 跟踪、且不落在角色/共享/
     冻结/`ignore_paths`/**记忆层(`notes_dir` 与 `decisions_file`)** 里的
     文件,`verify-setup` 打印首行含"孤儿"与总数、随后逐行列出的警告,
