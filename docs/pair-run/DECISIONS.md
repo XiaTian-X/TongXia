@@ -90,3 +90,9 @@
 - 理由: 契约「简报的记忆段落」有一条「**截断**」:注入内容若已被截断(`MAX_NOTE_INJECT_CHARS` / `MAX_DECISION_INJECT_CHARS` / 决策条数上限),简报写的是**截断之后**的那份。全仓 grep 不到任何用例碰这三个常量。当前实现下它是**结构性成立**的(简报与终端拿的是同一个 `mem` 值),所以不是缺陷 —— 但"结构性成立"正是 W2 那条决策记录说的"靠评审读代码核对不算防护":换一条取值路径就没了。之所以现在写进来:它是 W2 的遗留,双方都同意不塞进 W3(不在 W3 的验收标准与契约小节里,规则 5 也不允许),tester 报给了人类,但**报告不落文件就活不过这一轮** —— W3 通过后 PLAN 全部勾选、协议停止轮转,两份工作项笔记随之作废,而决策记录会被 `status` 按影响路径推给下一个动这些文件的人。
 - 已否决: 硬塞进 W3 的验收范围 —— 会让工作项范围含糊,而"要不要扩大范围"是人类的决定;这一条 tester 在 spec 笔记里论证过,我同意。也否决了只留在 `--uncovered` 与聊天报告里 —— 那正是这次要防的失效方式。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_brief.py`, `docs/pair-run/CONTRACT.md`
+
+## SETUP — 33 个孤儿路径的划归,以及它推翻的一条旧决策
+
+- 理由: 第三轮开工前把不属于任何角色的 33 个文件划给了 dev(仓库根的 6 份 md、各家入口文件、`cli/`、`pyproject.toml`、`examples/`、根 `.gitignore`),并把 `tests/conformance/mutation-cache.json` 放进 `ignore_paths`。实测划归后**孤儿 0、角色重叠 0**。这是 W6 的硬前置:它要迁移的引用有几处在 `INSTALL.md` 与 `README.md`,那两份此前谁都改不了。顺带删掉了 `roles.dev` 里的 `!docs/DECISIONS.md` —— 它排除的文件已不存在(`decisions_file` 早已是 `docs/pair-run/DECISIONS.md`,而那条路径不被 `docs/*.md` 匹配),是旧配置残留;删后实测 `decisions_file` 仍不被 dev 匹配。
+- 已否决: 把这些路径划进 `shared_paths` —— 那个键被五处逻辑依赖(`dispute-evidence` 强制点、评审文件命名、打回的位置引用、异议举证、`verify-setup` 的记忆层检查),并进去会让"写了一份提案/文档"被算成"异议落到纸面"。也**推翻了 `## W3 — 协议强制 dev 跑的验证命令…` 那条里对 `ignore_paths` 的否决**:它当时的理由是"tester 对缓存的改动不再受任何约束,拿掉一条真防护"。复查认为那条防护并不存在 —— 提议中的留痕防不住伪造,而缓存另有基线指纹保护;`ignore_paths` 的 `continue` 落在角色与阶段判断之前,本就是为副产物设计的位置。
+- 影响路径: `.pair/config.json`, `pyproject.toml`, `.gitignore`, `examples/`, `cli/`, `tests/conformance/mutation-cache.json`

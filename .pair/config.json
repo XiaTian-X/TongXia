@@ -8,7 +8,15 @@
     "dev": [
       ".agents/skills/pair-protocol/**",
       "docs/*.md",
-      "!docs/DECISIONS.md"
+      "*.md",
+      ".clinerules",
+      ".windsurfrules",
+      ".gitignore",
+      ".cursor/**",
+      ".github/**",
+      "cli/**",
+      "pyproject.toml",
+      "examples/**"
     ]
   },
   "shared_paths": [
@@ -20,7 +28,9 @@
     ".claude",
     ".pair"
   ],
-  "ignore_paths": [],
+  "ignore_paths": [
+    "tests/conformance/mutation-cache.json"
+  ],
   "scope": [],
   "plan_file": "docs/pair-run/PLAN.md",
   "contract_file": "docs/pair-run/CONTRACT.md",

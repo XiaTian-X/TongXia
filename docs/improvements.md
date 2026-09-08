@@ -693,6 +693,34 @@ phase 与 owner、不计入 `changes_count`;`fulfill` 只能由路径归属方�
 
 ---
 
+## P1-14 两个高影响文件零测试覆盖,划归 dev 之后风险上升
+
+**来源:** 第三轮开工前的孤儿划归审查。
+
+**问题:** 划归把 33 个孤儿分给了角色,其中两个文件**内容零测试覆盖**,
+而它们此前正是靠"谁都改不了"才没坏:
+
+- **`pyproject.toml`** —— `tests/conformance/` 里确实引用它,但那是把它当
+  **栈探测的标志文件**用的假 fixture(`"[project]\nname = \"demo\""`),
+  **不校验真实文件的内容**。`force-include` 那行决定 skill 目录进不进 wheel,
+  改坏了没有任何东西会红,而 `pair init` 分发的就是它。
+- **仓库根的 `.gitignore`** —— `test_v1_shipped.py` 查的是
+  `examples/demo-project/.gitignore`,不是根目录这份。删掉 `__pycache__/`
+  那行,`.pyc` 会进 git 并落到对方路径下 —— **那正是前两轮撞过的跨角色污染**。
+
+**提议:** 补两条内容校验,都很便宜:
+
+1. `pyproject.toml` 的 `force-include` 指向 `.agents/skills/pair-protocol`
+2. `GITIGNORE_LINES` 的每一行都在仓库根的 `.gitignore` 里
+   (照抄 `test_v1_shipped.py` 已有的那条,只换目标文件)
+
+**与现有设计的冲突:** 无。两条都落在 tester 路径,是既有检查的同类扩展。
+
+**验收:** 各一条用例;变异点各一个(拆掉 `force-include` 校验、
+拆掉根 `.gitignore` 校验)。
+
+---
+
 ## P2-5 死锁时的第三个会话:只读的材料整理
 
 **来源:** 2026-09 设计讨论;`prior-art.md` 的 Adversarial Review
