@@ -464,6 +464,43 @@ def tracked_files(root):
     return [p for p in out.split("\0") if p]
 
 
+# 清单超过这个条数就截断 —— 列全会刷屏,人就不看了。
+PATH_LISTING_LIMIT = 10
+
+
+def is_orphan(path, cfg):
+    """不属于任何角色、也不在共享/冻结/ignore_paths/记忆层里的已跟踪文件。
+
+    **记忆层必须排除。** 它被挡在角色/冻结/共享之外不是配置疏忽,是
+    cmd_verify_setup 的「记忆层路径自洽」那段自己强制的 —— 三种归法都会
+    bad()。不排除,这条警告就没有任何一种消除方式,而一个结构上不可能清零的
+    警告几次之后就没人看了。
+    """
+    if any(matches_any(path, cfg["roles"][r]) for r in ROLES):
+        return False
+    if matches_any(path, cfg["shared_paths"]):
+        return False
+    if matches_any(path, cfg["ignore_paths"]):
+        return False
+    if any(path_matches(path, f) for f in cfg["frozen_paths"]):
+        return False
+    if memory_on(cfg) and (path_matches(path, cfg["notes_dir"])
+                           or path_matches(path, cfg["decisions_file"])):
+        return False
+    return True
+
+
+def render_path_listing(head, paths, limit=PATH_LISTING_LIMIT):
+    """`<首行>` + 逐行路径,超过 limit 只列前 limit 行再补**剩余**数。
+
+    补的是剩余数不是总数:总数已经在首行里,再报一次说不出"还有多少没看到"。
+    """
+    lines = [head] + ["      %s" % p for p in paths[:limit]]
+    if len(paths) > limit:
+        lines.append("      … 还有 %d 个没列出" % (len(paths) - limit))
+    return "\n".join(lines)
+
+
 def writable_paths(cfg, phase):
     """按角色 + 阶段计算可写路径。评审阶段只读:仅允许写评审记录与记忆层。
 
@@ -1606,11 +1643,30 @@ def cmd_handoff(root, cfg, args):
                                % (" ".join(cfg["scope"]),
                                   " ".join(cfg["shared_paths"]))))
 
+    # 孤儿要单独说。开工前的警告和真正撞上的时刻隔着几十个回合,而撞上的那个
+    # 文件多半是人类刚改的 —— 让 agent"撤销这些改动"就会撤销掉不是它写的东西。
+    # 只在中间加一句提示不够:末尾留着一句相反的指令,agent 照样照后者做,
+    # 所以末尾那句要跟着变。
+    #
+    # 下面两行之间不能插东西:变异点「拆掉写权限边界」锚的就是 `if violations:`
+    # 紧跟 `lines =`(mutation_check.py 的 MUTATIONS,在 tester 路径下,我改不了)。
+    # 孤儿的计算因此排在 lines 之后,不是它逻辑上该在的位置。
     if violations:
-        lines = "".join("\n  %s\n      %s" % (p, why) for p, why in violations)
-        die("拒绝交接 —— 以下改动越界:%s\n\n"
-            "请撤销这些改动后重试。如果你认为规则本身有问题,"
-            "写进 docs/reviews/ 并告诉人类。" % lines)
+        lines = "".join(
+            "\n  %s\n      %s%s"
+            % (p, why,
+               "\n      这个文件不属于任何角色,需要人类划归。" if is_orphan(p, cfg)
+               else "")
+            for p, why in violations)
+        orphaned = [p for p, _ in violations if is_orphan(p, cfg)]
+        if orphaned:
+            tail = ("其中 %d 个不属于任何角色 —— 那多半不是你改的。\n"
+                    "**先找人类划归,不要直接撤销。** 其余越界的改动请撤销后重试。"
+                    % len(orphaned))
+        else:
+            tail = "请撤销这些改动后重试。"
+        die("拒绝交接 —— 以下改动越界:%s\n\n%s如果你认为规则本身有问题,"
+            "写进 docs/reviews/ 并告诉人类。" % (lines, tail + ""))
 
     # --- 测试删除防护 -----------------------------------------------------
     test_paths = cfg["roles"]["tester"]
@@ -2572,6 +2628,27 @@ def cmd_verify_setup(root, cfg, args):
         if clash:
             bad("roles.%s 的 %s 与 frozen_paths 冲突 —— 该角色永远无法提交"
                 % (r, clash))
+
+    # --- 路径归属的可见性 --------------------------------------------------
+    # 这两个缺口原本只在第 N 个回合突然发作:孤儿是"两个 agent 都写不了",
+    # ignore_paths 是"任何角色任何阶段都能写"。两者都不是错误配置 ——
+    # 前者要人类划归,后者本来就是副产物该有的待遇 —— 但都必须是人类
+    # **看得见的决定**,不能藏在配置里。所以是 warn,不是 bad。
+    orphans = [f for f in files if is_orphan(f, cfg)]
+    if orphans:
+        warn(render_path_listing(
+            "%d 个孤儿:不属于任何角色,也不在共享/冻结/ignore_paths/记忆层里。\n"
+            "      两个 agent 都写不了它们,而这件事在开工时没有任何地方说过 ——\n"
+            "      前两轮三次卡顿全出自这里。请人类划归到某个角色或冻结:"
+            % len(orphans), orphans))
+
+    ignored = [f for f in files if matches_any(f, cfg["ignore_paths"])]
+    if ignored:
+        warn(render_path_listing(
+            "%d 个文件不受边界保护:命中 ignore_paths,任何角色、任何阶段都能写。\n"
+            "      这是它的用途(副产物就该这样),但哪些文件已经不受保护\n"
+            "      必须是人类看得见的决定,不是藏在配置里的一行:"
+            % len(ignored), ignored))
 
     # --- 测试命令与基线 ---------------------------------------------------
     if not cfg.get("test_cmd"):
