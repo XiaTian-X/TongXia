@@ -1,10 +1,10 @@
 {
   "round": 3,
-  "phase": "impl",
+  "phase": "spec",
   "item": "W4",
   "item_type": "feature",
-  "last_actor": "tester",
-  "changes_count": 1,
+  "last_actor": "dev",
+  "changes_count": 2,
   "completed_items": [
     "W2",
     "W3",
@@ -13,5 +13,5 @@
   "setup_verified": true,
   "deadlock_hits": [],
   "contract_sha": "a8acd4b1dd09e3790196542b3d877ef0b95e49aa",
-  "after_rebound": false
+  "after_rebound": true
 }
