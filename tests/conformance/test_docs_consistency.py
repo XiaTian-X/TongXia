@@ -519,10 +519,19 @@ class TestSymbolReferences(unittest.TestCase):
 
     def test_区间形式也被拒且按起始行给建议(self):
         rel = ".agents/skills/pair-protocol/scripts/pair.py"
-        # 2375 在 cmd_init.put 内,2390 已经出了 put、落在外层 cmd_init ——
-        # **起止必须落在不同符号**,否则取起始行还是取结束行都一样,
-        # 这条断言就守不住它声称守的东西(dev 在 review-test 里用变异证明了)。
-        bad = self._one("见 `%s:2375-2390`" % rel)
+        # **坐标在用例里现算,不写死。** 起止必须落在不同符号(否则取起始行
+        # 还是结束行都一样,这条断言就守不住它声称守的东西),但把那对行号
+        # 写进用例就是又一处硬编码坐标 —— W6 把全仓文档的坐标都取消了,
+        # 自己的用例里留一处指向 dev 文件的,第一个 impl 回合就会漂,
+        # 而且 W6 的检查只扫文档、扫不到测试代码。
+        import ast
+        tree = ast.parse(PY_BY_REL[rel].read_text(encoding="utf-8"))
+        outer = next(n for n in ast.walk(tree)
+                     if isinstance(n, ast.FunctionDef) and n.name == "cmd_init")
+        inner = next(n for n in ast.walk(outer)
+                     if isinstance(n, ast.FunctionDef) and n.name == "put")
+        # end_lineno + 1 落在 outer 内、inner 外 —— 起止跨符号
+        bad = self._one("见 `%s:%d-%d`" % (rel, inner.lineno, inner.end_lineno + 1))
         self.assertEqual(len(bad), 1, bad)
         self.assertIn("cmd_init.put", bad[0],
                       "应按**起始行**所在的最内层符号给建议,而不是结束行的")

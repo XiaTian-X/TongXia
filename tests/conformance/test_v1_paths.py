@@ -79,34 +79,59 @@ class TestOrphanListing(PairTestCase):
         self.assertNotIn("docs/notes/W1.md", r.text)
         self.assertNotIn("docs/DECISIONS.md", r.text)
 
+class TestOrphanTruncation(PairTestCase):
+    """截断:超过十个只列前十,并说明**还剩多少**。
+
+    单独一个类,因为它需要"孤儿只有用例自己造的" —— `init` 铺的那 3 个
+    入口文件会占掉截断名额,而**契约没有规定清单内部的顺序**,
+    按名字前缀数行、或断言谁排在第 10 位,都是在断言一条契约没写的排序
+    承诺(规则 4)。把那 3 个划给 dev,数量就干净可数了。
+    """
+
+    config = {"require_setup_verification": True,
+              "roles": {"tester": ["tests"],
+                        "dev": ["src", "*.md", ".gitignore"]}}
+    REPORT = setup_report("W1", "W2")
+
+    def _verify(self):
+        self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
+        return self.repo.run("verify-setup", "--drafter", "other", role="dev")
+
+    def _commit(self, msg="人类提交"):
+        self.repo.git("add", "-A")
+        self.repo.git("commit", "-q", "-m", msg)
+
     def test_超过十个只列前十并说明还剩多少(self):
         """剩余数不是总数 —— 契约点名了这一点。
         列全会刷屏,只列不说剩多少则看不出规模。"""
-        for i in range(12):
-            self.repo.write("孤儿%02d.md" % i, "x")
+        made = ["孤儿%02d.txt" % i for i in range(12)]
+        for name in made:
+            self.repo.write(name, "x")
         self._commit()
         r = self._verify()
-        listed = [l for l in r.text.split("\n") if "孤儿0" in l or "孤儿1" in l]
-        self.assertEqual(len(listed), 10, "应当只列前 10 行,实际 %d" % len(listed))
-        self.assertIn("5", r.text, "12 个新孤儿加上原有 3 个共 15 个,应说明还剩 5 个")
+        # 数"被列出的孤儿有几个",不按名字前缀数行、也不假设谁排在前面
+        listed = [n for n in made if n in r.text]
+        self.assertEqual(len(listed), 10,
+                         "12 个孤儿应当只列出 10 个,实际 %d" % len(listed))
+        self.assertIn("2", r.text, "12 − 10,应说明还剩 2 个(剩余数不是总数)")
 
 
 class TestIgnorePathsListing(PairTestCase):
     """`ignore_paths` 的覆盖清单 —— 哪些文件已经不受保护,要摆给人看。"""
 
     config = {"require_setup_verification": True,
-              "ignore_paths": ["tests/缓存.json"]}
+              "ignore_paths": ["build/缓存.json"]}
     REPORT = setup_report("W1", "W2")
 
     def test_列出_ignore_paths_覆盖的被跟踪文件(self):
-        self.repo.write("tests/缓存.json", "{}")
+        self.repo.write("build/缓存.json", "{}")
         self.repo.git("add", "-A")
         self.repo.git("commit", "-q", "-m", "副产物入库")
         self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
         r = self.repo.run("verify-setup", "--drafter", "other", role="dev")
         self.assertAccepted(r)
         self.assertIn("不受边界保护", r.text)
-        self.assertIn("tests/缓存.json", r.text)
+        self.assertIn("build/缓存.json", r.text)
 
 
 class TestBoundaryRefusalMentionsOrphan(PairTestCase):
