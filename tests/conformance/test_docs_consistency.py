@@ -16,7 +16,7 @@ import json
 import os
 import re
 import unittest
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 REPO = Path(__file__).resolve().parents[2]
 SKILL = REPO / ".agents" / "skills" / "pair-protocol"
@@ -71,42 +71,135 @@ def _positioning_scope():
             yield p
 
 
-# 文档里用 `文件.py:行号` 引用过的源码文件。basename 必须唯一 —— 重名了就
-# 认不出引用指的是哪一个,下面的 setUpModule 级断言会直接红。
-CITED = {p.name: p for r in (SKILL / "scripts", REPO / "tests" / "conformance",
-                             REPO / "examples", REPO / "cli" / "pair_bootstrap")
-         for p in sorted(r.glob("*.py"))}
+# --- 符号引用(W6)-----------------------------------------------------
+# 仓库里所有 .py。键是**仓库相对路径** —— 裸文件名只在唯一时才允许,
+# 本仓库有 3 个 __init__.py,裸名解析不到唯一文件。
+PY_BY_REL = {str(p.relative_to(REPO)): p
+             for p in REPO.rglob("*.py")
+             if ".git" not in p.parts and "__pycache__" not in p.parts}
+PY_BY_NAME = {}
+for _rel_, _p_ in PY_BY_REL.items():
+    PY_BY_NAME.setdefault(_p_.name, []).append(_rel_)
 
-# 被引文件的行数。变了就说明所有指向它的行号引用都可能错位 —— 见
-# test_被引文件的行数没变过。**改这里之前先逐条核对引用,别只改数字。**
-CITED_LINE_COUNTS = {
-    "pair.py": 2926,
-    "harness.py": 401,
-    "mutation_check.py": 690,
-    "make-demo.py": 94,
-    "drive.py": 212,
-    "__init__.py": 102,
-    "test_v1_shipped.py": 149,
-    "test_v1_report.py": 116,
-    "test_v1_review_evidence.py": 112,
-}
-
-# `pair.py:1799` / `harness.py:204-205`。反引号可有可无 —— 两种写法文档里都有。
-_CITE_RE = re.compile(r"([A-Za-z_][\w\-]*\.py):(\d+)(?:-(\d+))?")
+# `<路径>#<符号>` 是规定形式;`<路径>:<行号>` 与区间是旧形式;带 @<sha> 的豁免。
+# **不要求反引号** —— 规定形式带反引号,但漏掉反引号的旧引用同样该被迁移。
+_SYM_REF = re.compile(r"([\w./\-]+\.py)#([\w.]+)")
+_LINE_REF = re.compile(r"([\w./\-]+\.py):(\d+)(?:-(\d+))?(@[0-9a-fA-F]+)?")
 
 
-def _citations(doc):
-    """(文件名, 起, 止, 原文) —— 只认得出 CITED 里的文件。"""
-    for m in _CITE_RE.finditer(doc):
-        if m.group(1) in CITED:
-            a = int(m.group(2))
-            yield m.group(1), a, int(m.group(3) or a), m.group(0)
+def _blank_fences(text):
+    """把 ``` 围栏里的内容抹成空行。行号不变,便于报位置。
+
+    契约:不算引用的**只有两类** —— 围栏代码块,以及目标 .py 不存在。
+    行内代码**算**引用(那正是规定形式),整类豁免掉会让这条检查恒真。
+    """
+    out, fenced = [], False
+    for line in text.split("\n"):
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            out.append("")
+        else:
+            out.append("" if fenced else line)
+    return "\n".join(out)
 
 
-def _docs_with_citations():
-    """提案文档也算:它的行号引用同样指向**当前**的代码。"""
-    for path in NORMATIVE:
-        yield path, path.read_text(encoding="utf-8")
+def _symbol_index(rel):
+    """{裸名: [限定名…]}。限定名形如 Result.text / cmd_init.put。
+
+    包括类内方法与嵌套函数 —— 文档实际指向过它们(pair.py 里 bad/put/warn)。
+    """
+    cache = _symbol_index.__dict__.setdefault("_c", {})
+    if rel in cache:
+        return cache[rel]
+    import ast
+    tree = ast.parse(PY_BY_REL[rel].read_text(encoding="utf-8"))
+    index = {}
+
+    def walk(node, prefix):
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef,
+                                  ast.ClassDef)):
+                qual = prefix + child.name
+                index.setdefault(child.name, []).append(qual)
+                if qual != child.name:
+                    index.setdefault(qual, []).append(qual)
+                walk(child, qual + ".")
+            elif isinstance(child, ast.Assign) and not prefix:
+                for t in child.targets:
+                    if isinstance(t, ast.Name):
+                        index.setdefault(t.id, []).append(t.id)
+    walk(tree, "")
+    cache[rel] = index
+    return index
+
+
+def _enclosing_symbol(rel, lineno):
+    """该行所在的**最内层** def/class 的限定名;模块级返回 None。"""
+    import ast
+    tree = ast.parse(PY_BY_REL[rel].read_text(encoding="utf-8"))
+    best = None
+
+    def walk(node, prefix):
+        nonlocal best
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef,
+                                  ast.ClassDef)):
+                qual = prefix + child.name
+                end = getattr(child, "end_lineno", child.lineno)
+                if child.lineno <= lineno <= end:
+                    best = qual          # 后写的更内层
+                walk(child, qual + ".")
+    walk(tree, "")
+    return best
+
+
+def _resolve(path_token):
+    """引用里的 <路径> -> 仓库相对路径。返回 (rel, 错误说明)。"""
+    if path_token in PY_BY_REL:
+        return path_token, None
+    hits = PY_BY_NAME.get(PurePosixPath(path_token).name, [])
+    if len(hits) == 1 and "/" not in path_token:
+        return hits[0], None
+    if len(hits) > 1 and "/" not in path_token:
+        return None, ("裸文件名 %s 在仓库里有 %d 个:%s —— 请写仓库相对路径"
+                      % (path_token, len(hits), "、".join(sorted(hits))))
+    return None, None            # 文件不存在 -> 不算引用(契约第 2 类豁免)
+
+
+def check_symbol_refs(text, where):
+    """一份文档里的代码引用违规清单。纯函数,便于直接用字符串测。"""
+    bad = []
+    body = _blank_fences(text)
+    for m in _LINE_REF.finditer(body):
+        token, a, b, sha = m.group(1), int(m.group(2)), m.group(3), m.group(4)
+        if sha:
+            continue                     # 历史快照豁免,且不校验 sha 是否存在
+        rel, err = _resolve(token)
+        if err:
+            bad.append("%s:%s —— %s" % (where, m.group(0), err))
+            continue
+        if rel is None:
+            continue                     # 目标文件不存在,不算引用
+        sym = _enclosing_symbol(rel, a)
+        bad.append("%s 的 `%s` 是行号形式,请改成 `%s#%s`"
+                   % (where, m.group(0), rel, sym or "(模块级,写文件名即可)"))
+    for m in _SYM_REF.finditer(body):
+        token, sym = m.group(1), m.group(2)
+        rel, err = _resolve(token)
+        if err:
+            bad.append("%s:%s —— %s" % (where, m.group(0), err))
+            continue
+        if rel is None:
+            continue
+        index = _symbol_index(rel)
+        quals = index.get(sym)
+        if not quals:
+            bad.append("%s 引用了 %s 里不存在的符号 `%s`" % (where, rel, sym))
+        elif len(quals) > 1:
+            bad.append("%s 的 `%s#%s` 在该文件里重名(%s),"
+                       "请写成 <外层>.<内层>"
+                       % (where, rel, sym, "、".join(sorted(quals))))
+    return bad
 
 
 def _load_pair():
@@ -259,59 +352,6 @@ class TestDocsConsistency(unittest.TestCase):
                         broken.append("%s -> %s(锚点不存在)" % (_rel(path), target))
         self.assertFalse(broken, "失效的文档链接:\n  " + "\n  ".join(broken))
 
-    # --- 行号引用 -----------------------------------------------------
-    def test_文档里的行号引用都落在文件内(self):
-        """`pair.py:1799` 这类引用是**硬编码的坐标**,最起码得指到文件里面。"""
-        bad = []
-        for path, doc in _docs_with_citations():
-            for name, a, b, _ in _citations(doc):
-                src = CITED[name].read_text(encoding="utf-8").splitlines()
-                if b > len(src):
-                    bad.append("%s -> %s:%d-%d(该文件只有 %d 行)"
-                               % (_rel(path), name, a, b, len(src)))
-        self.assertFalse(bad, "指到文件外面的行号引用:\n  " + "\n  ".join(bad))
-
-    def test_被引文件的行数没变过(self):
-        """行号引用的**绊线**。
-
-        被引文件上方插一行,下面每一处引用就都指向别处,而在这条出现之前
-        没有任何东西会红 —— `fc5c212` 一次让 7 处同时失效,全部是评审证据
-        级别的锚点(这个仓库的裁决门禁本身就要求 `路径:行号`)。
-
-        **为什么不比对内容:** 试过,不成立。引用旁边的反引号片段常常是
-        *描述*而不是原文(`put()` vs `def put(rel, content):`、`git commit`
-        vs `subprocess.run(("git",) + args, ...)`),按片段比对会误伤。
-
-        所以钉的是**触发条件**:被引文件的行数一变,就说明每一处引用都
-        *可能*已经错位,红并把它们当前指到的内容打出来,人五秒钟核完。
-        **它是绊线,不是校验器** —— 行数不变的内容修改抓不到,而且逃逸口
-        (不核对就改数字)与变异缓存的基线指纹同级。别把它读成"行号引用
-        已经有脚本守着了"。
-        """
-        drifted = []
-        for name, expect in sorted(CITED_LINE_COUNTS.items()):
-            actual = len(CITED[name].read_text(encoding="utf-8").splitlines())
-            if actual != expect:
-                drifted.append((name, expect, actual))
-        if not drifted:
-            return
-        lines = []
-        for name, expect, actual in drifted:
-            src = CITED[name].read_text(encoding="utf-8").splitlines()
-            lines.append("%s:%d 行 -> %d 行,受影响的引用:" % (name, expect, actual))
-            for path, doc in _docs_with_citations():
-                for cname, a, b, raw in _citations(doc):
-                    if cname != name:
-                        continue
-                    body = " / ".join(x.strip() for x in src[a - 1:b] if x.strip())
-                    lines.append("    %s 的 %s   现在指到:%s"
-                                 % (_rel(path), raw, body[:70] or "(空行)"))
-        self.fail("被引文件的行数变了,行号引用可能已经失效 ——\n  "
-                  + "\n  ".join(lines)
-                  + "\n\n逐条核对上面每一处指到的内容,改对之后更新 "
-                    "CITED_LINE_COUNTS。\n不核对就只改数字,这条检查等于没有。")
-
-    # --- 定位口径 -----------------------------------------------------
     def test_入口文档都写明了交付目的(self):
         """定位的**正向锚**:每个入口都得在开头说清楚这套协议是干什么的。
 
@@ -347,8 +387,8 @@ class TestDocsConsistency(unittest.TestCase):
         那两条管的是 **agent 为了过门禁而产出的文字** —— 换个说法就绕过去,
         而且会把协议绑死在一种语言上。这里查的是**本仓库自己的文档**,
         由本仓库的测试跑,没有人在试图绕过它:失效方式是**忘了改**,不是规避。
-        同 `CITED_LINE_COUNTS` 一样,**它是绊线,不是校验器** —— 换一种没列进
-        表里的句式照样能漂,别把它读成"定位已经有脚本守着了"。
+        **它是绊线,不是校验器** —— 换一种没列进表里的句式照样能漂,
+        别把它读成"定位已经有脚本守着了"。
 
         **豁免的三份是记录,不是主张:** design-decisions.md 里的既有 ADR
         按追加式纪律不改写(由 ADR-022 在顶层解释)、improvements.md 描述的是
@@ -417,3 +457,82 @@ class TestDocsConsistency(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSymbolReferences(unittest.TestCase):
+    """W6:文档里引用源码位置必须用符号形式,不用行号。
+
+    行号是**硬编码的坐标**:被引文件上方插一行,下面每一处引用就都指向别处。
+    前两轮为此烧掉两次异议与两次人类手工介入,而旧防线(`CITED_LINE_COUNTS`
+    绊线)只在**行数**变化时才红 —— 行数不变的内容改写、以及省掉文件名的
+    续引,它都抓不到。
+
+    符号引用让漂移**在源头不发生**:插入行、移动函数、重排顺序全部免疫。
+    失败模式也变了 —— 函数改名会红,而**改名了本来就该看一眼引用它的文档**。
+    """
+
+    # --- 对真实仓库的检查 -------------------------------------------
+    def test_规范文档里没有行号形式的引用(self):
+        """迁移的驱动用例。每一处都给出应改成的符号,不用人去反查。"""
+        bad = []
+        for path in NORMATIVE:
+            bad += check_symbol_refs(path.read_text(encoding="utf-8"),
+                                     _rel(path))
+        self.assertFalse(bad, "还有行号形式的引用(或引用有问题):\n  "
+                              + "\n  ".join(bad))
+
+    # --- 作弊场景:直接喂字符串,不依赖真实文档 -----------------------
+    def _one(self, text):
+        return check_symbol_refs(text, "X.md")
+
+    def test_符号不存在被检出(self):
+        bad = self._one("见 `tests/conformance/harness.py#没有这个符号`")
+        self.assertEqual(len(bad), 1, bad)
+        self.assertIn("不存在的符号", bad[0])
+
+    def test_裸写重名符号被检出并列出候选(self):
+        """`harness.py` 里 run / git / read / exists 各有两处,裸名等于抽签。"""
+        bad = self._one("见 `tests/conformance/harness.py#run`")
+        self.assertEqual(len(bad), 1, bad)
+        self.assertIn("重名", bad[0])
+        self.assertIn("PairRepo.run", bad[0])
+        self.assertIn("BareRepo.run", bad[0])
+
+    def test_限定名可以消歧(self):
+        """写成 <外层>.<内层> 就不再是抽签 —— 这是上一条的正向对照。"""
+        self.assertEqual(
+            self._one("见 `tests/conformance/harness.py#PairRepo.run`"), [])
+
+    def test_裸文件名不唯一被检出(self):
+        """本仓库有 3 个 __init__.py,裸名解析不到唯一文件。"""
+        bad = self._one("见 `__init__.py#main`")
+        self.assertEqual(len(bad), 1, bad)
+        self.assertIn("裸文件名", bad[0])
+
+    def test_围栏代码块里的不算引用(self):
+        """讲解引用形式、粘贴失败输出的文档要靠它。"""
+        self.assertEqual(self._one("```\npair.py:123\n```\n"), [])
+
+    def test_行内代码算引用(self):
+        """整类豁免行内代码,等于所有引用都不算引用 —— 这条检查会恒真。
+        规定形式外面那对反引号**就是**行内代码。"""
+        bad = self._one("见 `.agents/skills/pair-protocol/scripts/pair.py:100`")
+        self.assertEqual(len(bad), 1, bad)
+        self.assertIn("行号形式", bad[0])
+
+    def test_区间形式也被拒且按起始行给建议(self):
+        rel = ".agents/skills/pair-protocol/scripts/pair.py"
+        bad = self._one("见 `%s:2375-2382`" % rel)
+        self.assertEqual(len(bad), 1, bad)
+        self.assertIn("cmd_init.put", bad[0],
+                      "应按**起始行**所在的最内层符号给建议")
+
+    def test_历史快照豁免且不校验_sha(self):
+        """运行报告记的是当时的状态,改写它等于篡改历史;
+        而校验 sha 存在会让浅克隆无端变红。"""
+        rel = ".agents/skills/pair-protocol/scripts/pair.py"
+        self.assertEqual(self._one("见 `%s:100@deadbeef`" % rel), [])
+
+    def test_目标文件不存在时不算引用(self):
+        """rules.md 拿 `src/auth.py:42` 举例,那是虚构项目,没有符号可迁移。"""
+        self.assertEqual(self._one("见 `src/auth.py:42`"), [])
