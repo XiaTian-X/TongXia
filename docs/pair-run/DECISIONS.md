@@ -108,3 +108,15 @@
 - 理由: `SETUP_REPORT_REL` 是**全局唯一的固定文件名**,两个角色的开工前结论写同一份文件。dev 的 `verify-setup` 在后台跑的那两分钟里 tester 提交了自己的结论(`0472b88`),dev 没看见就整份覆盖(`2ff494f`),之后从 git 逐字节还原、两份并存(`e935350`)。**没有内容丢失,但这是一次真的越写。** 对照:`docs/reviews/` 下所有别的文件都带 `<ID>-<阶段>` 前缀,由 `check_review_names` 强制并检查,唯独这一份不受管。它和本轮 W4 是同一类东西 —— **边界的缺口只在真撞上的那一刻才发作**,这次撞上的是 dev 自己。
 - 已否决: 现在就改成 `setup-verification-<角色>.md` —— 不在本轮 PLAN 里,而"要不要扩大范围"是人类的决定;`verify-setup` 读的是固定路径,改它要同时动 `SETUP_REPORT_REL` 与文案,属于新工作项。也否决了只在聊天里报一句:上一条 W3 决策刚记过"报告不落文件就活不过这一轮"。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/reviews/setup-verification.md`, `docs/improvements.md`
+
+## W6 — 「模块级赋值算符号」这条契约条款的防护挂在一处文档引用上，改写那句话就会静默拆掉它
+
+- 理由: `TestSymbolReferences` 的 10 条作弊场景里没有一条喂模块级赋值。实测:删掉 `_symbol_index` 里的 `ast.Assign` 分支,只有 `test_规范文档里没有行号形式的引用` 变红 —— 而它之所以红,是因为 W6 迁移时恰好把 `docs/improvements.md` 的一处引用写成了 `tests/conformance/mutation_check.py#MAX_CACHED`。那份文件在 dev 路径:任何一次改写那句话都会让这条契约条款回到零覆盖,而且**不会有任何东西红**。契约「引用形式」写明符号可以是「模块级赋值的名字」,所以这是有契约、无独立用例的状态。dev 在两轮 review-test 里都把它写进 `--uncovered`,tester 两轮都没补 —— 双方都不认为它够打回,但它也不该随工作项笔记一起作废。补法是一行:`self._one("见 `…/mutation_check.py#MAX_CACHED`") == []`。
+- 已否决: 拿它做第三次打回 —— 契约没要求每条条款都有独立用例,而现状确实有覆盖,为凑打回而打回本身就是失真(评审阶段的文案点名禁止)。也否决了 dev 在 `improvements.md` 里给那处引用加"别删"的注释 —— 靠注释保护一条测试覆盖,是把防护建在下一个人读不读注释上,比现状更弱。
+- 影响路径: `tests/conformance/test_docs_consistency.py`, `docs/improvements.md`
+
+## W6 — 决策记录本身不在符号引用的扫描范围内，而它是唯一跨轮次的长期资产
+
+- 理由: W6 的检查按契约只扫 `NORMATIVE`(SKILL.md、rules.md、README、INSTALL、`docs/*.md`)。`docs/reviews/` 与工作项笔记不在其中,那是对的 —— 它们一次性、随工作项作废。但 `docs/pair-run/DECISIONS.md` 不同:**它每次 `status` 都被注入给两个 agent**,是跨轮次唯一的长期资产,却同样不被扫描。实测它现在带着 `mutation_check.py:596`、`harness.py:189-190`、`pair.py:1787` 等行号引用,其中 `mutation_check.py:596` **已经是错的**(596 是 `run_baseline`,那条决策说的是 `precheck_no_baseline`)—— 正是 W6 笔记里追出来的那次漂移,它在决策记录里还留着一份没修。也就是说:被反复读给未来 agent 的那份材料,恰恰是防护最弱的一份。
+- 已否决: 在 W6 里顺手把 `decisions_file` 加进扫描范围 —— 契约「边界」逐字写的是"只管规范性文档(与现有一致性检查的口径相同)",扩大范围要改契约,是人类的决定;而且记忆层能否承受"符号改名就变红"要单独想清楚(决策记录记的是当时的判断,和运行报告同类,可能该走 `@<sha>` 豁免而不是符号)。也否决了 dev 在评审回合顺手修那处 596 —— 决策记录是追加式的,改写既有条目正是它禁止的。
+- 影响路径: `docs/pair-run/DECISIONS.md`, `tests/conformance/test_docs_consistency.py`, `docs/pair-run/CONTRACT.md`
