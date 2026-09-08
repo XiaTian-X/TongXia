@@ -113,7 +113,31 @@ class TestOrphanTruncation(PairTestCase):
         listed = [n for n in made if n in r.text]
         self.assertEqual(len(listed), 10,
                          "12 个孤儿应当只列出 10 个,实际 %d" % len(listed))
-        self.assertIn("2", r.text, "12 − 10,应说明还剩 2 个(剩余数不是总数)")
+
+        # 剩余那一行:**不能用 assertIn("2", r.text)** —— 首行是"12 个孤儿",
+        # 里面就含 "2",那样的断言是恒真的(dev 用变异证明过:把补剩余数
+        # 那两行整段删掉,301 条一条都不红)。契约的括号「总数减 10,
+        # 不是总数」是定稿时专门加的,得真的守住。
+        #
+        # 也不断言措辞("还有""没列出")—— 契约只规定"再补一行说明还剩
+        # 多少个",没规定怎么说。所以用**结构**定位:孤儿块里既不含总数、
+        # 也不是被列出路径的那一行。这样双向都挡得住:不实现 -> 找不到这样
+        # 的行;打印总数当剩余数 -> 那行含 "12" 被排除,同样找不到。
+        lines = r.text.split("\n")
+        head = next(k for k, l in enumerate(lines) if "孤儿" in l and "12" in l)
+        block = lines[head:]
+        block = block[:next((k for k, l in enumerate(block) if not l.strip()),
+                            len(block))]
+        rest = [l for l in block
+                if any(c.isdigit() for c in l)
+                and "12" not in l
+                and not any(n in l for n in made)]
+        self.assertTrue(
+            rest, "契约要求再补一行说明还剩多少个,孤儿块里没找到这样一行:\n"
+                  + "\n".join(block))
+        self.assertTrue(
+            any("2" in l for l in rest),
+            "剩余数应当是 12 − 10 = 2,实际那一行是:%r" % rest)
 
 
 class TestIgnorePathsListing(PairTestCase):
