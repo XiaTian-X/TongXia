@@ -157,20 +157,55 @@ committer 探测 rc=128,只探一条就会一字不写、随后 commit 照样失
 
 ## 新增一条防护时
 
-五步,缺一不可:
+五步,缺一不可 —— **但没有任何一个角色能独立走完这五步。**
+按 `.pair/config.json` 的 `roles`,它横跨两个独占路径:
+
+| 步骤 | 落在哪 | 谁能写 |
+|---|---|---|
+| 1. 加拒绝分支 | `pair.py` | **dev** |
+| 2. 加作弊用例 | `tests/conformance/` | **tester** |
+| 3. 补 `MUTATIONS` 变异点 | `tests/conformance/mutation_check.py` | **tester** |
+| 4. 登记 `ENFORCEMENTS` + 文档标记 | `pair.py` + `docs/` | **dev** |
+| 5. 同步文档 | `docs/` 与 skill 内的 `references/` | **dev** |
+
+单人维护时这是一份完整的检查表;切成两个角色之后,它是**两个人各持一半**。
+所以下面按角色分开写,并写明交接时怎么把另一半递过去。
+
+### dev 的三步(1、4、5)
 
 1. **在 `pair.py` 里加拒绝分支。** 拒绝文案要包含:拦了什么、为什么、怎么改。
    agent 只能看到这段文字 —— 它就是这条规则的全部说明书。
-2. **在 `tests/conformance/` 里加一个扮演作弊 agent 的用例**,断言它被拦住。
-3. **在 `mutation_check.py` 的 `MUTATIONS` 里补上对应变异点** ——
-   一段能拆掉这条防护的字符串替换。没补的防护等于没有保障。
-4. **在 `pair.py` 的 `ENFORCEMENTS` 里登记一个 id**,并在
+2. **在 `pair.py` 的 `ENFORCEMENTS` 里登记一个 id**,并在
    [protocol-spec.md](protocol-spec.md) §4 或 [architecture.md](architecture.md)
    的强制力分布表上方那行 `<!-- pair-enforcements: ... -->` 注释里加上它。
-5. **同步文档**:`references/rules.md`(判例)、
+3. **同步文档**:`references/rules.md`(判例)、
    [protocol-spec.md](protocol-spec.md)(规范)、
    [troubleshooting.md](troubleshooting.md)(被拒了怎么办)、
    [design-decisions.md](design-decisions.md)(值得留 ADR 的决策)。
+
+**并且:在交接说明与工作项笔记里点名"第 2、3 步还欠着"**,把 tester 要写的
+那两样说清楚(哪条防护、拆掉它的字符串片段大概长什么样)。
+笔记随工作项作废,所以**如果对方那一轮没补上,要在完成前写进决策记录** ——
+否则那条防护就是没有保障地上线了。
+
+### tester 的两步(2、3)
+
+1. **加一个扮演作弊 agent 的用例**,断言它被拦住。
+2. **在 `MUTATIONS` 里补上对应变异点** —— 一段能拆掉这条防护的字符串替换。
+   **没补的防护等于没有保障。**
+
+**时机上有个坑:** 新分支的变异锚点是 `pair.py` 的**字面源码片段**,而
+`test_变异点仍能匹配到源码` 要求它 `count(old) == 1`。防护还没写出来时,
+任何锚点都是失配 —— 要它匹配,tester 就得把 dev 将要写的那几行逐字写死,
+那是在断言实现细节。**所以第 3 步只能等实现落地之后**:或者放在同一工作项
+dev 交出实现后的评审回合,或者单开一个 `[cover]` 工作项专门补。
+第三、四轮各踩过一次,处理办法都是后者。
+
+**反过来也有一个坑:** dev 写新代码时可能不小心让某个既有锚点命中两处
+(照抄了一行现成的判断),`test_变异点仍能匹配到源码` 会红,而 dev 改不了
+`MUTATIONS`。第四轮实测撞过一次,dev 那一侧的出路是**换一种等价写法**
+让锚点保持唯一,并在代码里留注释说明为什么不能照抄 —— 否则下一个人会
+"顺手修正"回去。
 
 第 4 步不是形式主义:`tests/conformance/test_docs_consistency.py` 会拿
 `ENFORCEMENTS`、`DEFAULT_STATE`、子命令列表逐一核对文档,漏改就红。

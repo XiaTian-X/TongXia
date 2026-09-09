@@ -148,6 +148,8 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "contract-change-shape", # document-shape 的子项:契约变更四小节(按文件名触发)
     "baseline-shape",        # document-shape 的子项:基线说明两小节
     "setup-report-coverage", # 契约审查结论必须逐节点名 + 声明作者身份
+    "doc-reason",            # 改了规范性文档就必须给理由
+    "roadmap-basis",         # 路线图有改写时,依据必须指向一份真实产物
 )
 
 
@@ -1384,6 +1386,79 @@ def _known_path(ref, known):
     return any(k == ref or k.endswith("/" + ref) for k in known)
 
 
+ROADMAP_REL = "docs/improvements.md"
+
+
+def normative_docs(cfg, entries):
+    """本回合改动里的**规范性文档**。
+
+    闭合定义:所有 `.md`,减去记忆层(`notes_dir` / `decisions_file`)与评审
+    目录(`shared_paths`)。**不是枚举** —— 新加的 `.md` 默认落在范围内,
+    而不是默认漏掉;第一版写成枚举,实算漏掉 13 份,其中包括 `AGENTS.md`、
+    `CLAUDE.md` 这批告诉每个 agent"这是结对项目"的入口文件。
+
+    **判据取本回合改动那一批(含未跟踪),不是 `git ls-files`。** 照后者判,
+    本回合新写一份规范性文档就完全逃过这条要求,而新增文档恰恰最该说明为什么。
+    调用方传进来的 `entries` 是 `handoff` 开头抓的那一批 —— 也就是
+    `tick_plan_item` 写 `PLAN.md` **之前**,所以脚本自己的勾选不会被算进来。
+    """
+    out = []
+    for _, path in entries:
+        if not path.endswith(".md"):
+            continue
+        # 两个操作数的顺序是**故意**和写权限边界那一处相反的:变异点
+        # 「拆掉 ignore_paths」与「拆掉协议日志的边界豁免」锚的是那一行的
+        # 字面片段(mutation_check.py,tester 独占路径),这里照抄会让锚点
+        # 命中两处、`test_变异点仍能匹配到源码` 直接红,而我改不了那个文件。
+        if matches_any(path, cfg["ignore_paths"]) or path in PROTOCOL_LOGS:
+            continue
+        if matches_any(path, cfg["shared_paths"]):
+            continue
+        if memory_on(cfg) and (path_matches(path, cfg["notes_dir"])
+                               or path_matches(path, cfg["decisions_file"])):
+            continue
+        out.append(path)
+    return sorted(set(out))
+
+
+def has_rewrite(root, path):
+    """这个文件本回合相对 HEAD 有没有删除行(有=改写,无=纯追加)。
+
+    **必须比 `HEAD`。** 不带参数的 `git diff` 只看未暂存的改动 —— agent 只要
+    在 `handoff` 之前先 `git add` 自己那几个文件,删除行数就变成 0,
+    `--basis` 直接绕过。未跟踪的新文件在 `HEAD` 里没有对应物,删除行数为 0,
+    按纯追加处理,这是对的。
+    """
+    stat = git("diff", "--numstat", "HEAD", "--", path,
+               cwd=root, check=False) or ""
+    for line in stat.splitlines():
+        cols = line.split("\t")
+        if len(cols) >= 2 and cols[1].isdigit() and int(cols[1]) > 0:
+            return True
+    return False
+
+
+def basis_points_at_file(root, text, entries):
+    """`--basis` 里有没有一个指向真实文件的路径。
+
+    三条都来自契约,少一条实现方就只能猜:
+    - **抽取**按空白切开、逐个候选去问,**至少命中一个就算合格**(包含匹配,
+      不是整串匹配)—— "见 X 的第二节"是人会自然写出来的形式;
+    - **行号后缀**先剥掉再问,剥不出就按原样问;
+    - **`known` 含本回合改动** —— 依据往往就是这一回合刚写的那份评审记录,
+      只用 `tracked_files` 会让第一个真实用例就被拒。
+
+    抽取这一步不能复用 `LOCATION_RE`:它的正则要求带行号,而依据通常是
+    一份文档的路径、不带行号,拿它抽会一个都抽不出来。
+    """
+    known = set(tracked_files(root)) | {p for _, p in entries}
+    for token in (text or "").split():
+        stripped = re.sub(r":\d+$", "", token)
+        if _known_path(token, known) or _known_path(stripped, known):
+            return True
+    return False
+
+
 def _review_top_level(cfg, path):
     """这个路径是不是评审目录的**顶层 .md**。
 
@@ -1740,6 +1815,43 @@ def cmd_handoff(root, cfg, args):
         die("拒绝交接 —— 以下改动越界:%s\n\n%s如果你认为规则本身有问题,"
             "写进 docs/reviews/ 并告诉人类。" % (lines, tail + ""))
 
+    # --- 文档改动要带理由 -------------------------------------------------
+    # 用的是 `entries`(handoff 开头抓的那一批),不是提交内容:完成工作项时
+    # 脚本自己去 PLAN.md 勾选,那次写入发生在这之后 —— 按提交判会让每一次
+    # 完成工作项的交接都被要求 --doc-reason,而那个改动不是 agent 做的。
+    touched_docs = normative_docs(cfg, entries)
+    if touched_docs and not args.doc_reason:
+        die("拒绝交接 —— 本回合改了规范性文档,但没说为什么:\n  %s\n\n"
+            "归属其实已经有了(提交正文里那行 `role=… phase=… item=…` 由脚本\n"
+            "写入,可靠),缺的是**理由与文档的绑定**:一次交接可能改了实现\n"
+            "加三份文档,而说明只有提交标题那一句。\n\n"
+            "  python3 %s handoff \"说明\" --doc-reason \"为什么改这些文档\"\n\n"
+            "笔记与评审记录豁免 —— 它们本身就是理由。\n"
+            "理由会写进提交正文,不校验写得好不好,那靠对方评审。"
+            % ("\n  ".join(touched_docs), PROG_HINT))
+
+    # --- 路线图的改写要有依据 ---------------------------------------------
+    # 只作用于路线图,而且只在**有改写**时:新条目往往是审查中发现的待办,
+    # 一刀切会让"记录一个发现"也要走重流程,路线图就变成不能记录发现的死文档。
+    if ROADMAP_REL in touched_docs and has_rewrite(root, ROADMAP_REL):
+        if not args.basis:
+            die("拒绝交接 —— 你改写了 %s(有删除行),这要给依据。\n\n"
+                "纯追加(只新增、不删行)不需要 —— 记录一个发现应当是轻的。\n"
+                "但**改写**动的是别人已经读过的结论,要说清楚凭什么。\n\n"
+                "  python3 %s handoff \"说明\" --doc-reason \"…\" "
+                "--basis \"docs/reviews/…\"\n\n"
+                "依据要指向一个仓库里真实存在的路径(评审记录、决策记录这类\n"
+                "**产物**),不是一句散文 —— 那样对方才能点开核对。"
+                % (ROADMAP_REL, PROG_HINT))
+        if not basis_points_at_file(root, args.basis, entries):
+            die("拒绝交接 —— `--basis` 里没有指向真实文件的路径,\n"
+                "所以它和 `--doc-reason` 一样只是一句话,对方无从核对。\n\n"
+                "  你写的: %s\n"
+                "  改写的: %s\n\n"
+                "写一份**产物**的路径,例如本回合的评审记录或决策记录;\n"
+                "可以写在句子里(\"见 X 的第二节\"),也可以带行号(\"X:12\")。"
+                % (args.basis, ROADMAP_REL))
+
     # --- 测试删除防护 -----------------------------------------------------
     test_paths = cfg["roles"]["tester"]
     deleted = [p for xy, p in entries
@@ -1909,6 +2021,10 @@ def cmd_handoff(root, cfg, args):
                                                  "\n  ".join(deleted))
     if args.no_decision:
         body += "\n未留决策(已声明): %s" % args.no_decision
+    if args.doc_reason:
+        body += "\n文档改动理由: %s" % args.doc_reason
+    if args.basis:
+        body += "\n改写依据: %s" % args.basis
     if verdict == "approve":
         body += "\n检查了: %s\n未覆盖: %s" % (args.checked, args.uncovered)
     # `is not None` 而不是真值判断:空串表示"重钉发生了但 sha 没取到",
@@ -3057,6 +3173,10 @@ def main(argv=None):
                       help="显式声明本次删除了测试,并给出理由")
     p_ho.add_argument("--no-decision", metavar="理由", default=None,
                       help="显式声明本工作项的笔记没有值得沉淀成决策的内容")
+    p_ho.add_argument("--doc-reason", metavar="理由", default=None,
+                      help="本回合改了规范性文档时必填:为什么改")
+    p_ho.add_argument("--basis", metavar="依据", default=None,
+                      help="改写路线图(有删除行)时必填:指向一份真实产物的路径")
     p_ho.add_argument("--checked", metavar="内容", default=None,
                       help="approve 必填:你具体检查了什么")
     p_ho.add_argument("--uncovered", metavar="内容", default=None,
