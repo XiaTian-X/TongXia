@@ -231,3 +231,9 @@
 - 理由: 实算 `FLOWS["feature"]`:tester 唯一可写的阶段是 `spec`(`review-impl` 是只读评审,`tests/` 与 `mutation_check.py` 都不在它的可写路径里)。回到 `spec` 的边只有两条 —— `('impl', 'changes')` 与 `('review-test', 'changes')` —— **两条都由 dev 发起**;tester 自己那次打回(`review-impl changes`)去的是 `impl`,是 dev 的回合。于是:**在一个 feature 工作项里,tester 补测试或补变异点的机会完全由 dev 决定。** 这和五步纪律的第 3 步(补 `MUTATIONS` 变异点)撞在一起:变异锚点是 `pair.py` 的字面源码,实现没落地时任何锚点都失配,所以第 3 步只能在实现之后 —— 而那时 tester 已经没有可写回合了。W8 这一轮它之所以补上了,是因为 dev 为**别的两条缺口**打了回、把阶段退回 `spec`,tester 顺带补的。**那是运气,不是机制。**
 - 已否决: 让 dev 为了给 tester 腾一个可写回合而打回 —— 那是制造一次打回,评审阶段的文案点名禁止,而且会污染打回率这个指标(`report` 拿它当"互相点头"的观测量)。也否决了把 `review-impl` 改成可写 —— 只读是它的全部意义:评审回合能改测试,就没有什么能阻止评审方把测试改成迁就实现的样子。正确出路写进了 `docs/contributing.md` 的分角色纪律:dev 交实现时点名欠账;若到 `review-test` 都没有正当的打回理由,**dev 必须在 approve 之前把欠账写进决策记录**;或者单开一个 `[cover]` 工作项(第三轮 W7 的做法)。
 - 影响路径: `docs/contributing.md`, `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/mutation_check.py`
+
+## W8 — `--doc-reason` 少了 `.strip()`：一个空格就能满足「强制留痕」，而留下的痕是空的
+
+- 理由: 实测在临时仓库跑真实 `handoff`:`--doc-reason "   "` 退出码 **0**,提交正文里那一行渲染成 `文档改动理由:` —— **git 剥掉尾随空白,留痕与没写一模一样**。契约对这个旗标的原话是"不是放行,是强制留痕",现在两头都不成立。根因是判据写成 `not args.doc_reason`,而同一份文件里既有的同类旗标(`--checked` / `--uncovered`)用的是 `not (val or "").strip()` —— **少了 `.strip()`,与仓库既有口径不一致**。tester 上一轮补的 `test_理由是空字符串不算数` 只钉了 `""`,一个空格就绕过去。缺陷在实现,不在用例;但 feature 流程里 tester 唯一可写的阶段是 `spec`,所以必须由 dev 打回才能补上这条用例 —— 这正是本工作项另一条决策记的那个结构问题的第二次实例。
+- 已否决: dev 在 `review-test` 直接 approve 再自己找机会补 `.strip()` —— review-test 只读,改不了实现;而下一个可写回合要到下一个工作项,那时这条防护已经以"一个空格就能满足"的形态上线了。也否决了顺带要求补 `--basis "   "` 的用例 —— 实测空白串会被第二道 `basis_points_at_file` 拒掉(`"   ".split()` 是空列表),那条用例会是恒真的,而恒真的用例比没有更坏。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_docreason.py`, `tests/conformance/mutation_check.py`
