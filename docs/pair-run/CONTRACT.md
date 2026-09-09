@@ -287,11 +287,16 @@ agent 照做就会撤销掉不是它写的东西。**只在中间加一句提示
 - 依据: 人类定稿
 
 本轮两节都要判断"这次改动碰没碰规范性文档",而仓库里已经有一个近义的范围
-(`test_docs_consistency.py` 的 `NORMATIVE`)。**两者不等,差 5 份文件**,
+(`test_docs_consistency.py` 的 `NORMATIVE`)。**两者不等,实算差 18 份**,
 不点破就是同一个词两个外延 —— 第三轮开工前审查已经因为这类含糊报过一次。
 
-**「规范性文档」(本轮两节用的定义)** = **所有被 git 跟踪的 `.md`**,
-除去记忆层(`notes_dir` 与 `decisions_file`)与评审目录(`shared_paths`)。
+**「规范性文档」(本轮两节用的定义)** = **所有 `.md`**,除去记忆层
+(`notes_dir` 与 `decisions_file`)与评审目录(`shared_paths`)。
+
+**判定用的是本回合改动的那批文件,不是 `git ls-files`。** 本回合**新建**的
+`.md` 在检查那一刻还没入库 —— 照 `git ls-files` 判,**新写一份规范性文档
+就完全逃过这条要求**,而新增文档恰恰最该说明为什么。判据要和写权限边界
+用同一批数据(`git status --porcelain`,它包含未跟踪文件)。
 
 **这是一个闭合定义,不是枚举** —— 新加的 `.md` 默认落在范围内,而不是默认
 漏掉。第一版写成枚举(`docs/` 下的 + README + INSTALL + skill 的),实算
@@ -304,13 +309,16 @@ W4 刚用 33 个孤儿证明过枚举会漏,同一轮里不该再造一个枚举
 **含 `docs/pair-run/PLAN.md` 与 `docs/pair-run/CONTRACT.md`**,
 也含 `examples/` 下随包分发的样板文档(它们是分发物,改了同样该有理由)。
 
-**「扫描范围」(「文档里的代码引用」那一节用的)** = `NORMATIVE`,
-比上面少 5 份:`docs/pair-run/PLAN.md`、`docs/pair-run/CONTRACT.md`、
-以及 `references/` 下的 `brownfield.md`、`contract-templates.md`、
-`documents.md`。
+**「扫描范围」(「文档里的代码引用」那一节用的)** = `NORMATIVE`(17 份)。
+规范性文档是 35 份,少掉的 18 份里最要紧的是:`docs/pair-run/PLAN.md`、
+`docs/pair-run/CONTRACT.md`、`references/` 下的 `brownfield.md` /
+`contract-templates.md` / `documents.md`,以及 `AGENTS.md`、`CLAUDE.md`
+这批入口文件。
 
-**这个差是既成事实,不是本轮要消除的东西。** 符号引用检查扫不到那 5 份,
-是一个独立的缺口,已登记进路线图;本轮只负责**不再用同一个词指两件事**。
+**这个差是既成事实,不是本轮要消除的东西。** 符号引用检查扫不到那 18 份
+(其中 `PLAN.md`、`CONTRACT.md` 与 `references/` 下三份是规范性内容,
+其余多为入口文件与 `examples/` 下的样板),是一个独立的缺口 ——
+**开放条目 16**;本轮只负责**不再用同一个词指两件事**。
 
 ## 文档改动要带理由
 
@@ -353,14 +361,24 @@ agent 自述,可靠。缺的是**理由与文档的绑定**:一次交接可能�
 **为什么要分** 路线图的新条目往往是审查中发现的待办。一刀切会让"记录一个
 发现"也要先走一遍重流程,**路线图就变成不能记录发现的死文档**。
 
-**判据** `git diff --numstat` 对这些文件的删除行数。这有先例 ——
+**判据** `git diff --numstat HEAD -- <文件>` 的删除行数。**必须比 HEAD,
+不能用不带参数的 `git diff`** —— 后者只看未暂存的改动,agent 只要在
+`handoff` 之前先 `git add` 自己那几个文件,删除行数就变成 0、直接绕过
+`--basis`。(`handoff` 自己的 `git add -A` 发生在全部校验**之后**,
+所以校验那一刻工作区通常是未暂存的 —— 但"通常"不是防护。)
+未跟踪的新文件在 `HEAD` 里没有对应物,删除行数为 0,按纯追加处理,这是对的。
+这有先例 ——
 `DECISIONS.md` 的追加式检查判的是同一件事,只是那里能靠"只在末尾追加"
 用 `startswith`,而路线图的新条目会插在中间,所以改用删除行数。
 
-**`--basis` 要指向一个仓库里真实存在的路径**,不是一句散文。判据与
-`handoff changes` 的位置引用检查同一个手法(`LOCATION_RE` + 路径真实性),
-不新造机制:写 `docs/reviews/W7-review-test.md`、`docs/pair-run/DECISIONS.md`
-这类**产物**,而不是"因为我觉得更好"。
+**`--basis` 要指向一个仓库里真实存在的路径**,不是一句散文。写
+`docs/reviews/W7-review-test.md`、`docs/pair-run/DECISIONS.md` 这类**产物**,
+而不是"因为我觉得更好"。
+
+**判据是路径真实性(`_known_path`),不是 `LOCATION_RE`。** 后者的正则是
+`([\w./\-]+):(\d+)` —— **要求带行号**,而上面两个例子都不带,
+拿它当判据会把契约自己举的例子全部判成不合格。允许带行号(`…md:12`),
+但不强制。
 
 **为什么要这一条**:`--doc-reason` 与 `--basis` 若都只要求非空,两者的效果
 **完全一样**,叠在一起只是让人多打一行字。要求指向产物之后它们才真的不同 ——

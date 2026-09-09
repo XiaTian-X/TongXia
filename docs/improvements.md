@@ -1491,6 +1491,49 @@ W6 把带文件名的引用全部迁到了 `` `<路径>#<符号>` ``,但检查�
 (那条说的是**跑**,这条说的是**写**)。
 
 
+### 16. 符号引用检查的扫描范围比「规范性文档」小 18 份
+
+W6 的符号引用检查扫 `test_docs_consistency.py` 的 `NORMATIVE`(**17 份**)。
+第四轮给「规范性文档」定了一个闭合定义(所有 `.md` 减记忆层与评审目录,
+**35 份**),两者差 **18 份**。差集里有真内容:
+
+- `docs/pair-run/PLAN.md`、`docs/pair-run/CONTRACT.md` —— 承重文档,
+  里面引用源码的地方一处都没被检查过
+- `references/` 下的 `brownfield.md`、`contract-templates.md`、`documents.md`
+  —— 随包分发的指引
+- `AGENTS.md`、`CLAUDE.md`、`CONVENTIONS.md`、`GEMINI.md`、
+  `.github/copilot-instructions.md` —— **入口文件**,ADR-022 那次 sweep
+  漏掉的正是这一批
+- `examples/` 下的样板文档
+
+**为什么不是顺手就能改的:** 把 `NORMATIVE` 直接换成闭合定义会立刻扫到
+`examples/demo-project/` 下的样板 —— 那是**故意做成"接入前的样子"**的
+fixture,里面的引用未必指向本仓库的符号。要么给 fixture 单独豁免(又一条
+排除,又一个会漏的口子),要么先把样板里的引用清一遍。**这是一笔单独的账。**
+
+第四轮的契约「术语」一节点名了这个差,但只负责"不再用同一个词指两件事",
+不消除它。
+
+### 17. `setup_verified` 一旦为真就永不复位，契约改了也不会要求重读
+
+`cmd_verify_setup` 结尾把 `state["setup_verified"]` 置为 `True`,而**全仓
+没有任何一处把它置回 `False`**。`claim` / `handoff` / `status` 三处都只读
+它。于是:
+
+**第三轮结束后契约新增了三节(术语、文档改动要带理由、冻结文件改成带声明
+才放行),而 `setup_verified` 仍然是 `True` —— `claim` 会直接放行,
+没有任何机制要求任何一方读过那三节。**
+
+第四轮的计划里写着"开工前重跑 `verify-setup`",但那是**散文规则**,
+正是这个项目一向不信任的那种。这道门是协议自称唯一会致命的失败模式
+(契约歧义)的主要防线,而它在契约变更之后自动失效。
+
+**修法:** `contract_file` 的 blob sha 变了就把 `setup_verified` 置回
+`False`。状态里已经有 `contract_sha` 这个字段,但它的生命周期绑在工作项上
+(`claim` 时记、完成时清),要另存一个"上次通过校验时的契约 sha"。
+和开放条目 12、13 同属 `verify-setup` 的一组缺陷,建议一起做。
+
+
 ---
 
 ## 已解决(留档)
