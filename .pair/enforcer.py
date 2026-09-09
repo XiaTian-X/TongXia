@@ -464,6 +464,49 @@ def tracked_files(root):
     return [p for p in out.split("\0") if p]
 
 
+JUDGE_REL = ".pair/enforcer.py"
+
+
+def judge_pair(root):
+    """(裁判副本, 正本) —— 副本或正本缺一就返回 (None, None)。
+
+    正本走 `PROG_HINT` 那个固定路径,**绝不能用 `__file__`**:本轮的真实
+    部署方式就是跑副本,那时 `__file__` 指向副本自己 —— 拿它去比是自己跟
+    自己比,恒真,而且恰好在最该生效的场景下失效。
+    """
+    copy, src = root / JUDGE_REL, root / PROG_HINT
+    if not copy.exists() or not src.exists():
+        return None, None
+    return copy, src
+
+
+def judge_in_sync(root):
+    """副本是否逐字节等于正本。副本不存在时算同步(默认用法没有副本)。
+
+    **必须逐字节。** 比注册表、比符号集合、比 strip 之后的文本都不行 ——
+    上一轮真实发生过的漂移里 `ENFORCEMENTS` 与 `HANDOFF_INVARIANTS` 两边
+    差集都是空的,而两个文件差 122 行、整节孤儿清单不在裁判里。
+    那种判据长得像检测器,实际恒真。
+    """
+    copy, src = judge_pair(root)
+    return copy is None or copy.read_bytes() == src.read_bytes()
+
+
+def repin_judge(root):
+    """把正本复制成副本,返回新的 blob sha;没有副本时返回 None。
+
+    调用点必须落在**写权限边界校验之后、`git add -A` 之前**:落在校验之前
+    会被自己的冻结判定拦住,落在 `git add -A` 之后则重钉过的副本留在工作区
+    没进提交 —— 下一个回合对方被冻结判定拦住,而那个改动不是它做的,
+    撤销又会把重钉一起撤掉,它没有出路。
+    """
+    copy, src = judge_pair(root)
+    if copy is None:
+        return None
+    copy.write_bytes(src.read_bytes())
+    return git("hash-object", PROG_HINT, cwd=root, check=False)
+
+
 # 清单超过这个条数就截断 —— 列全会刷屏,人就不看了。
 PATH_LISTING_LIMIT = 10
 
@@ -1245,6 +1288,21 @@ def cmd_claim(root, cfg, args):
             "请让结对的另一方先跑:python3 %s verify-setup --drafter self|other"
             % PROG_HINT)
 
+    # --- 裁判副本必须与正本一致 -------------------------------------------
+    # 校验放在 claim 不放在 handoff:工作项进行中 dev 正在改正本,两者本来
+    # 就该不等 —— 放在 handoff 会让 dev 每一次实现都被自己拦住。
+    if not judge_in_sync(root):
+        die("拒绝认领 —— 裁判副本和正本不一致。\n\n"
+            "  副本(实际在执行的):%s\n"
+            "  正本(工作产物)    :%s\n\n"
+            "副本落后时,协议是拿一个旧版本在判你 —— 上一轮真实发生过:\n"
+            "两个文件差 122 行,整节孤儿清单在副本里根本不存在,而整轮没人发现,\n"
+            "因为少一条警告不会让任何东西变红。\n\n"
+            "重钉:\n"
+            "  cp %s %s\n\n"
+            "重钉之前先确认正本是绿的 —— 钉上去的那一份马上就要当裁判。"
+            % (JUDGE_REL, PROG_HINT, PROG_HINT, JUDGE_REL))
+
     items = parse_plan(root, cfg)
     if not items:
         die("%s 里没有找到任何工作项。\n"
@@ -1820,6 +1878,12 @@ def cmd_handoff(root, cfg, args):
     state["after_rebound"] = (verdict == "changes")
     save_state(root, state)
 
+    # --- 裁判副本重钉 -----------------------------------------------------
+    # 只在 DONE 且全绿时。"全绿"就是证据 —— 那是这个协议唯一信任的东西,
+    # 不另造一套。位置钉两头:在写权限边界校验之后(否则被自己的冻结判定
+    # 拦住),且在 `git add -A` 之前(否则重钉过的副本留在工作区没进提交)。
+    repinned = repin_judge(root) if (target == "DONE" and green) else None
+
     # --- 提交 -------------------------------------------------------------
     prefix = ("dispute" if is_dispute
               else COMMIT_PREFIX[phase] + ("/" + verdict if verdict else ""))
@@ -1833,6 +1897,9 @@ def cmd_handoff(root, cfg, args):
         body += "\n未留决策(已声明): %s" % args.no_decision
     if verdict == "approve":
         body += "\n检查了: %s\n未覆盖: %s" % (args.checked, args.uncovered)
+    if repinned:
+        body += "\n裁判副本已重钉: %s -> %s (%s)" % (PROG_HINT, JUDGE_REL,
+                                                     repinned)
 
     git("add", "-A", cwd=root)
     git("commit", "-q", "-m", "%s: %s" % (prefix, message), "-m", body, cwd=root)
