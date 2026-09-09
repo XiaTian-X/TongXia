@@ -502,9 +502,23 @@ def repin_judge(root):
     """
     copy, src = judge_pair(root)
     if copy is None:
-        return None
+        return None                     # 没有副本 —— 什么都没发生
     copy.write_bytes(src.read_bytes())
-    return git("hash-object", PROG_HINT, cwd=root, check=False)
+    out = git("hash-object", PROG_HINT, cwd=root, check=False)
+    # 到这一行副本**已经改写**。所以返回的是"重钉发生过"这个事实,不是
+    # "取到了 sha":取不到就返回空串,调用方照样留痕。
+    #
+    # 两条看起来更严的路都比这条差:
+    #   - 取不到就什么都不写 —— 那是"动作发生了、记录没有",正是 W10 要
+    #     消灭的那一类失效(上一轮的漂移整轮没被发现,就因为它不让任何
+    #     东西变红)。
+    #   - 取不到就让整次交接失败 —— `die` 会把已经改写的副本留在工作区
+    #     没进提交,下一个回合对方被冻结判定拦住,而拒绝文案让它"撤销这些
+    #     改动",撤销就把重钉撤掉。这不是推演:`35136c4` 实测发生过一次。
+    #
+    # 副本同步是本工作项要守的不变量,记录的完整性次之 —— 所以宁可 sha
+    # 缺一格,也不让副本停在半路。
+    return (out or "").strip()
 
 
 # 清单超过这个条数就截断 —— 列全会刷屏,人就不看了。
@@ -1897,9 +1911,11 @@ def cmd_handoff(root, cfg, args):
         body += "\n未留决策(已声明): %s" % args.no_decision
     if verdict == "approve":
         body += "\n检查了: %s\n未覆盖: %s" % (args.checked, args.uncovered)
-    if repinned:
-        body += "\n裁判副本已重钉: %s -> %s (%s)" % (PROG_HINT, JUDGE_REL,
-                                                     repinned)
+    # `is not None` 而不是真值判断:空串表示"重钉发生了但 sha 没取到",
+    # 那一行更要写,不能被 falsy 吞掉。
+    if repinned is not None:
+        body += "\n裁判副本已重钉: %s -> %s (%s)" % (
+            PROG_HINT, JUDGE_REL, repinned or "sha 取失败")
 
     git("add", "-A", cwd=root)
     git("commit", "-q", "-m", "%s: %s" % (prefix, message), "-m", body, cwd=root)

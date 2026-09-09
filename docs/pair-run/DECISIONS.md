@@ -190,3 +190,15 @@
 - 理由: 契约「裁判副本的同步」要求 DONE 重钉时把新 sha 写进提交正文,而那一行是裁判被换掉之后**唯一的纸面记录**。`test_重钉的_sha_进提交正文` 断言的是 `sha[:7] in body` —— 整份正文含 sha 前 7 位即可。变异实测:拿掉 `repin_judge` 的 `.strip()`,正文断成两行(sha 行尾断开、右括号单独一行),**11 条一条都不红**。tester 在 review-impl 里靠读代码发现了这个缺陷,并主动记下"我的用例一条都抓不到,这是我的问题",还点名请 dev 在 review-test 用实测决定要不要打回。正确判据是**结构**不是措辞:正文里存在**一行**同时含 `JUDGE_REL` 与完整 sha —— 这样不碰措辞,也不撞规则 4。
 - 已否决: 拿"`and green` 去掉之后 11 条全绿"一起打回 —— 核实后收回:`FLOWS` 里 `review-test`(以及 refactor 的 `review-impl`)期望都是 GREEN,不绿在红绿不变量那一步就 die,`green` 在 `target == "DONE"` 处**不可能为假**,那是结构性冗余而不是无人看守的条款;变异存活但不可达,不核实就报会变成一次假打回,而假打回和点头一样失真。也否决了要求 tester 为"`hash-object` 失败时仍留痕"造注入点 —— 用例跑的是子进程,把 git 弄坏会让整条链一起塌,强行造测试的代价大于它守住的东西;那条改由代码注释与评审记录守着,已写进本条。
 - 影响路径: `tests/conformance/test_v1_judge.py`, `.agents/skills/pair-protocol/scripts/pair.py`
+
+## W10 — 临时变异脚本会变成死代码而安静全绿：变异测试自己的失效模式，和它要检测的东西一模一样
+
+- 理由: tester 在 spec 回合写的变异脚本,在 dev 的实现落地之后**六条全报 OK** —— 锚点是"当时那份实现"的字面源码片段,实现一变 `str.replace` 什么都没替换掉,而脚本不报错。**它安静地全绿,和它要检测的失效模式完全同形。** 仓库里 `test_变异点仍能匹配到源码` 守的是同一件事(`MUTATIONS` 的 `count(old) == 1`),但只管登记在册的变异点,管不到评审回合临时写的一次性脚本 —— 而 W10 这一轮两个角色一共跑了十几次临时变异,全部没有这层保护。ADR-018 把"把实现改坏看有没有测试会红"确立为本项目发现问题的主要手段,那么这个手段自己的失效模式就是一等问题。最省事的修法:临时脚本在替换之后断言内容确实变了(`before != after`),两行。
+- 已否决: 要求把所有临时变异都登记进 `MUTATIONS` —— 那会让每一次评审探查都变成一次跨角色的文件改动(`mutation_check.py` 在 tester 独占路径),而临时变异的价值正在于随手可跑;开放条目 15 已经记了这条边界。也否决了本回合就写进 `docs/improvements.md` —— review-test 是只读评审,`docs/*.md` 不在可写路径里,硬写会被边界拦住;先落决策记录,等下一个能写文档的回合搬过去。
+- 影响路径: `tests/conformance/mutation_check.py`, `docs/contributing.md`, `docs/improvements.md`
+
+## W10 — 两条测不了或没规定的缺口，明确不作为打回理由
+
+- 理由: 两条都在 W10 的评审里查实,都不构成偏离契约。①**`if repinned is not None:` 退回真值判断抓不到**:它只在 `git hash-object` 失败时才有区别,而用例跑的是子进程,脚手架里没有干净的注入点 —— 把 git 弄坏会让整条链一起塌。dev 在两轮评审里都明确要求 tester **不要为它造注入点**,代价大于它守住的东西;这条不变量("动作发生了必须有记录")靠 `repin_judge` 里那段注释与两份评审记录守着。②**正本缺失而副本存在时校验静默通过**:`judge_pair` 在 `PROG_HINT` 不存在时返回 `(None, None)`,`judge_in_sync` 因此为真。契约只写了"副本存在时必须相等",没写正本缺失怎么办 —— 不算偏离,但那恰恰是"有人把正本删了"的形状,而协议一个字都不说。
+- 已否决: 拿这两条做第三次打回 —— `DEADLOCK_LIMIT = 3`,第三次 `handoff changes` 会停转并要求人类裁决,而这里没有分歧:①是双方都同意测不了,②是 tester 自己先记下来、dev 同意不作为理由。死锁闸守的是"两个 agent 谈不拢",拿共识去触发它是把闸用歪。也否决了只写进 `--uncovered` 就算完 —— 那只在提交正文里,而这两条值得活过 W10。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_judge.py`, `docs/pair-run/CONTRACT.md`
