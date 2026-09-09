@@ -131,15 +131,47 @@ class TestJudgeRepinAtDone(JudgeMixin, PairTestCase):
         self.assertEqual(self.repo.state()["completed_items"], ["W1"])
         self.assertEqual(self.repo.read(ENFORCER), self.repo.read(PAIR_PY))
 
-    def test_重钉的_sha_进提交正文(self):
+    def done_body(self):
         self.run_to_done()
         self.assertAccepted(self.repo.run("handoff", "approve", "只断言契约",
                                           *EVIDENCE, role="dev"))
         sha = self.repo.git("hash-object", PAIR_PY).stdout.decode().strip()
         body = self.repo.git("log", "-1", "--format=%b").stdout.decode("utf-8")
-        self.assertTrue(
-            len(sha) >= 7 and sha[:7] in body,
-            "提交正文里没有重钉后的 sha(%s)。正文:\n%s" % (sha[:7], body))
+        self.assertGreaterEqual(len(sha), 7)
+        return sha, body
+
+    def test_重钉的_sha_进提交正文(self):
+        """记录必须是**一行**,而且那一行里的 sha 是完整的。"""
+        sha, body = self.done_body()
+        record = [l for l in body.splitlines() if ENFORCER in l and sha in l]
+        self.assertEqual(
+            len(record), 1,
+            "正文里应当恰好有一行同时含 %s 与完整 sha %s。正文:\n%s"
+            % (ENFORCER, sha, body))
+
+    def test_写进正文的值不带换行(self):
+        """`.strip()` 缺失的那一条,只有这条抓得住。
+
+        上一版断言的是 `sha[:7] in body`,太松。而"存在一行同时含副本路径与
+        完整 sha"**同样抓不住** —— 实测过:sha 未 strip 时正文变成
+
+            …-> .pair/enforcer.py (9bc1b424…3fa382
+            )
+
+        右括号被挤到下一行,而 sha 在上一行里仍然是**完整**的,两条判据都为真。
+
+        真正的结构判据是:**正文里不该有"只剩标点"的残行**。一个带换行的值
+        插进模板中段,模板剩下的那半必然独占一行、且没有任何字母数字 ——
+        不管措辞怎么写都成立,所以不撞规则 4。值恰好在模板末尾时不会留下残行,
+        那种情况也确实无害,判据不误伤它。
+        """
+        _, body = self.done_body()
+        stray = [l for l in body.splitlines()
+                 if l.strip() and not any(c.isalnum() for c in l)]
+        self.assertEqual(
+            stray, [],
+            "正文里有只剩标点的残行 %r —— 多半是某个插进正文的值没 strip。"
+            "正文:\n%s" % (stray, body))
 
     def test_重钉发生在_git_add_之前所以进了提交(self):
         """⑤ 只钉"边界校验之后"这一头不够:落在 `git add -A` 之后,
