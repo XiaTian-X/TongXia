@@ -168,3 +168,8 @@
 - 理由: 第一版把范围写成枚举(`docs/` 下的 `.md` + `README` + `INSTALL` + skill 的 `references/` 与 `SKILL.md`)。按"所有被跟踪的 `.md` 减去记忆层与评审目录"这个闭合定义实算,枚举**漏掉 13 份**,其中包括 `AGENTS.md`、`CLAUDE.md`、`CONVENTIONS.md`、`GEMINI.md`、`.github/copilot-instructions.md` —— **正是告诉每个 agent"这是结对项目"的那批入口文件**,也正是 ADR-022 那次 sweep 漏掉过的同一批。W4 刚用 33 个孤儿证明了枚举会漏,同一轮里不该再造一个枚举。闭合定义下当前 64 份被跟踪 `.md` 有 35 份在范围内,含 `examples/` 下的样板文档(它们是分发物,改了同样该有理由)。另外把 `--basis` 从"只要求非空"改成"必须指向仓库里真实存在的路径"(判据复用 `handoff changes` 的位置引用检查):两个旗标若都只查非空,效果**完全一样**,叠着只是多打一行字;要求指向产物之后一个是"为什么"、一个是"凭什么",而后者可被对方点开核对。
 - 已否决: 在闭合定义里再排除 `examples/` —— 每加一条排除就重新打开"会漏"的口子,而样板文档是随包分发的,改它本来就该留理由。也否决了直接取消 `--basis` 只留 `--doc-reason` —— 那会把"路线图的改写要有依据"(P1-15②)整条丢掉,而它是本轮的来源之一。
 - 影响路径: `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `.agents/skills/pair-protocol/scripts/pair.py`
+## SETUP — 裁判副本必须逐字节等于 pair.py，重钉时刻由 DONE 定义；契约四处修订由 tester 代笔，人类授权
+
+- 理由: 开工前审查实跑发现两条阻断:①本轮裁判 `.pair/enforcer.py` 与 `pair.py` 差 100 行,`grep -c orphan` 一边 8 处一边 **0 处** —— W4 上一轮验收通过的孤儿清单**整整一轮都不在裁判里**,而 W8/W9 要加的旗标直接 `unrecognized arguments`,两条验收标准无人能执行;②只在冻结分支开豁免不够,实算 `writable_paths` 两份文件在**五个阶段全部不在 `allowed` 里**,豁免完照样被拒、且会被 W4 判成孤儿。**判据**:不变量取"逐字节相等,例外窗口是一个工作项",`claim` 校验 + `DONE` 自动重钉(全绿即证据),推论是**同一个工作项里不能既加旗标又用旗标** —— W8/W9 里做不到的那两条据此摘出去,W11 承接。**另定:`verify-setup --drafter other` 挪到定稿之前** —— 它有效(本轮六条全是它挖的),只是发生得太晚,前三轮每轮都在定稿后返工,换个顺序零成本。
+- 已否决: 拿 `ENFORCEMENTS` / `HANDOFF_INVARIANTS` 注册表比对当护栏 —— 实算两边都是 14 条与 16 条、**差集为空**,而两文件差 100 行,这个断言恒真,会全绿地放过上面那一整轮。也否决了取消钉住改回 `pair.py` 当裁判:本轮给 `handoff` 加两条拒绝分支,改坏就两边都动不了,钉住的副本正是这件事的保险。还否决了「契约每条行为附一行实测」:契约小节属低频档、加得起,但会退化成套话,而挪前的独立审查已经覆盖了它的目的。
+- 影响路径: `.pair/enforcer.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `.agents/skills/pair-protocol/scripts/pair.py`
