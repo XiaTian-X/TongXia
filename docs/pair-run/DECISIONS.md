@@ -225,3 +225,9 @@
 - 理由: 契约「路线图与计划的改写要有依据」把路线图写死成 `docs/improvements.md`,而这个协议是**随包分发的 skill**。任何下游项目都没有这个文件,于是 `--basis` 那半条强制对它们**永远不触发** —— 它只在本仓库有效。tester 在 spec 回合提出,dev 同意。有先例(`SETUP_REPORT_REL` 也写死),但两者性质不同:评审结论是**协议自己产出的产物**,路线图是**项目自己的文档**;而 `plan_file` / `contract_file` / `notes_dir` / `decisions_file` 全都是配置键,唯独它不是 —— 这个不对称本身就是信号。建议加 `roadmap_file` 配置键,缺省 `docs/improvements.md`。
 - 已否决: 本轮顺手加这个键 —— 契约是冻结文件,而且加配置键要同时动 `load_config` 的默认值、`verify-setup` 的路径自洽检查、以及 W8 那 15 条用例的 `config`,是一个完整工作项而不是顺手改;本轮已有 W9、W11 未做。也否决了照 `SETUP_REPORT_REL` 的先例就此认下 —— 那个先例指向的是协议产物,拿它论证项目文档也该写死,是把两类不同的东西并成一类。
 - 影响路径: `.pair/config.json`, `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_docreason.py`
+
+## W8 — feature 流程里 tester 只有一个可写回合，而回到它的两条边都由 dev 发起
+
+- 理由: 实算 `FLOWS["feature"]`:tester 唯一可写的阶段是 `spec`(`review-impl` 是只读评审,`tests/` 与 `mutation_check.py` 都不在它的可写路径里)。回到 `spec` 的边只有两条 —— `('impl', 'changes')` 与 `('review-test', 'changes')` —— **两条都由 dev 发起**;tester 自己那次打回(`review-impl changes`)去的是 `impl`,是 dev 的回合。于是:**在一个 feature 工作项里,tester 补测试或补变异点的机会完全由 dev 决定。** 这和五步纪律的第 3 步(补 `MUTATIONS` 变异点)撞在一起:变异锚点是 `pair.py` 的字面源码,实现没落地时任何锚点都失配,所以第 3 步只能在实现之后 —— 而那时 tester 已经没有可写回合了。W8 这一轮它之所以补上了,是因为 dev 为**别的两条缺口**打了回、把阶段退回 `spec`,tester 顺带补的。**那是运气,不是机制。**
+- 已否决: 让 dev 为了给 tester 腾一个可写回合而打回 —— 那是制造一次打回,评审阶段的文案点名禁止,而且会污染打回率这个指标(`report` 拿它当"互相点头"的观测量)。也否决了把 `review-impl` 改成可写 —— 只读是它的全部意义:评审回合能改测试,就没有什么能阻止评审方把测试改成迁就实现的样子。正确出路写进了 `docs/contributing.md` 的分角色纪律:dev 交实现时点名欠账;若到 `review-test` 都没有正当的打回理由,**dev 必须在 approve 之前把欠账写进决策记录**;或者单开一个 `[cover]` 工作项(第三轮 W7 的做法)。
+- 影响路径: `docs/contributing.md`, `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/mutation_check.py`
