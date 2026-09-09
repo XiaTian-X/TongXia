@@ -1,9 +1,9 @@
 {
   "round": 4,
-  "phase": "impl",
+  "phase": "review-impl",
   "item": "W10",
   "item_type": "feature",
-  "last_actor": "tester",
+  "last_actor": "dev",
   "changes_count": 1,
   "completed_items": [
     "W2",
@@ -14,5 +14,5 @@
   "setup_verified": true,
   "deadlock_hits": [],
   "contract_sha": "b3fbf7438648c2fcd969d7bd8063b99b55cc303d",
-  "after_rebound": true
+  "after_rebound": false
 }
