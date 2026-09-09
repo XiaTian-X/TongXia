@@ -61,6 +61,30 @@ class TestDocReasonRequired(DocReasonBase):
         self.repo.write(GUIDE, "# 新文档\n")
         self.assertRefused(self.handoff(), "--doc-reason", GUIDE)
 
+    def test_理由是空字符串不算数(self):
+        """`--doc-reason` 是「强制留痕」不是「放行」,空串留下的是空痕:
+        提交正文里多一行 `文档改动理由: `,后面什么都没有,门却开了。
+        仓库对这一类已经表过态(`--checked` / `--uncovered` 各有
+        `test_空字符串不算数`)。
+
+        **这一条后面没有第二道兜底** —— `--basis` 的空串会被
+        `basis_points_at_file` 接着拦下(实测过),`--doc-reason` 不会。
+        """
+        self.claim()
+        self.repo.write(GUIDE, "# 新文档\n")
+        self.assertRefused(self.handoff("--doc-reason", ""),
+                           "--doc-reason", GUIDE)
+
+    def test_删掉一份规范性文档同样要理由(self):
+        """契约写的是"本回合的**改动**里若含规范性文档" —— 删除是改动,
+        而且是最该说明为什么的那一种:新增和改写至少还留着文字可读,
+        删除之后连痕迹都没有。"""
+        self.repo.write(GUIDE, "# 指南\n\n一句话。\n")
+        self.commit("人类先放一份文档")
+        self.claim()
+        self.repo.delete(GUIDE)
+        self.assertRefused(self.handoff(), "--doc-reason", GUIDE)
+
     def test_只改笔记与评审记录不要求理由(self):
         """过程文档本身就是理由,再要一句说明是纯噪音。"""
         self.claim()

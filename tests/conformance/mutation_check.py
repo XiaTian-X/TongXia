@@ -380,6 +380,24 @@ MUTATIONS = [
     ("拆掉重钉后 sha 的 strip",
      '    return (out or "").strip()',
      '    return (out or "")'),
+
+    # --- W8:文档改动要带理由 / 路线图改写要有依据 -------------------------
+    ("拆掉文档理由强制",
+     "    if touched_docs and not args.doc_reason:",
+     "    if False:"),
+
+    ("文档理由允许空串",
+     "    if touched_docs and not args.doc_reason:",
+     "    if touched_docs and args.doc_reason is None:"),
+
+    ("规范性文档不算删除",
+     '    for _, path in entries:\n        if not path.endswith(".md"):',
+     '    for _xy, path in entries:\n        if "D" in _xy:\n            continue\n'
+     '        if not path.endswith(".md"):'),
+
+    ("拆掉路线图依据强制",
+     "        if not basis_points_at_file(root, args.basis, entries):",
+     "        if False:"),
 ]
 
 # unittest 的失败行有两种形态:

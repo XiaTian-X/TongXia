@@ -1,5 +1,5 @@
 {
-  "baseline": "11f5aa6d307125c3",
+  "baseline": "a7c64ebed14fa1d8",
   "catchers": {
     "剩余数打成总数": [
       "test_v1_paths.TestIgnorePathsTruncation.test_超过十个只列前十并说明还剩多少"
@@ -198,6 +198,9 @@
     "拆掉打回后 spec 回合的 RED 豁免": [
       "test_v1_disputes.TestPostDisputeSpec.test_review_test_打回后也豁免_RED"
     ],
+    "拆掉文档理由强制": [
+      "test_v1_docreason.TestDocReasonRequired.test_删掉一份规范性文档同样要理由"
+    ],
     "拆掉死锁留痕": [
       "test_v1_disputes.TestDeadlockTrace.test_status_显示曾经触发过",
       "test_v1_disputes.TestDeadlockTrace.test_触发后被记进状态"
@@ -280,14 +283,23 @@
     "拆掉越界文案里的孤儿分情况": [
       "test_v1_paths.TestBoundaryRefusalMentionsOrphan.test_越界项里有孤儿时要说清楚别撤销"
     ],
+    "拆掉路线图依据强制": [
+      "test_v1_docreason.TestBasisOnRewrite.test_依据指向不存在的路径被拒"
+    ],
     "拆掉重钉后 sha 的 strip": [
       "test_v1_judge.TestJudgeRepinAtDone.test_写进正文的值不带换行"
+    ],
+    "文档理由允许空串": [
+      "test_v1_docreason.TestDocReasonRequired.test_理由是空字符串不算数"
     ],
     "裁判副本改成 strip 后比": [
       "test_v1_judge.TestJudgeSyncAtClaim.test_只差一个空白字符也要拦"
     ],
     "裁判正本改用 __file__": [
       "test_v1_judge.TestJudgeSyncAtClaim.test_副本当裁判时也要拦"
+    ],
+    "规范性文档不算删除": [
+      "test_v1_docreason.TestDocReasonRequired.test_删掉一份规范性文档同样要理由"
     ]
   }
 }
