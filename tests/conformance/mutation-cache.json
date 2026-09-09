@@ -1,6 +1,9 @@
 {
-  "baseline": "5fd38190329a368a",
+  "baseline": "11f5aa6d307125c3",
   "catchers": {
+    "剩余数打成总数": [
+      "test_v1_paths.TestIgnorePathsTruncation.test_超过十个只列前十并说明还剩多少"
+    ],
     "只认 impl 阶段的异议,漏掉评审打回": [
       "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
     ],
@@ -43,6 +46,9 @@
       "test_v1_layouts.TestIgnorePaths.test_glob_形式的忽略路径生效",
       "test_v1_layouts.TestIgnorePaths.test_lockfile_改动不被判越界",
       "test_v1_layouts.TestIgnorePaths.test_忽略目录下的文件生效"
+    ],
+    "拆掉 ignore_paths 的覆盖清单": [
+      "test_v1_paths.TestIgnorePathsListing.test_列出_ignore_paths_覆盖的被跟踪文件"
     ],
     "拆掉 impl 阶段红绿检查": [
       "test_invariants.TestRedGreen.test_impl_阶段红着交接被拒绝",
@@ -163,6 +169,9 @@
     "拆掉完成时的晋升 gate": [
       "test_v1_memory.TestPromotion.test_笔记没处理不许完成"
     ],
+    "拆掉开工前的孤儿清单": [
+      "test_v1_paths.TestIgnorePathsListing.test_命中_ignore_paths_的文件不算孤儿"
+    ],
     "拆掉异议后必须改测试": [
       "test_v1_disputes.TestPostDisputeSpec.test_空转一轮被拒绝"
     ],
@@ -213,14 +222,23 @@
     "拆掉第二次打回强制": [
       "test_v1_memory.TestRebound.test_第二次打回不留结论被拒绝"
     ],
+    "拆掉简报写失败的降级": [
+      "test_v1_brief.TestBriefWriteFailure.test_写失败时不影响记忆注入"
+    ],
     "拆掉简报的提前收尾守卫": [
       "test_v1_brief.TestBriefMemory.test_status_提前收尾时简报也没有记忆段落"
+    ],
+    "拆掉简报进 gitignore": [
+      "test_v1_brief.TestBriefGitignore.test_init_之后_gitignore_含简报"
     ],
     "拆掉结论侧的围栏剥离": [
       "test_v1_documents.TestSetupReportNamesSections.test_把契约粘进围栏不算点名"
     ],
     "拆掉考古 sha 校验": [
       "test_v1_documents.TestArchaeologySha.test_编的_sha_被拒"
+    ],
+    "拆掉裁判副本的逐字节比对": [
+      "test_v1_judge.TestJudgeSyncAtClaim.test_副本当裁判时也要拦"
     ],
     "拆掉角色重叠检测": [
       "test_v1_setup.TestVerifySetup.test_角色边界重叠被报出"
@@ -258,6 +276,18 @@
     ],
     "拆掉起草人身份声明": [
       "test_v1_documents.TestSetupReportNamesSections.test_不声明作者身份被拒"
+    ],
+    "拆掉越界文案里的孤儿分情况": [
+      "test_v1_paths.TestBoundaryRefusalMentionsOrphan.test_越界项里有孤儿时要说清楚别撤销"
+    ],
+    "拆掉重钉后 sha 的 strip": [
+      "test_v1_judge.TestJudgeRepinAtDone.test_写进正文的值不带换行"
+    ],
+    "裁判副本改成 strip 后比": [
+      "test_v1_judge.TestJudgeSyncAtClaim.test_只差一个空白字符也要拦"
+    ],
+    "裁判正本改用 __file__": [
+      "test_v1_judge.TestJudgeSyncAtClaim.test_副本当裁判时也要拦"
     ]
   }
 }

@@ -14,6 +14,7 @@
 agent 照做就会撤销掉不是它写的。
 """
 
+import re
 import unittest
 
 from harness import PairTestCase, setup_report
@@ -135,9 +136,12 @@ class TestOrphanTruncation(PairTestCase):
         self.assertTrue(
             rest, "契约要求再补一行说明还剩多少个,孤儿块里没找到这样一行:\n"
                   + "\n".join(block))
-        self.assertTrue(
-            any("2" in l for l in rest),
-            "剩余数应当是 12 − 10 = 2,实际那一行是:%r" % rest)
+        # 取整数比,不用子串:`"2" in l` 会被"还有 20 个"满足,
+        # 而 20 正是"补的是总数+8"这类错误实现会打出来的数。
+        nums = {int(x) for l in rest for x in re.findall(r"\d+", l)}
+        self.assertIn(
+            2, nums,
+            "剩余数应当是 12 − 10 = 2,那一行里的数字是 %s:%r" % (sorted(nums), rest))
 
 
 class TestIgnorePathsListing(PairTestCase):
@@ -156,6 +160,92 @@ class TestIgnorePathsListing(PairTestCase):
         self.assertAccepted(r)
         self.assertIn("不受边界保护", r.text)
         self.assertIn("build/缓存.json", r.text)
+
+    def test_命中_ignore_paths_的文件不算孤儿(self):
+        """`ignore_paths` 在这一节里被用在两处,语义**相反**:孤儿判据里它是
+        排除项(命中就不算孤儿),覆盖清单里它是来源(命中就要列出来)。
+        少了 `is_orphan` 里那一句排除,同一个文件会同时出现在两段警告里 ——
+        而孤儿那段的表头自己写着"也不在 `ignore_paths` 里"。
+
+        判据是**整份输出里只出现一次**,不是"在某一段里"。
+        `TestIgnorePathsListing` 原来只断言它出现在"不受边界保护"那段,
+        没断言它**不在**孤儿清单里,所以拆掉排除那一句 10 条一条都不红。
+        """
+        self.repo.write("build/缓存.json", "{}")
+        self.repo.git("add", "-A")
+        self.repo.git("commit", "-q", "-m", "副产物入库")
+        self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
+        r = self.repo.run("verify-setup", "--drafter", "other", role="dev")
+        self.assertIn("孤儿", r.text,
+                      "前提:这一轮得真的打印了孤儿清单,否则下面那条恒真")
+        self.assertEqual(
+            r.text.count("build/缓存.json"), 1,
+            "命中 ignore_paths 的文件只该出现在「不受边界保护」那一段。"
+            "出现两次说明 is_orphan 没把它排除掉,而孤儿表头自己写着"
+            "「也不在 ignore_paths 里」。输出:\n%s" % r.text)
+
+    def test_首行含不受保护的文件总数(self):
+        """和孤儿那一侧对称:只列文件不给总数,超过十个被截断时
+        就看不出规模了。"""
+        self.repo.write("build/缓存.json", "{}")
+        self.repo.git("add", "-A")
+        self.repo.git("commit", "-q", "-m", "副产物入库")
+        self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
+        r = self.repo.run("verify-setup", "--drafter", "other", role="dev")
+        heads = [l for l in r.text.split("\n") if "不受边界保护" in l]
+        self.assertTrue(heads, "输出里没有任何一行提到不受边界保护")
+        self.assertRegex(heads[0], r"\d+",
+                         "这一段的首行要含总数:%r" % heads[0])
+
+
+class TestIgnorePathsTruncation(PairTestCase):
+    """截断:`ignore_paths` 这一侧同样超过十个只列前十。
+
+    孤儿那侧有 `TestOrphanTruncation` 守着,这一侧原来没有 —— 把
+    `PATH_LISTING_LIMIT` 调成 10000,10 条一条都不红。
+
+    `ignore_paths` 写成 `"build"`(不含通配符)走目录前缀语义,
+    所以只有本用例造的那批命中,数量干净可数。
+    """
+
+    config = {"require_setup_verification": True,
+              "ignore_paths": ["build"]}
+    REPORT = setup_report("W1", "W2")
+
+    def test_超过十个只列前十并说明还剩多少(self):
+        made = ["build/产物%02d.json" % i for i in range(12)]
+        for name in made:
+            self.repo.write(name, "{}")
+        self.repo.git("add", "-A")
+        self.repo.git("commit", "-q", "-m", "副产物入库")
+        self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
+        r = self.repo.run("verify-setup", "--drafter", "other", role="dev")
+
+        listed = [n for n in made if n in r.text]
+        self.assertEqual(len(listed), 10,
+                         "12 个应当只列出 10 个,实际 %d" % len(listed))
+
+        # 判据照孤儿那侧:结构定位,不数名字前缀、不断言措辞、
+        # 更不能 assertIn("2") —— 首行"12 个文件"里就含 "2",那是恒真的。
+        lines = r.text.split("\n")
+        head = next(k for k, l in enumerate(lines)
+                    if "不受边界保护" in l and "12" in l)
+        block = lines[head:]
+        block = block[:next((k for k, l in enumerate(block) if not l.strip()),
+                            len(block))]
+        rest = [l for l in block
+                if any(c.isdigit() for c in l)
+                and "12" not in l
+                and not any(n in l for n in made)]
+        self.assertTrue(
+            rest, "契约要求这一段同样补一行说明还剩多少个,没找到:\n"
+                  + "\n".join(block))
+        # 取整数比,不用子串:`"2" in l` 会被"还有 20 个"满足,
+        # 而 20 正是"补的是总数+8"这类错误实现会打出来的数。
+        nums = {int(x) for l in rest for x in re.findall(r"\d+", l)}
+        self.assertIn(
+            2, nums,
+            "剩余数应当是 12 − 10 = 2,那一行里的数字是 %s:%r" % (sorted(nums), rest))
 
 
 class TestBoundaryRefusalMentionsOrphan(PairTestCase):

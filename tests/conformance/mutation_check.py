@@ -338,6 +338,48 @@ MUTATIONS = [
     ("拆掉死锁留痕",
      '            hit = "%s x%d" % (item or "?", changes_n)',
      '            hit = None; state["deadlock_hits"] = []; hit = ""'),
+
+    # --- W7 补:W3 与 W4 的五条防护,落地一轮多都没有变异点 -----------------
+    ("拆掉简报写失败的降级",
+     "        except OSError as exc:",
+     "        except UnicodeDecodeError as exc:"),
+
+    ("拆掉简报进 gitignore",
+     '                   ".pair/whoami", ".pair/turns/", BRIEF_REL,',
+     '                   ".pair/whoami", ".pair/turns/",'),
+
+    ("拆掉开工前的孤儿清单",
+     "    orphans = [f for f in files if is_orphan(f, cfg)]",
+     "    orphans = []"),
+
+    ("拆掉 ignore_paths 的覆盖清单",
+     '    ignored = [f for f in files if matches_any(f, cfg["ignore_paths"])]',
+     "    ignored = []"),
+
+    ("剩余数打成总数",
+     '        lines.append("      … 还有 %d 个没列出" % (len(paths) - limit))',
+     '        lines.append("      … 还有 %d 个没列出" % len(paths))'),
+
+    ("拆掉越界文案里的孤儿分情况",
+     "        orphaned = [p for p, _ in violations if is_orphan(p, cfg)]",
+     "        orphaned = []"),
+
+    # --- W7 补:W10 的四条。实现刚落地,锚点这时才有得可锚 -------------------
+    ("拆掉裁判副本的逐字节比对",
+     "    return copy is None or copy.read_bytes() == src.read_bytes()",
+     "    return True"),
+
+    ("裁判副本改成 strip 后比",
+     "    return copy is None or copy.read_bytes() == src.read_bytes()",
+     "    return copy is None or copy.read_bytes().strip() == src.read_bytes().strip()"),
+
+    ("裁判正本改用 __file__",
+     "    copy, src = root / JUDGE_REL, root / PROG_HINT",
+     "    copy, src = root / JUDGE_REL, Path(__file__).resolve()"),
+
+    ("拆掉重钉后 sha 的 strip",
+     '    return (out or "").strip()',
+     '    return (out or "")'),
 ]
 
 # unittest 的失败行有两种形态:
