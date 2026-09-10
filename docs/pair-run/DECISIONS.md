@@ -237,3 +237,8 @@
 - 理由: 实测在临时仓库跑真实 `handoff`:`--doc-reason "   "` 退出码 **0**,提交正文里那一行渲染成 `文档改动理由:` —— **git 剥掉尾随空白,留痕与没写一模一样**。契约对这个旗标的原话是"不是放行,是强制留痕",现在两头都不成立。根因是判据写成 `not args.doc_reason`,而同一份文件里既有的同类旗标(`--checked` / `--uncovered`)用的是 `not (val or "").strip()` —— **少了 `.strip()`,与仓库既有口径不一致**。tester 上一轮补的 `test_理由是空字符串不算数` 只钉了 `""`,一个空格就绕过去。缺陷在实现,不在用例;但 feature 流程里 tester 唯一可写的阶段是 `spec`,所以必须由 dev 打回才能补上这条用例 —— 这正是本工作项另一条决策记的那个结构问题的第二次实例。
 - 已否决: dev 在 `review-test` 直接 approve 再自己找机会补 `.strip()` —— review-test 只读,改不了实现;而下一个可写回合要到下一个工作项,那时这条防护已经以"一个空格就能满足"的形态上线了。也否决了顺带要求补 `--basis "   "` 的用例 —— 实测空白串会被第二道 `basis_points_at_file` 拒掉(`"   ".split()` 是空列表),那条用例会是恒真的,而恒真的用例比没有更坏。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_docreason.py`, `tests/conformance/mutation_check.py`
+## W8 — 判空少一个 strip 的洞不止 --doc-reason 一个：--allow-deletion 三个空格就能悄悄删掉已有测试
+
+- 理由: W8 修的是 `--doc-reason` 的判空(`not args.doc_reason` → `not (args.doc_reason or "").strip()`),根因是 **git 会剥掉尾随空白**,所以"三个空格"和"没写"在提交正文里长得一模一样 —— 留痕和没留一样,而门开了。实测发现**同一行形状在 `pair.py:1863` 的 `--allow-deletion` 上还开着**:`handoff "删了 W1 的用例" --allow-deletion "   "` 退出码 **0**,正文那一行渲染成 `删除测试(已声明):` 后面什么都没有。**这一条比 --doc-reason 要紧**:它守的是删除已有测试,而同一段拒绝文案自己写着"测试是规格,删除它等于悄悄缩小验收范围"。`pair.py:943` 的 `--no-decision` 是同一行形状(未单独实测,看代码推的)。判据:凡是"强制留痕"类旗标,判空一律走 `not (val or "").strip()`,即 `--checked` / `--uncovered` 那一处的既有口径;补法是各一条空白用例 + 一个变异点,与 `--doc-reason` 完全同形。
+- 已否决: 拿这两条打回 W8 的实现 —— 不是这次改出来的,也不在 W8 的契约小节里,拿范围外的旧缺陷打回是把打回当待办清单用。也否决了只写进 `--uncovered`:同一份记录里已经有一条判死过这种做法(预告过、写进 --uncovered、对方读到了,然后照样发生了),而 `--uncovered` 只在提交正文里,活不过这个工作项。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/mutation_check.py`, `docs/improvements.md`
