@@ -242,3 +242,9 @@
 - 理由: W8 修的是 `--doc-reason` 的判空(`not args.doc_reason` → `not (args.doc_reason or "").strip()`),根因是 **git 会剥掉尾随空白**,所以"三个空格"和"没写"在提交正文里长得一模一样 —— 留痕和没留一样,而门开了。实测发现**同一行形状在 `pair.py:1863` 的 `--allow-deletion` 上还开着**:`handoff "删了 W1 的用例" --allow-deletion "   "` 退出码 **0**,正文那一行渲染成 `删除测试(已声明):` 后面什么都没有。**这一条比 --doc-reason 要紧**:它守的是删除已有测试,而同一段拒绝文案自己写着"测试是规格,删除它等于悄悄缩小验收范围"。`pair.py:943` 的 `--no-decision` 是同一行形状(未单独实测,看代码推的)。判据:凡是"强制留痕"类旗标,判空一律走 `not (val or "").strip()`,即 `--checked` / `--uncovered` 那一处的既有口径;补法是各一条空白用例 + 一个变异点,与 `--doc-reason` 完全同形。
 - 已否决: 拿这两条打回 W8 的实现 —— 不是这次改出来的,也不在 W8 的契约小节里,拿范围外的旧缺陷打回是把打回当待办清单用。也否决了只写进 `--uncovered`:同一份记录里已经有一条判死过这种做法(预告过、写进 --uncovered、对方读到了,然后照样发生了),而 `--uncovered` 只在提交正文里,活不过这个工作项。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/mutation_check.py`, `docs/improvements.md`
+
+## W8 — 把变异点锚在「还不存在的实现」上，解开了五步纪律第 3 步的时机死结
+
+- 理由: 第 3 步(补 `MUTATIONS` 变异点)的锚点是 `pair.py` 的字面源码片段,而 `test_变异点仍能匹配到源码` 要求 `count(old) == 1` —— 防护没写出来时任何锚点都失配,所以第 3 步只能在实现之后;但 feature 流程里 tester 唯一可写的阶段是 `spec`,回到它的两条边又都由 dev 发起。W8 最后一轮 tester 用了第三条路:**在 spec 回合就把锚点按"实现应该长什么样"写下来**(`(args.doc_reason or "").strip()`),让 `test_变异点仍能匹配到源码` 红着交给 dev,并在交接说明里写明"要换写法就在 review-test 打回我并给出你实际用的片段"。dev 按片段实现,锚点即刻匹配,不需要额外往返。**这把一个时序死结变成了一次普通的规格协商** —— 锚点从"事后追认的实现细节"变成"事前声明的接口",而 dev 有正常的异议通道可以推翻它。前提是那个片段本身有依据:这次的片段与同文件 `--checked` / `--uncovered` 的既有口径逐字一致,不是凭空指定实现。
+- 已否决: 继续用原来那两条出路当唯一解 —— "dev 打回时顺带补"依赖运气(W8 这一轮确实是靠 dev 为别的缺口打回才补上的),"单开 `[cover]` 工作项"要多排一整项。也否决了把这条写进 W8 的实现 —— 它是流程纪律不是代码,该进 `docs/contributing.md` 的分角色那一节,由下一个能写文档的回合补。**顺带记一个操作坑**:重锚或重命名变异点时要同时删掉 `mutation-cache.json` 里的旧键,否则 `test_缓存里的条目名都在_MUTATIONS_里` 变红,而第一反应"跑 `mutation_check` 刷新缓存"是死路 —— 它要求基线全绿,而基线红的原因正是那条陈旧缓存。出路是按那条测试自己说的直接删键。
+- 影响路径: `docs/contributing.md`, `tests/conformance/mutation_check.py`, `tests/conformance/mutation-cache.json`
