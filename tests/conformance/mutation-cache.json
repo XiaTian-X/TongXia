@@ -1,5 +1,5 @@
 {
-  "baseline": "a7c64ebed14fa1d8",
+  "baseline": "c51647183402b58e",
   "catchers": {
     "剩余数打成总数": [
       "test_v1_paths.TestIgnorePathsTruncation.test_超过十个只列前十并说明还剩多少"
@@ -289,8 +289,8 @@
     "拆掉重钉后 sha 的 strip": [
       "test_v1_judge.TestJudgeRepinAtDone.test_写进正文的值不带换行"
     ],
-    "文档理由允许空串": [
-      "test_v1_docreason.TestDocReasonRequired.test_理由是空字符串不算数"
+    "文档理由不 strip": [
+      "test_v1_docreason.TestDocReasonRequired.test_理由只有空白不算数"
     ],
     "裁判副本改成 strip 后比": [
       "test_v1_judge.TestJudgeSyncAtClaim.test_只差一个空白字符也要拦"

@@ -1820,7 +1820,11 @@ def cmd_handoff(root, cfg, args):
     # 脚本自己去 PLAN.md 勾选,那次写入发生在这之后 —— 按提交判会让每一次
     # 完成工作项的交接都被要求 --doc-reason,而那个改动不是 agent 做的。
     touched_docs = normative_docs(cfg, entries)
-    if touched_docs and not args.doc_reason:
+    # 判空要剥空白,和同一份文件里 --checked / --uncovered 的判据一致:
+    # 实测 `--doc-reason "   "` 退出码 0,而 git 会剥掉尾随空白 ——
+    # 提交正文那一行渲染成「文档改动理由:」后面什么都没有,
+    # 放行了,而且留下的痕和没写一模一样。契约要的是强制留痕。
+    if touched_docs and not (args.doc_reason or "").strip():
         die("拒绝交接 —— 本回合改了规范性文档,但没说为什么:\n  %s\n\n"
             "归属其实已经有了(提交正文里那行 `role=… phase=… item=…` 由脚本\n"
             "写入,可靠),缺的是**理由与文档的绑定**:一次交接可能改了实现\n"
