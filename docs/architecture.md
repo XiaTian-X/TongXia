@@ -136,7 +136,7 @@ agent 被人类唤醒
 
 这是理解这个架构最重要的一张表:**哪些规则是脚本拦的,哪些只能靠留痕。**
 
-<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis -->
+<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now -->
 
 | 规则 | 强制方式 | 失效条件 |
 |---|---|---|
@@ -148,6 +148,8 @@ agent 被人类唤醒
 | 评审理由非空 | 脚本拒绝 | 改代码 |
 | 文档改动带理由 | 脚本拒绝 | 改代码 |
 | 路线图改写有依据 | 脚本拒绝(依据要指向真实文件) | 改代码 |
+| 承重文件带声明才放行 | 脚本拒绝;豁免只认 `plan_file` / `contract_file` 两个键 | 改代码 |
+| 声明的那次交接当场留决策 | 脚本拒绝 | 改代码 |
 | 决策格式与追加式 | 脚本拒绝 | 改代码 |
 | 考古记录三小节 | 脚本拒绝 | 改代码 |
 | 契约变更留记录 | 脚本拒绝(比对 blob sha) | 改代码 |

@@ -150,6 +150,8 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "setup-report-coverage", # 契约审查结论必须逐节点名 + 声明作者身份
     "doc-reason",            # 改了规范性文档就必须给理由
     "roadmap-basis",         # 路线图有改写时,依据必须指向一份真实产物
+    "contract-change-basis", # 改承重文件时,声明必须指向一份真实产物
+    "contract-change-now",   # 带声明的那次交接必须当场留决策(不是等到 DONE)
 )
 
 
@@ -1766,8 +1768,17 @@ def cmd_handoff(root, cfg, args):
     exempt_from_scope = list(cfg["shared_paths"])
     if memory_on(cfg):
         exempt_from_scope += [cfg["notes_dir"], cfg["decisions_file"]]
+    # 冻结豁免:**只认 `plan_file` 与 `contract_file` 这两个配置键**,
+    # 不是"带了旗标就能改冻结路径" —— `frozen_paths` 里还有 `.pair`,
+    # 而 `.pair/enforcer.py` 是裁判,一个旗标能改判官,这条防护就整个塌了。
+    # `continue` 落在循环最前面,所以跳过的是**三道**判定(冻结、越界、scope):
+    # 只跳冻结那一道的话,下一行就是越界 —— 这两份文件不在任何角色路径里,
+    # 五个阶段全部不在 allowed 中,拒绝理由只会从"冻结"换成"越界"。
+    named_frozen = {cfg["plan_file"], cfg["contract_file"]}
     violations = []
     for xy, path in entries:
+        if path in named_frozen and args.contract_change:
+            continue
         if path in PROTOCOL_LOGS or matches_any(path, cfg["ignore_paths"]):
             continue
         hit_frozen = next((f for f in cfg["frozen_paths"]
@@ -1814,6 +1825,33 @@ def cmd_handoff(root, cfg, args):
             tail = "请撤销这些改动后重试。"
         die("拒绝交接 —— 以下改动越界:%s\n\n%s如果你认为规则本身有问题,"
             "写进 docs/reviews/ 并告诉人类。" % (lines, tail + ""))
+
+    # --- 契约/计划的变更要带声明,并且当场留决策 ---------------------------
+    changed_named_frozen = sorted({p for _, p in entries if p in named_frozen})
+    if changed_named_frozen and args.contract_change:
+        # 校验强度取高的那一档,和 `--basis` 同一条判据:只要求非空的话,
+        # 它和 `--doc-reason` 效果完全一样,叠在一起只是多打一行字。
+        if not basis_points_at_file(root, args.contract_change, entries):
+            die("拒绝交接 —— `--contract-change` 里没有指向真实文件的路径,\n"
+                "所以它只是一句话,对方无从核对。\n\n"
+                "  你写的: %s\n"
+                "  改动的: %s\n\n"
+                "写一份**产物**的路径(本回合的决策记录、评审记录这类);\n"
+                "可以写在句子里,也可以带行号。"
+                % (args.contract_change, "、".join(changed_named_frozen)))
+        # 这是一条**新检查,不是复用**:既有那条(契约在工作项期间变过就必须
+        # 留决策)的触发点是 `target == "DONE"`,拿 `claim` 时记下的
+        # contract_sha 比对 —— 它抓的是"完成时发现契约变过",抓不到
+        # 改动发生的那一刻。两条并存、互不替代。
+        fresh = [e for e in new_decision_entries(root, cfg) if e[0] == item]
+        if not fresh:
+            die("拒绝交接 —— 你改了 %s,但本回合没有留下决策。\n\n"
+                "承重文件的改动是重新推导代价最高的事:今后每个回合都会拿改过的\n"
+                "版本当作理所当然,而改它的理由谁都看不到了。\n\n"
+                "在 %s 里追加一条 `## %s — …`,写清楚原来是什么、为什么不行、\n"
+                "改成了什么。\n\n%s"
+                % ("、".join(changed_named_frozen), cfg["decisions_file"],
+                   item, DECISION_FORMAT_HINT))
 
     # --- 文档改动要带理由 -------------------------------------------------
     # 用的是 `entries`(handoff 开头抓的那一批),不是提交内容:完成工作项时
@@ -2029,6 +2067,8 @@ def cmd_handoff(root, cfg, args):
         body += "\n文档改动理由: %s" % args.doc_reason
     if args.basis:
         body += "\n改写依据: %s" % args.basis
+    if args.contract_change:
+        body += "\n契约变更(已声明): %s" % args.contract_change
     if verdict == "approve":
         body += "\n检查了: %s\n未覆盖: %s" % (args.checked, args.uncovered)
     # `is not None` 而不是真值判断:空串表示"重钉发生了但 sha 没取到",
@@ -2254,7 +2294,7 @@ def cmd_report(root, cfg, args):
     state = load_state(root)
 
     reviews = changes = disputes = 0
-    claimed = deadlocks = no_decision = 0
+    claimed = deadlocks = no_decision = contract_changes = 0
     rounds_by_item = {}
 
     for subject, body in rows:
@@ -2271,6 +2311,8 @@ def cmd_report(root, cfg, args):
             deadlocks += 1
         if "未留决策(已声明)" in body:
             no_decision += 1
+        if "契约变更(已声明)" in body:
+            contract_changes += 1
         m = re.search(r"item=(\S+)", body)
         if m and m.group(1) != "none":
             rounds_by_item[m.group(1)] = rounds_by_item.get(m.group(1), 0) + 1
@@ -2308,6 +2350,11 @@ def cmd_report(root, cfg, args):
         "!! 记忆层空转" if done >= MIN_SAMPLE and not decisions else "—")
     row("--no-decision", _fmt_rate(no_decision, done),
         "!  偏高" if done and no_decision > done / 2.0 else "—")
+    # 承重文件不再冻结,换来的是"改了必有人知道"。频率是这笔交易唯一的
+    # 观测量:弱版本对"两个 agent 合谋改契约去迁就实现"的防护弱于双方签字,
+    # 异常了就该收紧。
+    row("--contract-change", _fmt_rate(contract_changes, done),
+        "!  偏高" if done and contract_changes > done else "—")
     print("=" * 62)
     print()
 
@@ -3181,6 +3228,8 @@ def main(argv=None):
                       help="本回合改了规范性文档时必填:为什么改")
     p_ho.add_argument("--basis", metavar="依据", default=None,
                       help="改写路线图(有删除行)时必填:指向一份真实产物的路径")
+    p_ho.add_argument("--contract-change", metavar="依据", default=None,
+                      help="改 PLAN/CONTRACT 时必填:指向一份真实产物的路径")
     p_ho.add_argument("--checked", metavar="内容", default=None,
                       help="approve 必填:你具体检查了什么")
     p_ho.add_argument("--uncovered", metavar="内容", default=None,
