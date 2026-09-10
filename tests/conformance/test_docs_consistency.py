@@ -567,9 +567,44 @@ class TestLoadBearingDocHeaders(unittest.TestCase):
 
     路径从 `.pair/config.json` 的 `plan_file` / `contract_file` 读,
     不写死 —— 下一轮换了目录这条检查要跟着走。
+
+    **窗口从 3 行改成"标题 + 前导引用块"时,第二条断言被削弱了一格,
+    这是有意接受的取舍:**
+
+    | | 3 行窗口 | 结构窗口 |
+    |---|---|---|
+    | 「只读」写进导语第 5 行 | 漏(**打回理由**) | 红 |
+    | 标题去掉 `--contract-change`、导语仍提 | 红 | **绿** |
+    | 整个前导块都不提那个旗标 | 红 | 红 |
+
+    第二行那一格是真的丢了。接受它,是因为这条断言要守的是"**读的人知不知道
+    现在怎么改它**" —— 标题和紧随其后的导语是同一个视觉块,写在哪一半都算
+    告诉了;而钉死"必须在标题里",会让一次合法的重排(把机制挪进导语、
+    标题只留名字)误红。丢掉的那一格由第三行兜着:前导块整个不提,仍然红。
     """
 
-    HEAD_LINES = 3          # 只看开头几行:那句话就在标题里
+    # 窗口 = 标题行 + 紧随其后的**前导引用块**,不是一个写死的行数。
+    # 第一版是 `HEAD_LINES = 3`,写的时候恰好够用(那两句假话都在第 1 行);
+    # 后来导语被写长了 —— `CONTRACT.md` 的前导块 18 行,**15 行落在窗口外**,
+    # 而那 15 行正是最容易长出新错话的地方。实测:把「只读」放到
+    # `PLAN.md` 第 5 行,两条断言一条都不红。
+    #
+    # 窗口也**不能**扩大成整份文件:「只读」在这两份文件的正文里合法出现 6 次,
+    # 全是**引用旧标题**(W9 / W11 的验收标准、契约那一节的背景)。
+    # 改掉它们等于篡改记录 —— 和 W6 给历史引用留 `@<sha>` 豁免同一个道理。
+    # 所以窗口要有界:到正文就停。
+    @staticmethod
+    def _leading_block(text):
+        lines = text.splitlines()
+        if not lines:
+            return ""
+        out = [lines[0]]
+        for line in lines[1:]:
+            if not line.strip() or line.lstrip().startswith(">"):
+                out.append(line)
+            else:
+                break                       # 第一行正文,停
+        return "\n".join(out)
 
     def _headers(self):
         cfg = json.loads((REPO / ".pair" / "config.json")
@@ -579,8 +614,7 @@ class TestLoadBearingDocHeaders(unittest.TestCase):
             rel = cfg[key]
             path = REPO / rel
             self.assertTrue(path.exists(), "%s 指向的 %s 不存在" % (key, rel))
-            head = "\n".join(path.read_text(encoding="utf-8")
-                              .splitlines()[:self.HEAD_LINES])
+            head = self._leading_block(path.read_text(encoding="utf-8"))
             out.append((rel, head))
         return out
 
