@@ -197,7 +197,7 @@ W8 与 W9 各自新增一条拒绝分支。第三轮的教训是**同一个失�
     裁判重钉之后才可用。**另起一项,排在 W9 之后**
   - 对应契约:`docs/pair-run/CONTRACT.md` → 冻结文件改成带声明才放行
 
-- [ ] **W11** [feature] — 改掉 `PLAN.md` 与 `CONTRACT.md` 的「冻结」标题
+- [x] **W11** [feature] — 改掉 `PLAN.md` 与 `CONTRACT.md` 的「冻结」标题
   - **必须排在 W9 之后、且在 W9 的重钉之后** —— 这一项本身就是本轮第一个
     `--contract-change` 的真实用例,旗标要到裁判重钉之后才可用
   - **类型是 `[feature]` 不是 `[refactor]`**:`claim` 对 `refactor` 的

@@ -1,10 +1,10 @@
 {
-  "round": 8,
-  "phase": "review-test",
-  "item": "W11",
-  "item_type": "feature",
-  "last_actor": "tester",
-  "changes_count": 1,
+  "round": 9,
+  "phase": "idle",
+  "item": null,
+  "item_type": null,
+  "last_actor": "dev",
+  "changes_count": 0,
   "completed_items": [
     "W2",
     "W3",
@@ -13,10 +13,11 @@
     "W10",
     "W7",
     "W8",
-    "W9"
+    "W9",
+    "W11"
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": "b3fbf7438648c2fcd969d7bd8063b99b55cc303d",
+  "contract_sha": null,
   "after_rebound": false
 }
