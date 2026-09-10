@@ -546,5 +546,59 @@ class TestSymbolReferences(unittest.TestCase):
         """rules.md 拿 `src/auth.py:42` 举例,那是虚构项目,没有符号可迁移。"""
         self.assertEqual(self._one("见 `src/auth.py:42`"), [])
 
+
+class TestLoadBearingDocHeaders(unittest.TestCase):
+    """W11:`PLAN.md` 与 `CONTRACT.md` 的开头不能再说自己是"agent 只读"。
+
+    W9 落地之后那句话就是**假的**:两个角色都可以落笔,只是要带
+    `--contract-change` 并当场留决策。协议里最贵的失效模式是"文档说的和
+    脚本做的不一样",而这两份是承重文件 —— 每个 agent 开工第一件事就是读它们。
+
+    **判据盯的是"那句话是不是假的",不是措辞:**
+
+    - 开头不得再出现「只读」—— 这是被 W9 证伪的那个断言;
+    - 开头必须出现 `--contract-change` —— 那是现在真正管着它们的机制,
+      和 `ENFORCEMENTS ↔ architecture.md` 那条一致性检查同一个手法:
+      把文档钉在**脚本真的在做的那件事**上,而不是钉在某种说法上。
+
+    两条缺一不可:只查前者,删掉半句话就能过而不告诉人新规矩;
+    只查后者,写成"冻结 — agent 只读,除非带 `--contract-change`"这种
+    自相矛盾的句子也能过。
+
+    路径从 `.pair/config.json` 的 `plan_file` / `contract_file` 读,
+    不写死 —— 下一轮换了目录这条检查要跟着走。
+    """
+
+    HEAD_LINES = 3          # 只看开头几行:那句话就在标题里
+
+    def _headers(self):
+        cfg = json.loads((REPO / ".pair" / "config.json")
+                         .read_text(encoding="utf-8"))
+        out = []
+        for key in ("plan_file", "contract_file"):
+            rel = cfg[key]
+            path = REPO / rel
+            self.assertTrue(path.exists(), "%s 指向的 %s 不存在" % (key, rel))
+            head = "\n".join(path.read_text(encoding="utf-8")
+                              .splitlines()[:self.HEAD_LINES])
+            out.append((rel, head))
+        return out
+
+    def test_开头不再自称_agent_只读(self):
+        for rel, head in self._headers():
+            with self.subTest(file=rel):
+                self.assertNotIn(
+                    "只读", head,
+                    "%s 的开头还写着自己是 agent 只读 —— W9 之后这句是假的。"
+                    "开头几行:\n%s" % (rel, head))
+
+    def test_开头点名真正管着它们的机制(self):
+        for rel, head in self._headers():
+            with self.subTest(file=rel):
+                self.assertIn(
+                    "--contract-change", head,
+                    "%s 的开头没有点名 `--contract-change` —— 读的人不知道"
+                    "现在怎么改它。开头几行:\n%s" % (rel, head))
+
 if __name__ == "__main__":
     unittest.main()
