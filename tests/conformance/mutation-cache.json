@@ -1,5 +1,5 @@
 {
-  "baseline": "656e10ef05e469ab",
+  "baseline": "1ab9c7c1f1660083",
   "catchers": {
     "剩余数打成总数": [
       "test_v1_paths.TestIgnorePathsTruncation.test_超过十个只列前十并说明还剩多少"
