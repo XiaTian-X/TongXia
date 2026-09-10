@@ -165,7 +165,7 @@ W8 与 W9 各自新增一条拒绝分支。第三轮的教训是**同一个失�
     的同步」的推论),留给 W8 之后的任一工作项做第一个真实用例
   - 对应契约:`docs/pair-run/CONTRACT.md` → 文档改动要带理由
 
-- [ ] **W9** [feature] — 冻结文件改成带声明才放行
+- [x] **W9** [feature] — 冻结文件改成带声明才放行
   - 验收标准:`PLAN.md`/`CONTRACT.md` **仍在 `frozen_paths` 里**,改动它们
     带 `--contract-change` 时放行、不带时照旧拒绝;豁免按 `plan_file` /
     `contract_file` 两个**配置键**点名,`frozen_paths` 里的其他路径
