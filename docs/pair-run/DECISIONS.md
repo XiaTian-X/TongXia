@@ -248,3 +248,8 @@
 - 理由: 第 3 步(补 `MUTATIONS` 变异点)的锚点是 `pair.py` 的字面源码片段,而 `test_变异点仍能匹配到源码` 要求 `count(old) == 1` —— 防护没写出来时任何锚点都失配,所以第 3 步只能在实现之后;但 feature 流程里 tester 唯一可写的阶段是 `spec`,回到它的两条边又都由 dev 发起。W8 最后一轮 tester 用了第三条路:**在 spec 回合就把锚点按"实现应该长什么样"写下来**(`(args.doc_reason or "").strip()`),让 `test_变异点仍能匹配到源码` 红着交给 dev,并在交接说明里写明"要换写法就在 review-test 打回我并给出你实际用的片段"。dev 按片段实现,锚点即刻匹配,不需要额外往返。**这把一个时序死结变成了一次普通的规格协商** —— 锚点从"事后追认的实现细节"变成"事前声明的接口",而 dev 有正常的异议通道可以推翻它。前提是那个片段本身有依据:这次的片段与同文件 `--checked` / `--uncovered` 的既有口径逐字一致,不是凭空指定实现。
 - 已否决: 继续用原来那两条出路当唯一解 —— "dev 打回时顺带补"依赖运气(W8 这一轮确实是靠 dev 为别的缺口打回才补上的),"单开 `[cover]` 工作项"要多排一整项。也否决了把这条写进 W8 的实现 —— 它是流程纪律不是代码,该进 `docs/contributing.md` 的分角色那一节,由下一个能写文档的回合补。**顺带记一个操作坑**:重锚或重命名变异点时要同时删掉 `mutation-cache.json` 里的旧键,否则 `test_缓存里的条目名都在_MUTATIONS_里` 变红,而第一反应"跑 `mutation_check` 刷新缓存"是死路 —— 它要求基线全绿,而基线红的原因正是那条陈旧缓存。出路是按那条测试自己说的直接删键。
 - 影响路径: `docs/contributing.md`, `tests/conformance/mutation_check.py`, `tests/conformance/mutation-cache.json`
+## W9 — 带了 --contract-change 却没改承重文件时：不校验、不拒绝、照样进统计
+
+- 理由: 实测 `handoff "什么承重文件都没改" --contract-change "这不是路径"` → **退出码 0**,提交正文里照样写下 `契约变更(已声明): 这不是路径`。根因:校验块的入口是 `if changed_named_frozen and args.contract_change:`,没改承重文件时 `changed_named_frozen` 为空,整块被跳过 —— **路径真实性那一道根本没跑**;而写正文那一段只看 `if args.contract_change:`,于是 `report` 的 `--contract-change` 那一行把它计成一次契约变更。契约把那一行定为"频率异常再收紧"的观测量,而**一个不改任何东西就能加一的计数器观测不了任何东西**。这和本工作项里另一条(report 那一行原来被分母推动)是同一个病:那一行到底有没有意义。判据:两条出路都行 —— 声明只在 `changed_named_frozen` 非空时才写进正文;或者反过来,空的时候直接拒绝("你没改承重文件,不要带这个旗标")。**契约没规定这种情况,所以不是偏离,要人类定一句。**
+- 已否决: 在本轮补一条用例把它钉住 —— 契约没写这种情况该怎么办,钉哪一边都是断言契约没规定的东西(规则 4);先把事实记下来,等契约定了再补用例与变异点。也否决了只写进 `--uncovered`:同一份记录里已有一条判死过那种做法。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`

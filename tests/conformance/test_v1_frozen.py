@@ -210,21 +210,40 @@ class TestReportShowsContractChanges(FrozenBase):
                          "report 里应当恰好有一行契约变更频率。输出:\n%s" % r.text)
         return rows[0]
 
-    def test_report_那一行跟着事实变(self):
-        """判据是**这一行会变**,不是"这一行存在"。
+    def test_report_那一行跟着契约变更走(self):
+        """判据:**两次观测之间分母必须不变**,于是那一行只可能被分子推动。
 
-        只断言存在的话,一个恒为 0、或者干脆写死一个常数的实现照样能过 ——
-        而这一节的目的是"契约变更频率异常时收紧",一个不动的数字没有用处。
-        跑两个工作项:第一个不改契约,第二个改,断言那一行前后不同。
+        上一版是"跑两个工作项、断言那一行前后不同" —— 而 `_fmt_rate` 的
+        分母是**完成项数**,第二个工作项本身就让那一行变了。把
+        `contract_changes` 的自增改成永不发生,那一版照样绿:
+        `0% (0/1)` → `0% (0/2)`,**分母替分子演了"变化"**。
+
+        这一版:先完整跑掉 W1(不改契约),此时 `done == 1`;再认领 W2 并
+        **只做一次带声明的交接**(W2 不完成),`done` 仍然是 1。
+        两次观测的分母逐字相同,那一行还变了,就只能是分子变的。
+
+        不断言措辞,也不钉 `_fmt_rate` 的格式 —— 换成"N 次"这种没有分母的
+        写法,这条判据同样成立。
         """
         self.cycle("W1", contract_change=False)
         before = self.contract_row()
-        self.cycle("W2", contract_change=True)
+
+        self.assertAccepted(self.repo.run("claim", "W2", role="tester"))
+        self.repo.write("tests/W2")
+        self.touch_contract()
+        self.repo.append_decision(item="W2", title="契约这一节改成新的说法")
+        self.assertAccepted(self.repo.run(
+            "handoff", "用例", "--doc-reason", "措辞会误导",
+            "--contract-change", "docs/DECISIONS.md", role="tester"))
         after = self.contract_row()
+
+        self.assertEqual(
+            self.repo.state()["completed_items"], ["W1"],
+            "前提:第二次观测时完成项数必须还是 1,否则分母会变、判据失效")
         self.assertNotEqual(
             before.strip(), after.strip(),
-            "跑了一次契约变更之后,report 那一行没变:\n  前: %r\n  后: %r"
-            % (before, after))
+            "完成项数没变、只多了一次带声明的交接,report 那一行却没动:\n"
+            "  前: %r\n  后: %r" % (before, after))
 
 
 if __name__ == "__main__":

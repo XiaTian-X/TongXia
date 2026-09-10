@@ -405,6 +405,23 @@ MUTATIONS = [
     ("拆掉路线图依据强制",
      "        if not basis_points_at_file(root, args.basis, entries):",
      "        if False:"),
+
+    # --- W9:冻结文件改成带声明才放行 ---------------------------------------
+    ("拆掉承重文件的冻结豁免",
+     "        if path in named_frozen and args.contract_change:",
+     "        if False:"),
+
+    ("拆掉契约变更声明的真实性",
+     "        if not basis_points_at_file(root, args.contract_change, entries):",
+     "        if False:"),
+
+    ("拆掉契约变更当场留决策",
+     "        if not fresh:",
+     "        if False:"),
+
+    ("契约变更计数恒为 0",
+     "            contract_changes += 1",
+     "            pass"),
 ]
 
 # unittest 的失败行有两种形态:

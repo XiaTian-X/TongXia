@@ -1,11 +1,14 @@
 {
-  "baseline": "c51647183402b58e",
+  "baseline": "656e10ef05e469ab",
   "catchers": {
     "剩余数打成总数": [
       "test_v1_paths.TestIgnorePathsTruncation.test_超过十个只列前十并说明还剩多少"
     ],
     "只认 impl 阶段的异议,漏掉评审打回": [
       "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
+    ],
+    "契约变更计数恒为 0": [
+      "test_v1_frozen.TestReportShowsContractChanges.test_report_那一行跟着契约变更走"
     ],
     "把 RED 豁免放宽成整个红绿豁免": [
       "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
@@ -143,8 +146,14 @@
     "拆掉契约依据的可断言检查": [
       "test_v1_brownfield.TestContractProvenance.test_待核实的规格不能开_feature"
     ],
+    "拆掉契约变更声明的真实性": [
+      "test_v1_frozen.TestFrozenNeedsDeclaration.test_声明要指向真实存在的路径"
+    ],
     "拆掉契约变更强制": [
       "test_v1_memory.TestContractChange.test_契约变过就必须留记录"
+    ],
+    "拆掉契约变更当场留决策": [
+      "test_v1_frozen.TestDecisionIsMandatory.test_带声明但没留决策被拒"
     ],
     "拆掉契约审查结论的逐节点名": [
       "test_v1_documents.TestSetupReportNamesSections.test_把契约粘进围栏不算点名"
@@ -197,6 +206,9 @@
     ],
     "拆掉打回后 spec 回合的 RED 豁免": [
       "test_v1_disputes.TestPostDisputeSpec.test_review_test_打回后也豁免_RED"
+    ],
+    "拆掉承重文件的冻结豁免": [
+      "test_v1_frozen.TestDecisionIsMandatory.test_带声明但没留决策被拒"
     ],
     "拆掉文档理由强制": [
       "test_v1_docreason.TestDocReasonRequired.test_删掉一份规范性文档同样要理由"
