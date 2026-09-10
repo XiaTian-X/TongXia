@@ -61,19 +61,28 @@ class TestDocReasonRequired(DocReasonBase):
         self.repo.write(GUIDE, "# 新文档\n")
         self.assertRefused(self.handoff(), "--doc-reason", GUIDE)
 
-    def test_理由是空字符串不算数(self):
-        """`--doc-reason` 是「强制留痕」不是「放行」,空串留下的是空痕:
-        提交正文里多一行 `文档改动理由: `,后面什么都没有,门却开了。
-        仓库对这一类已经表过态(`--checked` / `--uncovered` 各有
-        `test_空字符串不算数`)。
+    def test_理由只有空白不算数(self):
+        """`--doc-reason` 是「强制留痕」不是「放行」。空白留下的是空痕:
+        **git 会剥掉尾随空白**,所以三个空格和空串在提交正文里长得一模一样
+        —— 都是 `文档改动理由:` 后面什么都没有,而门开了。实测过。
 
-        **这一条后面没有第二道兜底** —— `--basis` 的空串会被
-        `basis_points_at_file` 接着拦下(实测过),`--doc-reason` 不会。
+        上一版只钉了空串,一个空格就绕过去了。仓库既有口径是
+        `not (val or "").strip()`(`--checked` / `--uncovered` 那一处),
+        这条要和它对齐。
+
+        **这一条后面没有第二道兜底** —— `--basis` 的空白会被
+        `basis_points_at_file` 接着拦(`"".split()` 是空列表),
+        所以那一侧不补:补了会是恒真的。
         """
+        # `claim` 只做一次:被拒绝的交接不推进状态,所以同一个回合可以连着
+        # 试。第一版把 claim 放进了循环,于是第二轮起是**认领被拒**在报错
+        # ——4 条红,但红的理由是"上一个工作项还在进行中",不是空白绕过。
         self.claim()
         self.repo.write(GUIDE, "# 新文档\n")
-        self.assertRefused(self.handoff("--doc-reason", ""),
-                           "--doc-reason", GUIDE)
+        for reason in ("", " ", "   ", "\t", " \n "):
+            with self.subTest(reason=repr(reason)):
+                self.assertRefused(self.handoff("--doc-reason", reason),
+                                   "--doc-reason", GUIDE)
 
     def test_删掉一份规范性文档同样要理由(self):
         """契约写的是"本回合的**改动**里若含规范性文档" —— 删除是改动,

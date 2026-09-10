@@ -382,13 +382,20 @@ MUTATIONS = [
      '    return (out or "")'),
 
     # --- W8:文档改动要带理由 / 路线图改写要有依据 -------------------------
+    # 锚在 `touched_docs = …` 而不是它下面那个 `if`:那个 `if` 的条件正在被
+    # 改(空白也要算不合格),而锚点一失配 `test_变异点仍能匹配到源码` 就红,
+    # 那个文件 dev 改不了。这一行不会变。
     ("拆掉文档理由强制",
-     "    if touched_docs and not args.doc_reason:",
-     "    if False:"),
+     "    touched_docs = normative_docs(cfg, entries)",
+     "    touched_docs = []"),
 
-    ("文档理由允许空串",
-     "    if touched_docs and not args.doc_reason:",
-     "    if touched_docs and args.doc_reason is None:"),
+    # 这一条**故意锚在还不存在的代码上**,它就是本回合的规格:
+    # `--doc-reason` 要按仓库既有口径(pair.py 里 --checked/--uncovered 那一处)
+    # 判空,即 `(args.doc_reason or "").strip()`。落地之前它是 unmatched,
+    # 落地之后这条变异会被 test_理由只有空白不算数 打死。
+    ("文档理由不 strip",
+     '(args.doc_reason or "").strip()',
+     "args.doc_reason"),
 
     ("规范性文档不算删除",
      '    for _, path in entries:\n        if not path.endswith(".md"):',

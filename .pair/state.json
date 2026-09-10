@@ -1,9 +1,9 @@
 {
   "round": 6,
-  "phase": "spec",
+  "phase": "impl",
   "item": "W8",
   "item_type": "feature",
-  "last_actor": "dev",
+  "last_actor": "tester",
   "changes_count": 2,
   "completed_items": [
     "W2",
@@ -16,5 +16,5 @@
   "setup_verified": true,
   "deadlock_hits": [],
   "contract_sha": "b3fbf7438648c2fcd969d7bd8063b99b55cc303d",
-  "after_rebound": true
+  "after_rebound": false
 }
