@@ -163,9 +163,13 @@ class TestVerifySetup(PairTestCase):
         self.assertRefused(r, "过短")
 
     def test_交了结论后通过并允许认领(self):
+        """跑校验的是**认领者本人**。W13 起校验按角色记、`claim` 只看执行者
+        自己那一份(契约「校验与沉淀的有效期」),所以 dev 校验过不替 tester
+        解锁 —— 那个反面场景由 `test_v1_validity` 钉着。这里原先是
+        `role="dev"`,W13 的 dev 在 impl 回合以异议指出它与契约矛盾。"""
         self.assertFalse(self.repo.state()["setup_verified"])
         self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
-        r = self.repo.run(*VERIFY_OK, role="dev")
+        r = self.repo.run(*VERIFY_OK, role="tester")
         self.assertAccepted(r)
         self.assertTrue(self.repo.state()["setup_verified"])
         self.assertAccepted(self.repo.run("claim", "W1", role="tester"))
