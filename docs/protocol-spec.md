@@ -88,6 +88,9 @@
 - 执行者是 `tester`
 - 当前阶段是 `idle`
 - `require_setup_verification` 为真时,`state.setup_verified` 必须为真
+- 同上为真时,**执行者这个角色**上次通过校验时读的契约
+  (`state.setup_verified_contract[<角色>]`,取**工作区内容**的 blob sha)必须和现在
+  工作区里的一致;记录缺失或契约读不到都算不一致 —— 契约改过就要重跑 `verify-setup`
 - 工作项存在于 PLAN、未完成、类型合法
 - `state.json` 未被篡改
 
@@ -228,7 +231,9 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 最后一条是脚本查不了的那件事的替代品:它至少强制交出一份结论。
 没有歧义就明确写"无歧义"并说明逐条核对了什么 —— 空泛的一句"看过了"不算。
 
-通过后写入 `state.setup_verified = true`,此后才能 `claim`。
+通过后写入 `state.setup_verified = true`,并按执行者的角色记下这次读的是哪一份契约
+(`state.setup_verified_contract`),此后才能 `claim`。契约之后再变,那个角色就要
+重跑一次 —— 对方重跑不能替它解锁。
 
 ## 6. 记忆层
 
@@ -373,9 +378,12 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 | `setup_verified` | bool | 开工前校验是否通过 |
 | `deadlock_hits` | string[] | 撞过死锁闸的记录,形如 `W3 x3` |
 | `contract_sha` | string\|null | claim 时契约文件的 blob sha |
+| `setup_verified_contract` | object | 按角色记:该角色上次通过开工前校验时,契约文件**工作区内容**的 blob sha。`claim` 现场比对;与 `contract_sha`(按工作项记、取 HEAD)是两回事 |
 | `after_rebound` | bool | 上一次交接是不是一次打回(异议或评审 changes)。打回之后的 spec 回合豁免 **RED** 要求(不豁免 GREEN) |
 
 老状态文件缺少新键时取默认值,对应检查自动跳过 —— 存量仓库零成本升级。
+**例外是 `setup_verified_contract`**:缺失时 `claim` 要求重跑一次 `verify-setup`。
+"不知道上次校验的是哪一份"和"校验的是另一份"风险一样,而升级代价只是重跑一次。
 
 ## 9. 退出码
 

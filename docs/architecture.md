@@ -75,7 +75,7 @@ agent 被人类唤醒
   │   不是你的回合 → 报告在等谁 → 停止 ◄────────────────────┘
   │
   ├─► (仅 idle 且 tester) pair.py claim <ID>
-  │     检查 setup_verified → 解析 PLAN → 记 contract_sha
+  │     检查 setup_verified 与本角色校验过的契约 → 解析 PLAN → 记 contract_sha
   │     → 按类型进入起始阶段 → 立即提交(留痕 + 让 state 变干净)
   │
   ├─► 干活:只写自己路径下的文件,随手往 notes 写负空间
