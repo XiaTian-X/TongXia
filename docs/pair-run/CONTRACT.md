@@ -517,7 +517,7 @@ P0-7 推迟的 `artifact_paths`、P0-5 会需要的 `proposal_paths` 是同一�
 覆盖的是**一个回合**,而钉住一旦开始就没有终点。实测的后果:
 
 ```
-两个文件差 100 行,grep -c orphan → pair.py 8 处、enforcer.py 0 处
+两个文件差 122 行,grep -c orphan → pair.py 8 处、enforcer.py 0 处
 ```
 
 **W4 上一轮验收通过的孤儿清单,在裁判里根本不存在** —— 整整一轮的每一次
@@ -529,7 +529,7 @@ $ PAIR_ROLE=tester python3 .pair/enforcer.py handoff "探测" --contract-change 
 pair.py: error: unrecognized arguments: --contract-change 探测
 ```
 
-**注册表比对挡不住这件事。** 实算:`ENFORCEMENTS` 两边都是 14 条、
+**注册表比对挡不住这件事。** 实算:`ENFORCEMENTS` 两边都是 30 条、
 `HANDOFF_INVARIANTS` 两边都是 16 条,**差集为空**。拿它当护栏会全绿地放过
 上面这一整轮 —— 它长得像检测器,实际恒真。
 

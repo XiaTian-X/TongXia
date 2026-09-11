@@ -203,13 +203,21 @@
     `没有需要提交的改动`;⑦跳过提交时,"工作区里有未提交的代码改动"那段警告照打
   - **判据是索引不是工作区**:`changed_entries` 带未跟踪文件,拿"工作区干净"
     当判据会让缺陷原样保留而用例全绿
-  - **改动面实测**:`pair.py` **8 处**、`docs/` **26 处 / 6 个文件**、
-    `tests/` **47 处 / 8 个文件**,跨两个角色。**口径**:
-    `grep -ro 'setup-verification\|SETUP_REPORT_REL'` 的出现次数,
-    `docs/` 下排除 `reviews/` 与 `pair-run/notes/`(历史记录,不改),
-    `tests/` 另计 `setup_report`。第一版写的是 6 / 7 / 33 且没写口径 ——
-    三种口径都复现不出来。**本轮的主题正是"把测量工具修准",
-    立项依据自己就该是可复现的。**
+  - **改动面实测**:`pair.py` **8 处**、用户文档 **10 处 / 6 个文件**
+    (`INSTALL.md`、`SKILL.md`、`references/documents.md`、
+    `docs/troubleshooting.md`、`docs/command-reference.md`、`docs/improvements.md`)、
+    测试 **46 处 / 8 个文件**,跨两个角色。**口径**:全仓被跟踪文件里
+    `setup-verification` / `SETUP_REPORT_REL` / `setup_report` 的出现次数,
+    **排除** `docs/pair-run/`(本轮自己的 PLAN、契约、决策记录 —— 它们**描述**
+    W12,不是 W12 要**改**的;决策记录还是追加式,一个字都不能碰)与
+    `docs/reviews/`,也排除 `.pair/enforcer.py`(`DONE` 时自动重钉,不手改)。
+  - **这个数改过两次,两次都不对,值得记:** 第一版 6 / 7 / 33 没写口径,
+    复现不出来;第二版 8 / 26 / 47 口径可复现,但它数的范围是 `docs/` ——
+    按那个口径**现在已经是 29(写下时是 26),其中 23 处在本轮自己的规划与
+    决策记录里**:数的是**讨论 W12 的文档**,不是 W12 要改的文档,
+    而且每多写一条关于 W12 的决策它就涨一次;同时 `docs/` 这个范围又漏掉了
+    `INSTALL.md`、`SKILL.md`、`references/` —— 正是真要改的那几份。
+    **可复现不等于量对了。**
     这是本轮最大的一项,切不动就在 spec 回合说,别硬做
   - 对应契约:`docs/pair-run/CONTRACT.md` → 开工前校验的产物与退出码
 
