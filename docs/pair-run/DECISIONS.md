@@ -318,3 +318,9 @@
 - 理由: `066d7b6` 改了三处,dev 逐条独立重算。①**空转判据补上承重文件 —— 成立**:同一区间独立重算,散文口径 4、纯角色判据 3(含 W11 交付本身 `f1508f8`)、补上承重文件后 2,与 tester 逐一对上;**而契约背景原来那个 4 用的正是这份契约自己禁掉的散文算法**。②**W13→W14 顺序承重 —— 成立**:`pair.py:945` 正是含 `mine` 的晋升闸。③**W12 改动面 8/26/47 —— 口径可复现,但量错了对象**:按它的 `docs/` 口径现在已是 29(写下时 26),其中 23 处在本轮自己的 PLAN、契约、决策记录里 —— 数的是讨论 W12 的文档,每多写一条关于 W12 的决策就涨一次;同时 `docs/` 范围又漏掉 `INSTALL.md`、`SKILL.md`、`references/` 这几份真要改的。改成排除 `docs/pair-run/`、`docs/reviews/`、`.pair/enforcer.py` 的全仓口径:**8 / 10(6 文件)/ 46(8 文件)**。顺带改掉契约 W10 背景里两个早已知错、一直没改的数(差 100 行→122、`ENFORCEMENTS` 14 条→30),并给第四轮运行报告加更正块:它的"4 次空转"与 P1-6 累计的 11 个样本同样按散文数。
 - 已否决: 保留 8/26/47 只补一句"含自引" —— 那会让一个随讨论膨胀的数继续当立项依据;可复现是必要条件,量对对象才是充分条件。也否决了直接改写第四轮报告里的 4 与 11 —— 那是运行记录,改写历史数字等于篡改记录(与 W6 的 `@<sha>` 豁免同理),改为就地加更正块、原数字保留。
 - 影响路径: `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`, `docs/dogfood-run-4.md`, `docs/improvements.md`
+
+## W12 — 新分支的变异点欠着：七个锚点都已实测、各有且只有对应用例接得住，但 review-impl 回合写不了 MUTATIONS
+
+- 理由: dev 在 impl 回合点名了六个锚点并实测;tester 在隔离副本里逐个重跑,红的条数与是哪几条**全部复现**。另构造了 dev 说"没有干净的一行变异"的第七个 —— 把读取那一行改成拼接角色文件与旧共享文件(即"读并集"),它**恰好只被** `test_角色文件在就只读它_不回落也不读并集` 抓住。锚点(old → new):①`if (root / mine).exists():` → `if False:`;②`if fallback_why and report.exists():` → `if False:`;③`me, _ = try_resolve_role(root)` → `me, _ = resolve_role(root)`;④`if index_has_diff(root, sorted(set(to_add))):` → `if changed_entries(root):`;⑤同④ → `if True:`;⑥`REVIEW_FIXED_NAMES` 里由格式派生的两行 → 删掉;⑦`text = report.read_text(...)` 那一行 → 拼接两份。**但 `MUTATIONS` 在 tester 独占路径下,而 tester 此刻处在只读的 review-impl**;feature 流程里 tester 唯一可写的阶段是 `spec`,回到它的两条边都由 dev 发起。
+- 已否决: 让 dev 为了给 tester 腾一个可写回合而在 review-test 打回 —— 那是制造打回,评审文案点名禁止。也否决了只写进 `--uncovered`:那只在提交正文里,而这是七个已验证、可直接登记的锚点。**这笔账由后续第一个 tester 可写的回合还**(下一次 spec 回合、或单开一个 `[cover]`)。另记一个反讽:W13 落地之前,这条在 review-impl 回合写下的决策到 DONE 时不算"本回合新追加",笔记晋升闸还会再拦一次 —— 那正是 W13 要修的。
+- 影响路径: `tests/conformance/mutation_check.py`, `.agents/skills/pair-protocol/scripts/pair.py`
