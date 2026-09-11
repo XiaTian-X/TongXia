@@ -481,6 +481,48 @@ MUTATIONS = [
      "        fresh = [e for e in new_decision_entries(root, cfg) if e[0] == item]",
      '        fresh = [e for e in parse_decisions(_read(root / cfg["decisions_file"]))'
      " if e[0] == item]"),
+
+    # --- W13:契约变了,之前的校验作废(claim 侧)------------------------------
+    # 形状由 dev 定,dev 在 impl 笔记里点名、tester 在 review-impl 隔离复现过,
+    # 在 W14 的 spec 回合登记(W13 本项里 tester 唯一能写 tests/ 的回合漏了,
+    # 见 DECISIONS.md 的 `## W13 — claim 侧的 8 个变异点欠着`)。
+    ("claim 不拦过期的校验",
+     '            die("拒绝认领 —— " + stale)',
+     "            pass"),
+
+    ("校验比对端取 HEAD",
+     "    now = worktree_sha(root, rel)",
+     "    now = blob_sha(root, rel)"),
+
+    ("校验记录端取 HEAD",
+     '        rec[who] = worktree_sha(root, cfg["contract_file"])',
+     '        rec[who] = blob_sha(root, cfg["contract_file"])'),
+
+    ("校验记录变回全局单值",
+     '    seen = (state.get("setup_verified_contract") or {}).get(role)',
+     '    seen = next(iter((state.get("setup_verified_contract") or {}).values()), None)'),
+
+    ("校验记录缺失时放行",
+     "    if seen == now:",
+     "    if seen is None or seen == now:"),
+
+    ("契约读不到时放行",
+     '    if now is None:\n        return ("读不到',
+     '    if now is None:\n        return None\n        return ("读不到'),
+
+    ("门禁没开也拦过期的校验",
+     '    if cfg["require_setup_verification"]:\n'
+     "        stale = stale_verification(root, cfg, state, me)\n"
+     "        if stale:\n"
+     "            die(",
+     "    if True:\n"
+     "        stale = stale_verification(root, cfg, state, me)\n"
+     "        if stale:\n"
+     "            die("),
+
+    ("校验通过后不记契约",
+     '        state["setup_verified_contract"] = rec',
+     "        pass"),
 ]
 
 # unittest 的失败行有两种形态:

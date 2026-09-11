@@ -1,5 +1,5 @@
 {
-  "baseline": "ab1494a6a4daa00d",
+  "baseline": "67d38c7724b372b1",
   "catchers": {
     "剩余数打成总数": [
       "test_v1_paths.TestIgnorePathsTruncation.test_超过十个只列前十并说明还剩多少"
@@ -12,6 +12,9 @@
     ],
     "契约变更计数恒为 0": [
       "test_v1_frozen.TestReportShowsContractChanges.test_report_那一行跟着契约变更走"
+    ],
+    "当场留决策改成按工作项算": [
+      "test_v1_validity.TestSameTurnGatesUnchanged.test_带声明改契约_更早回合的决策不算当场"
     ],
     "把 RED 豁免放宽成整个红绿豁免": [
       "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
@@ -312,6 +315,15 @@
     ],
     "文档理由不 strip": [
       "test_v1_docreason.TestDocReasonRequired.test_理由只有空白不算数"
+    ],
+    "沉淀不认工作项 id": [
+      "test_v1_validity.TestSettledByItem.test_只有别的工作项的决策时_契约变更照样要记录"
+    ],
+    "沉淀改回按回合算": [
+      "test_v1_validity.TestSettledByItem.test_契约变更_决策在_spec_回合留过_完成时放行"
+    ],
+    "第二次打回改成按工作项算": [
+      "test_v1_validity.TestSameTurnGatesUnchanged.test_第二次打回_更早回合的决策不算"
     ],
     "索引判据恒真": [
       "test_v1_setup_report.TestNoIndexDiffDoesNotFail.test_原样重跑不再失败"

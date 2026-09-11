@@ -9,6 +9,7 @@
 """
 
 from harness import EVIDENCE, PairTestCase, with_loc
+from test_v1_memory import LONG_NOTE
 
 PLAN_3 = """# 项目规划
 
@@ -50,14 +51,19 @@ class ReportBase(PairTestCase):
         super().setUp()
         self.repo.set_plan(PLAN_3, CONTRACT_3)
 
-    def _cycle(self, item, bounce=False):
-        """走完一个 feature 工作项。bounce=True 时在 review-impl 打回一次。"""
+    def _cycle(self, item, bounce=False, note=False):
+        """走完一个 feature 工作项。bounce=True 时在 review-impl 打回一次。
+
+        `note=True` 时在完成前写一份够长的笔记 —— 只有那样,完成时带的
+        `--no-decision` 才真的被晋升闸读到(W14:声明只在生效时留痕)。"""
         self.repo.advance_to("review-impl", item=item)
         if bounce:
             self.repo.run("handoff", "changes", with_loc("这里不对"), role="tester")
             self.repo.write("src/%s" % item, "改好了")
             self.repo.run("handoff", "重新实现", role="dev")
         self.repo.run("handoff", "approve", "实现没问题", *EVIDENCE, role="tester")
+        if note:
+            self.repo.write("docs/notes/%s.md" % item, LONG_NOTE)
         self.repo.run("handoff", "approve", "测试没问题", *EVIDENCE,
                       "--no-decision", "没有可沉淀的", role="dev")
 
@@ -109,8 +115,24 @@ class TestHealthyHistory(ReportBase):
         self.assertIn("已完成工作项 : 3", out)
 
     def test_显式声明没有决策会被统计(self):
+        """W14 起:**生效的**声明才计数。两个工作项都写了笔记、都没沉淀成决策,
+        晋升闸真的读到了 `--no-decision`,所以是 100%。
+
+        这条原先不写笔记也断言 100% —— 那时正文里的声明不看生效与否,
+        而那正是契约「声明的生效条件」背景里点名的污染源。"""
+        self._cycle("W1", note=True)
+        self._cycle("W2", note=True)
+        out = self.report()
+        self.assertRegex(out, r"--no-decision\s+100% \(2/2\)")
+
+    def test_不生效的声明不计数(self):
+        """同样两个工作项都带了 `--no-decision`,但都没写笔记 —— 晋升闸的条件
+        根本不成立,没有任何检查读到这个旗标。落地前这里是 `100% (2/2)`。
+
+        **判据锚在 `--no-decision` 那一行上。** 第一版写的是
+        `assertIn("0% (0/2)", out)` —— 而同一份报告里 `--contract-change`
+        那一行恰好就是 `0% (0/2)`,这条在今天的代码上是绿的,恒真。"""
         self._cycle("W1")
         self._cycle("W2")
         out = self.report()
-        # 每个工作项都用了 --no-decision,应当显示 100%
-        self.assertIn("100% (2/2)", out)
+        self.assertRegex(out, r"--no-decision\s+0% \(0/2\)")
