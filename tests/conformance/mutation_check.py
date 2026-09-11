@@ -227,13 +227,16 @@ MUTATIONS = [
      '    if verdict == "changes" and state["changes_count"] + 1 == 2 and not mine:',
      "    if False:"),
 
+    # W13 起这两处不再看"本回合新追加的"(`mine`),改看"决策记录里存在 id 等于
+    # 本工作项的条目"(`settled`)。锚点在 W13 的 spec 回合就改成了新字面 ——
+    # dev 的 impl 回合改不了本文件,而 impl 结束必须 GREEN(契约「三节共同」)。
     ("拆掉契约变更强制",
      '        if (state.get("contract_sha") and cur_sha\n'
-     '                and cur_sha != state["contract_sha"] and not mine):',
+     '                and cur_sha != state["contract_sha"] and not settled):',
      "        if False:"),
 
     ("拆掉完成时的晋升 gate",
-     "        if len(note) >= MIN_NOTE_PROMOTE_CHARS and not mine and not args.no_decision:",
+     "        if len(note) >= MIN_NOTE_PROMOTE_CHARS and not settled and not args.no_decision:",
      "        if False:"),
 
     # 锚在这一行而不是 `mem = ...` 整句:契约要求简报与终端**同一次取值**,
@@ -456,6 +459,28 @@ MUTATIONS = [
     ("契约变更计数恒为 0",
      "            contract_changes += 1",
      "            pass"),
+
+    # --- W13:「已沉淀」按工作项算 -------------------------------------------
+    # 新代码的字面照抄紧挨着的 `mine = [e for e in fresh if e[0] == item]`,
+    # 在 spec 回合定死(「三节共同」)。`settled` 必须紧接在 `mine` 那一行之后:
+    # 下面「第二次打回改成按工作项算」要在打回检查里引用它。
+    ("沉淀改回按回合算",
+     "    settled = [e for e in parse_decisions(_read(root / dfile)) if e[0] == item]",
+     "    settled = mine"),
+
+    ("沉淀不认工作项 id",
+     "    settled = [e for e in parse_decisions(_read(root / dfile)) if e[0] == item]",
+     "    settled = parse_decisions(_read(root / dfile))"),
+
+    # 契约:另外两处**一个字都不改**。这两个变异把它们也换成按工作项算。
+    ("第二次打回改成按工作项算",
+     '    if verdict == "changes" and state["changes_count"] + 1 == 2 and not mine:',
+     '    if verdict == "changes" and state["changes_count"] + 1 == 2 and not settled:'),
+
+    ("当场留决策改成按工作项算",
+     "        fresh = [e for e in new_decision_entries(root, cfg) if e[0] == item]",
+     '        fresh = [e for e in parse_decisions(_read(root / cfg["decisions_file"]))'
+     " if e[0] == item]"),
 ]
 
 # unittest 的失败行有两种形态:
