@@ -1,8 +1,8 @@
 {
   "round": 10,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W13",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -19,6 +19,6 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "96bedabe344e82006cf82380d32f802074d26b80",
   "after_rebound": false
 }
