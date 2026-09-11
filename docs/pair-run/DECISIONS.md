@@ -334,3 +334,13 @@
 - 理由: W12 的 dev 在 review-test 实测:结论有改动时 `verify-setup` 的 `git commit` 不带路径、提交整个索引,事先暂存的实现会跟着结论进开工基线,「提交范围」只收窄了 `add`、没收窄 `commit`。W12 契约写明"有差异时一个字不变",不能在 W12 里改。人类问有没有合理方案,dev 在隔离克隆里验证了一行修法(`git commit` 末尾加 `"--", *sorted(set(to_add))`):那次提交只含结论,实现留在索引里并被既有"未提交的代码改动"警告列出,全套 357 条全绿;人类说"直接代笔"。**代笔是在 W12 进行中、tester 的回合里直接提交的**:只 add 这三个文件、写完即提交,工作区其他东西一概不碰(两个 agent 共用一个目录)。**已知后果**:契约在 W12 进行期间变了,W12 完成那次交接会被既有的「契约变更必留决策」拦下 —— 它要的是**那一次交接里新追加的** `## W12 — …`(W13 要修的正是这个判据)。那次交接由 dev 执行,dev 会当场补一条。
 - 已否决: 并进 W12 —— W12 契约写明"有差异时一个字不变",且 W12 正在评审,并入要从头再走一遍。索引里有范围外暂存就拒绝 —— 会卡住接入的第一条命令,人类也可能是有意暂存。只加警告、照样全部提交 —— 没解决。这条决策用 `## W15 — …` 做 id —— W13 落地后判据改成"纯 id",提前写一条 W15 的决策会让 W15 全程不必再留决策;契约已点名接受那个代价,但不必主动触发它,所以用 `SETUP`。
 - 影响路径: `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `.agents/skills/pair-protocol/scripts/pair.py`
+## W12 — 收尾时带声明修了 W15 契约三处：只提交真有差异的路径、判「在不在」按 -z 整路径、范围外改动不进索引
+
+- 理由: W15 一节是 dev 在 W12 进行中代笔追加的(`e62bdf5`),契约因此在 W12 期间变过。tester 开工前做了一次 `other` 审查,在隔离副本里挑出三处,dev 在隔离克隆里逐条复现:①第一版 `git commit -- <to_add 全部>` 在 `AD` 场景(暂存为新增后从工作区删掉)`exit 1`,状态位停在工作区;②"查 HEAD 的树、不能用 ls-files"只对一半,两者不带 `-z` 都转义中文路径;③修完后「拆掉 verify-setup 的提交范围」没有行为用例抓得住。改法:只提交 `to_add` 里在索引中真有差异的那些(与 `index_has_diff` 同一集合);判"在不在"按 `-z` 整条路径;新增"范围外的工作区改动不进索引"。新修法在克隆里:`AD` 场景 exit 0,`add -A` 变异会把实现写进索引(可观测),全套 357 条全绿。这次是借 W12 收尾那次交接用 `--contract-change` 改的:评审回合只读,但 W9 对带声明的承重文件改动同样放行,于是声明进了提交正文、被 report 计数。
+- 已否决: 等 W12 DONE 之后在 idle 代笔直提 —— idle 下 handoff 起不来,那等于绕过声明机制,留痕不完整。也否决了把修法写成对 `index_has_diff` 的重构 —— 它身上两个既有锚点在 tester 路径下,dev 一改就失配。
+- 影响路径: `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `.agents/skills/pair-protocol/scripts/pair.py`
+## W12 — 中文路径让 ls-files / ls-tree 不带 -z 时的 assertNotIn 恒真：仓库里已有三处
+
+- 理由: git 默认 `core.quotepath=true`,不带 `-z` 时中文路径输出为 `"\345\201…"`,`assertNotIn("偷跑的实现", 输出)` 不管实现怎样都成立。三处:`test_v1_setup_report.py` 的 `test_工作区不干净…` 与 `test_索引里预先暂存了别的东西时照样不提交`、`test_v1_setup.py` 的 `test_不把工作区里的代码一并提交进基线`。三条用例各有另一条活断言(提示语里点名那份实现、HEAD 没变),W12 的保证没被掏空。修法:按 `-z` 切开、整条路径相等,或者 harness 统一 `core.quotepath=false`。已写进 W15 验收标准⑦,由 W15 的 spec 回合改。**两个角色都踩过同一个坑、而且都认错了病因**:dev 在 W12 review-test 的探针里找不到中文路径,tester 在 spec 回合的 docstring 里写的是"要查 HEAD 的树" —— 两次都把转义误认成了"索引还是 HEAD"。
+- 已否决: 在 W12 里当场改 —— dev 的 review-test 回合只读,改不了 `tests/`。拿它打回 W12 —— 三条用例的保证靠活断言成立,那三句是恒真的冗余,不是缺失的规格;打回换不来任何新保证,决策记录里也已写明不为腾回合打回。
+- 影响路径: `tests/conformance/test_v1_setup_report.py`, `tests/conformance/test_v1_setup.py`, `tests/conformance/harness.py`
