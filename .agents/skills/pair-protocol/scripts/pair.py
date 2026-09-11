@@ -897,6 +897,23 @@ def memory_brief(root, cfg, state, phase):
     return "\n".join(out)
 
 
+def no_decision_is_read(root, cfg, state, target):
+    """这一回合晋升闸会不会**读到** `--no-decision`(W14:声明只在生效时留痕)。
+
+    就是晋升闸的条件去掉 `not args.no_decision` 那一项:完成交接、笔记够长、
+    本工作项还没有同 id 的决策。与 `check_memory` 里那一行同一个判据 ——
+    那一行是变异锚点,不改写它,在这里另算一遍。必须在完成交接把 item 置空
+    **之前**调用。
+    """
+    if not memory_on(cfg) or target != "DONE":
+        return False
+    item = state["item"]
+    note = _read(notes_path(root, cfg, item)).strip()
+    settled = [e for e in parse_decisions(_read(root / cfg["decisions_file"]))
+               if e[0] == item]
+    return len(note) >= MIN_NOTE_PROMOTE_CHARS and not settled
+
+
 def check_memory(root, cfg, state, phase, verdict, target, args):
     """记忆层门禁。返回拒绝理由;None 表示放行。"""
     if not memory_on(cfg):
@@ -2049,6 +2066,8 @@ def cmd_handoff(root, cfg, args):
     refusal = check_memory(root, cfg, state, phase, verdict, target, args)
     if refusal:
         die(refusal)
+    # 趁工作项状态还没被下面的完成交接清空,记下晋升闸有没有读到 --no-decision。
+    no_decision_read = no_decision_is_read(root, cfg, state, target)
 
     # --- 红绿不变量(按工作项类型) ---------------------------------------
     # 异议路径豁免:dev 正是因为测试写错、弄不绿才打回的,拿红绿卡他等于
@@ -2137,17 +2156,29 @@ def cmd_handoff(root, cfg, args):
     body = "role=%s phase=%s -> %s item=%s type=%s" % (
         me, phase, next_phase, item or "none", state["item_type"] or
         (flow is FEATURE_FLOW and "feature" or "?"))
-    if args.allow_deletion:
+    # 声明只在**生效**时写进正文(W14):"生效"= 这一回合真有检查读到了它,
+    # 不是"处在它该出现的阶段"。不生效时不写、不进统计,但也**不拒绝** ——
+    # 要治的是统计被污染,不是用法不整洁。判据一律用 handoff 开头抓的那批
+    # 改动(entries),不用提交内容:完成时 tick_plan_item 会改 PLAN.md。
+    if args.allow_deletion and deleted:
         body += "\n删除测试(已声明): %s\n  %s" % (args.allow_deletion,
                                                  "\n  ".join(deleted))
-    if args.no_decision:
+    if args.no_decision and no_decision_read:
         body += "\n未留决策(已声明): %s" % args.no_decision
-    if args.doc_reason:
+    if args.doc_reason and touched_docs:
         body += "\n文档改动理由: %s" % args.doc_reason
-    if args.basis:
+    if args.basis and ROADMAP_REL in touched_docs and has_rewrite(root, ROADMAP_REL):
         body += "\n改写依据: %s" % args.basis
-    if args.contract_change:
+    if args.contract_change and changed_named_frozen:
         body += "\n契约变更(已声明): %s" % args.contract_change
+    # 空转判定(W14):每一次从 impl 出发、且不是异议的交接都写,值为是/否 ——
+    # 只在空转时才写的话,report 分不出"没空转"和"那时还没有这一行"。
+    # 空转 = 本回合的改动里,既没有落在执行者角色路径下的,也没有带
+    # --contract-change 生效的承重文件改动(W9 合法化的那类交付不算开销)。
+    if phase == "impl" and not is_dispute:
+        idle = not (any(matches_any(p, cfg["roles"][me]) for _, p in entries)
+                    or (args.contract_change and changed_named_frozen))
+        body += "\n%s: %s" % (IDLE_JUDGMENT, "是" if idle else "否")
     if verdict == "approve":
         body += "\n检查了: %s\n未覆盖: %s" % (args.checked, args.uncovered)
     # `is not None` 而不是真值判断:空串表示"重钉发生了但 sha 没取到",
@@ -2310,7 +2341,6 @@ def cmd_whose_turn(root, cfg, args):
 # 健康区间。区间之外不等于错,等于**值得看一眼**。
 HEALTH = {
     "打回率": (0.15, 0.50),
-    "每工作项回合数": (4, 8),
     "死锁工作项占比": (0.0, 0.10),
 }
 
@@ -2318,6 +2348,8 @@ HEALTH = {
 MIN_SAMPLE = 5
 
 REPORT_SEP = "\x1f"
+# impl 交接写进提交正文的那一行的前缀,handoff 写、report 读 —— 同一个常量。
+IDLE_JUDGMENT = "空转判定"
 
 
 def _handoff_log(root):
@@ -2374,6 +2406,7 @@ def cmd_report(root, cfg, args):
 
     reviews = changes = disputes = 0
     claimed = deadlocks = no_decision = contract_changes = 0
+    idle_rounds = unjudged = 0          # W14:空转的 impl 回合 / 没有判定行的 impl 回合
     rounds_by_item = {}
 
     for subject, body in rows:
@@ -2395,12 +2428,19 @@ def cmd_report(root, cfg, args):
         m = re.search(r"item=(\S+)", body)
         if m and m.group(1) != "none":
             rounds_by_item[m.group(1)] = rounds_by_item.get(m.group(1), 0) + 1
+            # 只在表头计入的提交里数,两数之和才恒等于「交接提交」。
+            # **空转只认那一行**,不在这里再按阶段过滤:写不写判定行是 handoff 的
+            # 职责(只写在 impl、非异议的交接上)。两边各过滤一遍的话,拆掉任何
+            # 一边都没有用例看得见 —— 冗余的防护等于没有可测的防护。
+            j = re.search(r"^%s: (是|否)$" % IDLE_JUDGMENT, body, re.M)
+            if j and j.group(1) == "是":
+                idle_rounds += 1
+            elif j is None and "phase=impl -> " in body and prefix != "dispute":
+                unjudged += 1           # 没有判定行的 impl 交接不猜,单独计
 
     done = len(state["completed_items"])
     decisions = len(parse_decisions(_read(root / cfg["decisions_file"]))) \
         if memory_on(cfg) else 0
-    avg_rounds = (sum(rounds_by_item.values()) / float(len(rounds_by_item))
-                  if rounds_by_item else None)
     rate = (changes / float(reviews)) if reviews else None
     dl_rate = (deadlocks / float(claimed)) if claimed else None
 
@@ -2420,8 +2460,13 @@ def cmd_report(root, cfg, args):
     print("-" * 62)
     row("打回率", _fmt_rate(changes, reviews),
         _flag("打回率", rate, reviews >= MIN_SAMPLE))
-    row("每工作项回合数", "—" if avg_rounds is None else "%.1f" % avg_rounds,
-        _flag("每工作项回合数", avg_rounds, bool(rounds_by_item)))
+    # 「每工作项回合数」删掉了:它把推进交付的回合与协议开销的回合混在同一个
+    # 分母里,第四轮显示 7.9 ok 而其中有空转 —— 会给出错误诊断的指标比没有更糟。
+    # 三个绝对计数,不设健康区间:样本还不足以说什么算正常,先让它可观测。
+    handoffs = sum(rounds_by_item.values())
+    row("推进交付的回合", "%d" % (handoffs - idle_rounds), "—")
+    row("协议开销的回合", "%d" % idle_rounds, "—")
+    row("未判定的 impl 回合", "%d" % unjudged, "—")
     row("死锁工作项占比", _fmt_rate(deadlocks, claimed),
         _flag("死锁工作项占比", dl_rate, claimed >= MIN_SAMPLE))
     row("测试异议", "%d 次" % disputes, "—")
