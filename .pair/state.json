@@ -21,5 +21,8 @@
   "setup_verified": true,
   "deadlock_hits": [],
   "contract_sha": null,
+  "setup_verified_contract": {
+    "tester": "96bedabe344e82006cf82380d32f802074d26b80"
+  },
   "after_rebound": false
 }
