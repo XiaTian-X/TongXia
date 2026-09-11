@@ -231,6 +231,12 @@ DEFAULT_STATE = {
     # 契约变更 —— 那是最值得留下理由的时刻。老状态里没有这个键,取默认
     # None,检查自动跳过,存量仓库零成本升级。
     "contract_sha": None,
+    # **按角色**记下"这个角色上次通过开工前校验时,读的是哪一份契约"(W13)。
+    # 与上面的 contract_sha 是两回事:那个按工作项记、取 HEAD 的 blob,给完成时
+    # 的 contract-change-note 用;这个按角色记、取**工作区内容**,给 claim 用 ——
+    # 人类改了契约还没提交是常态,HEAD 口径看不见它。老状态里没有这个键 =
+    # 不知道上次校验的是哪一份,claim 要求重跑。
+    "setup_verified_contract": {},
     # 上一次交接是不是一次**打回**(异议或评审 changes)。打回之后回到 spec 时,
     # dev 的实现往往已经随之前的交接落地了 —— tester 按打回意见改完测试,
     # 套件整体就是绿的,而 feature 的 spec 要求 RED。不记这一笔,
@@ -707,6 +713,44 @@ def notes_path(root, cfg, item):
     return root / cfg["notes_dir"] / ("%s.md" % item)
 
 
+def worktree_sha(root, path):
+    """工作区里这份文件内容的 blob sha;读不到返回 None。
+
+    和 `blob_sha` 的区别:那个取 HEAD 里的,这个取工作区里的。W13 的记录端与
+    比对端**都**用这一个 —— 两端口径不同会把整轮锁死(一端记 HEAD、一端比工作区,
+    人类留一个未提交的契约改动,claim 就永久拒绝,重跑校验也解不开)。
+    """
+    if not (root / path).is_file():
+        return None
+    out = git("hash-object", "--", path, cwd=root, check=False)
+    return out.strip() if out else None
+
+
+def stale_verification(root, cfg, state, role):
+    """这个角色上次通过开工前校验时读的契约,是不是现在工作区里这一份。
+    返回拒绝理由;None 表示是同一份。**现场算,不写状态**:唯一能发现的时机是
+    claim 的拒绝路径(那是 die),status 是只读的,whose-turn 承诺始终 exit 0。
+    """
+    rel = cfg["contract_file"]
+    now = worktree_sha(root, rel)
+    if now is None:
+        return ("读不到 %s(被删或改名?)。契约是两边对齐的唯一依据,读不到就说不清\n"
+                "你校验过的是哪一份。先让人类恢复它,再重跑:\n"
+                "  python3 %s verify-setup --drafter self|other" % (rel, PROG_HINT))
+    seen = (state.get("setup_verified_contract") or {}).get(role)
+    if seen == now:
+        return None
+    why = ("状态里没有你(%s)上次校验时读的是哪一份契约 —— 存量项目升级上来就是这样,\n"
+           "\"不知道校验的是哪一份\"和\"校验的是另一份\"风险一样" % role
+           if seen is None else
+           "%s 在你(%s)上次通过开工前校验之后变过(比的是工作区内容,\n"
+           "人类还没提交的改动也算)" % (rel, role))
+    return ("%s。\n\n"
+            "每个角色各记一份:对方重跑不能替你解锁 —— 照契约写断言的是 tester,\n"
+            "它读的若是旧契约,两边就会各自\"对\"、合起来是废的。重跑:\n"
+            "  python3 %s verify-setup --drafter self|other" % (why, PROG_HINT))
+
+
 def blob_sha(root, path):
     out = git("rev-parse", "HEAD:%s" % path, cwd=root, check=False)
     return out.strip() if out else None
@@ -890,6 +934,7 @@ def check_memory(root, cfg, state, phase, verdict, target, args):
                        DECISION_FORMAT_HINT))
 
     mine = [e for e in fresh if e[0] == item]
+    settled = [e for e in parse_decisions(_read(root / dfile)) if e[0] == item]
 
     # --- refactor 的考古记录 --------------------------------------------
     # 重构回合里 tester 要判断的是"行为有没有被悄悄改掉",而测试全程是绿的,
@@ -951,7 +996,7 @@ def check_memory(root, cfg, state, phase, verdict, target, args):
         # --- 契约在本工作项期间被改过 -----------------------------------
         cur_sha = blob_sha(root, cfg["contract_file"])
         if (state.get("contract_sha") and cur_sha
-                and cur_sha != state["contract_sha"] and not mine):
+                and cur_sha != state["contract_sha"] and not settled):
             return ("拒绝交接 —— %s 在这个工作项期间被改过,但 %s 里没有对应记录。\n\n"
                     "契约变更是重新推导代价最高的事:今后每个新回合都会拿改过的\n"
                     "契约当作理所当然,而改它的理由谁都看不到了。\n\n"
@@ -961,7 +1006,7 @@ def check_memory(root, cfg, state, phase, verdict, target, args):
 
         # --- 晋升 gate:笔记要随工作项一起沉底,给它一次留下的机会 -------
         note = _read(notes_path(root, cfg, item)).strip()
-        if len(note) >= MIN_NOTE_PROMOTE_CHARS and not mine and not args.no_decision:
+        if len(note) >= MIN_NOTE_PROMOTE_CHARS and not settled and not args.no_decision:
             return ("拒绝交接 —— 工作项「%s」要完成了,但它的笔记还没被处理。\n\n"
                     "笔记是工作项级的:这一项关掉之后,没有任何回合会再读到它。\n"
                     "现在是它变成长期资产的唯一时机。二选一:\n\n"
@@ -1188,6 +1233,13 @@ def cmd_status(root, cfg, args):
         print("结对的一方(通常是还没动手的那个)需要先跑:")
         print("  python3 %s verify-setup --drafter self|other" % PROG_HINT)
         print("在此之前不能认领工作项。")
+    elif cfg["require_setup_verification"]:
+        stale = stale_verification(root, cfg, state, me)
+        if stale:
+            print()
+            print(">>> 提示:你上次的开工前校验已经不作数了(不阻断本命令)。<<<")
+            for line in stale.split("\n"):
+                print("  " + line if line else "")
 
     # 记忆块**只算这一次**,简报与终端共用它 —— 契约的「不做」要求两处来自
     # 同一次取值。而且只在终端真的会打印它的那条路径上算:PLAN 全部完成时
@@ -1324,6 +1376,14 @@ def cmd_claim(root, cfg, args):
         die("尚未通过开工前校验,不能认领工作项。\n"
             "请让结对的另一方先跑:python3 %s verify-setup --drafter self|other"
             % PROG_HINT)
+
+    # --- 契约变了,之前的校验作废(W13)---------------------------------------
+    # 只作用于 claim:工作项中途契约变了不挡交接(本轮每一项都要改契约),
+    # whose-turn 也不因此输出 stop。门禁没开时这一条不存在。
+    if cfg["require_setup_verification"]:
+        stale = stale_verification(root, cfg, state, me)
+        if stale:
+            die("拒绝认领 —— " + stale)
 
     # --- 裁判副本必须与正本一致 -------------------------------------------
     # 校验放在 claim 不放在 handoff:工作项进行中 dev 正在改正本,两者本来
@@ -3242,6 +3302,14 @@ def cmd_verify_setup(root, cfg, args):
     # 任何东西一并提交进基线,包括结对开始前就被写好的实现,而那恰好会让
     # spec 阶段的 RED 要求失效(测试一上来就是绿的)。
     state["setup_verified"] = True
+    # 按角色记下这次校验的是哪一份契约(工作区内容)。先复制再写:load_state
+    # 是浅拷贝,直接往默认值里的 dict 写会改到 DEFAULT_STATE 本身。
+    # 解析不出角色时(W12 的回落路径)记不了 —— 那个角色认领时会被要求重跑。
+    who, _ = try_resolve_role(root)
+    if who:
+        rec = dict(state.get("setup_verified_contract") or {})
+        rec[who] = worktree_sha(root, cfg["contract_file"])
+        state["setup_verified_contract"] = rec
     save_state(root, state)
     to_add = [STATE_REL, report_rel] + [
         p for _, p in changed_entries(root) if matches_any(p, cfg["shared_paths"])]
