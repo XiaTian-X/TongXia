@@ -74,9 +74,13 @@ python3 .agents/skills/pair-protocol/scripts/pair.py verify-setup --drafter self
 它检查配置自洽、基线全绿、PLAN 格式、契约覆盖度。
 
 **它还要求一件只有你能做的事:通读契约,把你认为有歧义的条款写进
-`docs/reviews/setup-verification.md`,并且逐节点名** —— 每个被工作项引用的
-契约小节都要在结论里出现过。交出这份结论之前校验不会通过,也不能 `claim`
+`docs/reviews/setup-verification-<你的角色>.md`,并且逐节点名** —— 每个被工作项
+引用的契约小节都要在结论里出现过。交出这份结论之前校验不会通过,也不能 `claim`
 —— 脚本查不了歧义,所以它至少强制你交出一份结论。
+
+结论**按角色分开**:两个角色曾写同一个文件,一方整份覆盖过另一方的结论。
+解析不出你的角色、或你那份还没写时,会回落到旧的共享位置
+`docs/reviews/setup-verification.md` 并打一条警告;不读并集。
 
 `--drafter` 必填:`other` = 我没参与契约起草,`self` = 我参与了、这份结论的
 证明力因此打折。**这句话不写在结论正文里,脚本不看措辞、只看参数。**

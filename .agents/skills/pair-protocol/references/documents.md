@@ -17,7 +17,7 @@
 | `docs/reviews/<ID>-*.md` | 评审方 | 评审回合 | `<ID>-` 开头 | **命名** |
 | `docs/reviews/<ID>-dispute.md` | dev | `impl` 阶段提异议 | 固定 | **必须存在 + 三小节** |
 | `docs/reviews/contract-change-<ID>.md` | 任一方 | 发起契约变更 | 固定 | **四小节**(按文件名触发) |
-| `docs/reviews/setup-verification.md` | 结对的一方 | 开工前一次 | 固定 | 长度、**逐节点名**(作者声明是参数,不写在文件里) |
+| `docs/reviews/setup-verification-<角色>.md` | 双方各一份 | 开工前各一次 | 固定(按角色) | 长度、**逐节点名**(作者声明是参数,不写在文件里);自己那份缺失才回落到旧的 `setup-verification.md` 并警告 |
 | `docs/reviews/baseline.md` | 人类 | 收窄门禁套件时 | 固定 | 两小节;缺失只警告 |
 | 提交正文里的四段 | 双方 | 见下 | —— | 非空、结构 |
 
@@ -103,7 +103,13 @@
 只有请求没有回应,人类就是拿单方面材料去改契约 —— 那仍然是契约漂移,
 只是这次有纸面。
 
-### 契约审查结论 `setup-verification.md`
+### 契约审查结论 `setup-verification-<角色>.md`
+
+**按角色分开**:tester 写 `setup-verification-tester.md`,dev 写
+`setup-verification-dev.md`,各自入库、互不覆盖。`verify-setup` 只读**执行者自己
+那一份**,不读并集 —— 读并集的话,一个角色可以交一句废话、靠另一份把字数与
+小节名凑满。旧的单一路径 `setup-verification.md` 只在解析不出角色、或自己那份
+还没写时回落使用,并打一条警告。
 
 ```markdown
 # 契约审查结论

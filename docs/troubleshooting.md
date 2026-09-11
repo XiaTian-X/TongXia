@@ -50,7 +50,7 @@
 ### `verify-setup` 一直卡在"还差最后一步"
 
 **原因** 它要求你通读契约,把认为有歧义的条款写进
-`docs/reviews/setup-verification.md`,至少 120 字。这一步脚本代替不了。
+`docs/reviews/setup-verification-<角色>.md`,至少 120 字。这一步脚本代替不了。
 
 **处理** 认真写。没有歧义就明确写"无歧义"并说明**逐条核对了什么** ——
 空泛的一句"看过了"既过不了字数,也没有价值。
@@ -325,7 +325,8 @@ bug,并且 cover 全程是绿的,红绿不变量抓不到。对方在 `review-te
 ### `handoff` 说评审目录里的文件名对不上任何工作项
 
 **原因** 评审目录顶层的 `.md` 要以某个工作项 ID 开头(`W1-*.md` 或 `W1.md`),
-或者是固定名 `setup-verification.md` / `baseline.md` / `contract-change-<ID>.md`。
+或者是固定名 `setup-verification.md` / `setup-verification-tester.md` /
+`setup-verification-dev.md` / `baseline.md` / `contract-change-<ID>.md`。
 
 **处理** 改成规范名。`status` 每回合会直接告诉你这一轮该写哪个文件名。
 

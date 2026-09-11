@@ -165,6 +165,10 @@ BRIEF_REL = ".pair/.last-brief.md"
 PROTOCOL_LOGS = (TESTLOG_REL, FULL_TESTLOG_REL, BRIEF_REL)
 WHOAMI_REL = ".pair/whoami"
 SETUP_REPORT_REL = "docs/reviews/setup-verification.md"
+# 第五轮起契约审查结论**按角色分开**。两个角色写同一个固定名,第三轮真的整份
+# 覆盖过一次(`2ff494f`)。上面那个旧的单一路径只剩回落用途:解析不出角色、
+# 或自己的角色文件还没写时才读它,并且要说出来。
+SETUP_REPORT_ROLE_FMT = "docs/reviews/setup-verification-%s.md"
 # 契约审查结论的最小长度。门槛不高,但足以挡住空文件和一句话敷衍。
 MIN_SETUP_REPORT_CHARS = 120
 
@@ -199,7 +203,9 @@ COVER_SECTIONS = ("行为来源", "我冻结了哪些可疑行为")
 # 但规范只管**前缀**,不管后半截 —— 上一轮真实运行里 tester 写过一份
 # `W1-spec-blocked.md`(不是裁决,是"我被协议卡住了"的求裁文书),那完全正当,
 # 规范不该把它拒掉。
-REVIEW_FIXED_NAMES = ("setup-verification.md", "baseline.md")
+REVIEW_FIXED_NAMES = ("setup-verification.md", "baseline.md",
+                      PurePosixPath(SETUP_REPORT_ROLE_FMT % "tester").name,
+                      PurePosixPath(SETUP_REPORT_ROLE_FMT % "dev").name)
 # `contract-change-<ID>.md`。前缀在前、ID 在后,与 improvements.md 的 P1-3 一致。
 REVIEW_ID_PREFIXES = ("contract-change-",)
 
@@ -420,7 +426,13 @@ ROLE_HELP = """无法确定你的角色,已停止。
 """
 
 
-def resolve_role(root):
+def try_resolve_role(root):
+    """同 `resolve_role`,但**什么都没配**时返回 `(None, None)`,不停下。
+
+    值配错了(`PAIR_ROLE` 或 `.pair/whoami` 不是 tester/dev)照样停 ——
+    那是配置错误,不是"还没配"。`verify-setup` 是新项目接入后的第一条命令,
+    那时角色可以还没配,它要能回落而不是被卡死。
+    """
     env = os.environ.get("PAIR_ROLE", "").strip()
     if env:
         if env not in ROLES:
@@ -440,7 +452,14 @@ def resolve_role(root):
         if m:
             return m.group(1), "git 分支名 %s" % branch.strip()
 
-    die(ROLE_HELP)
+    return None, None
+
+
+def resolve_role(root):
+    role, source = try_resolve_role(root)
+    if role is None:
+        die(ROLE_HELP)
+    return role, source
 
 
 # --------------------------------------------------------------------------
@@ -2839,6 +2858,42 @@ def _plan_blocks(root, cfg):
     return out
 
 
+def setup_report_paths(root):
+    """(读哪一份, 该让人写哪一份, 回落说明或 None)。
+
+    **角色文件优先,缺失才回落到旧的单一路径。不读并集** —— 读并集的话,
+    一个角色可以交一句废话、靠另一份把字数与小节名凑满。
+    角色走既有的解析顺序(PAIR_ROLE → .pair/whoami → 分支),不是 --drafter:
+    后者说的是"审查者有没有参与起草",和"你是哪个 agent"是两个轴。
+    """
+    me, _ = try_resolve_role(root)
+    if me is None:
+        return SETUP_REPORT_REL, SETUP_REPORT_REL, (
+            "解析不出你的角色(PAIR_ROLE、%s、pair/<角色> 分支都没有),"
+            "结论读的是两个角色共用的旧位置 %s。配好角色之后请改用 %s。"
+            % (WHOAMI_REL, SETUP_REPORT_REL, SETUP_REPORT_ROLE_FMT % "<角色>"))
+    mine = SETUP_REPORT_ROLE_FMT % me
+    if (root / mine).exists():
+        return mine, mine, None
+    return SETUP_REPORT_REL, mine, (
+        "%s 不存在,回落到旧的共享位置 %s。它是两个角色共用的,"
+        "第三轮在这里整份覆盖过对方的结论 —— 建议改名为 %s(本命令不替你搬)。"
+        % (mine, SETUP_REPORT_REL, mine))
+
+
+def index_has_diff(root, paths):
+    """`paths` 这批路径在索引里相对 HEAD 有没有差异。
+
+    **只看这一批,与工作区其余部分无关。** 拿"工作区干净"当判据是错的:
+    `src/` 下一份未跟踪的偷跑实现会让工作区永远不干净 → 照样去提交 →
+    照样空提交 → 照样 exit 1,缺陷原样保留。
+    """
+    proc = subprocess.run(("git", "diff", "--cached", "--quiet", "--") + tuple(paths),
+                          cwd=root, stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL)
+    return proc.returncode != 0
+
+
 def cmd_verify_setup(root, cfg, args):
     fails, warns = [], []
 
@@ -3082,8 +3137,14 @@ def cmd_verify_setup(root, cfg, args):
     # --- 契约歧义审查:这一步不能只靠 prose 要求 ---------------------------
     # 脚本查不了歧义,但可以强制"你必须交出一份审查结论"。没有它就不放行 ——
     # 否则这道最关键的门禁会退化成一句可以无视的建议。
-    report = root / SETUP_REPORT_REL
+    report_rel, target_rel, fallback_why = setup_report_paths(root)
+    report = root / report_rel
     text = report.read_text(encoding="utf-8").strip() if report.exists() else ""
+    # 回落时要说出来 —— 判据是"这条警告出现了"。直接打印而不走 warn():
+    # warns 在上面已经打完、计进了"有 N 条警告",这里补一条不该改那个数。
+    if fallback_why and report.exists():
+        print()
+        print("  [警告] %s" % fallback_why)
     if len(text) < MIN_SETUP_REPORT_CHARS:
         print()
         print("=" * 60)
@@ -3091,7 +3152,7 @@ def cmd_verify_setup(root, cfg, args):
         print("=" * 60)
         print("""
  通读 %s,把你认为**有歧义的条款**写进
- %s。
+ %s。%s
 
  脚本能查格式和覆盖度,查不了歧义。而契约歧义是这套机制唯一会致命的
  失败模式 —— tester 测 `login() -> token`、dev 写 `authenticate() -> Session`,
@@ -3115,10 +3176,15 @@ def cmd_verify_setup(root, cfg, args):
    python3 %s verify-setup --drafter self    # 我参与了,结论证明力打折
 
  在交出这份结论之前,校验不会通过,也不能认领工作项。
-""" % (cfg["contract_file"], SETUP_REPORT_REL, PROG_HINT, PROG_HINT))
+""" % (cfg["contract_file"], target_rel,
+       "" if target_rel == SETUP_REPORT_REL else
+       "\n (结论按角色分开存放。旧的共享位置 %s 仍然认,但会打警告 ——\n"
+       "  它是两个角色共用的,第三轮在那里整份覆盖过对方的结论。)" % SETUP_REPORT_REL,
+       PROG_HINT, PROG_HINT))
         die("尚未交出契约审查结论(%s 缺失或过短,至少 %d 字)。\n"
             "这是本步骤存在的主要理由,不能跳过。"
-            % (SETUP_REPORT_REL, MIN_SETUP_REPORT_CHARS))
+            % (report_rel if report.exists() else target_rel,
+               MIN_SETUP_REPORT_CHARS))
 
     # --- 结论必须逐节点名 ---------------------------------------------------
     # 长度是地板,不是门。一段泛泛而谈轻松过 120 字,而这道门守着协议自称
@@ -3173,14 +3239,22 @@ def cmd_verify_setup(root, cfg, args):
     # spec 阶段的 RED 要求失效(测试一上来就是绿的)。
     state["setup_verified"] = True
     save_state(root, state)
-    to_add = [STATE_REL, SETUP_REPORT_REL] + [
+    to_add = [STATE_REL, report_rel] + [
         p for _, p in changed_entries(root) if matches_any(p, cfg["shared_paths"])]
     git("add", "--", *sorted(set(to_add)), cwd=root)
     drafter_line = ("起草人自审: 是 —— 审查者参与过契约起草,本结论证明力打折"
                     if args.drafter == "self"
                     else "起草人自审: 否 —— 审查者未参与契约起草")
-    git("commit", "-q", "-m", "chore(pair): 通过开工前校验,含契约审查结论",
-        "-m", drafter_line, cwd=root)
+    # 三类都没变时 git 会拒绝空提交,整条命令 exit 1 —— 状态位上面已经存好,
+    # 状态是对的、退出码是错的,而调用方只看退出码。所以先问索引。
+    # 只改"索引里没有差异"这一种情形,有差异时一个字不变。
+    if index_has_diff(root, sorted(set(to_add))):
+        git("commit", "-q", "-m", "chore(pair): 通过开工前校验,含契约审查结论",
+            "-m", drafter_line, cwd=root)
+    else:
+        print()
+        print("  没有需要提交的改动 —— 状态位与结论都和上次提交时一样,"
+              "本次不产生提交。")
 
     stray = [p for xy, p in changed_entries(root)
              if "D" not in xy and not matches_any(p, cfg["ignore_paths"])
@@ -3194,7 +3268,7 @@ def cmd_verify_setup(root, cfg, args):
               "请交给人类确认这些是不是该在的。")
 
     print()
-    print("  契约审查结论已收到(%s,%d 字)。" % (SETUP_REPORT_REL, len(text)))
+    print("  契约审查结论已收到(%s,%d 字)。" % (report_rel, len(text)))
     print("  %s" % drafter_line)
     print("  开工前校验全部通过,现在可以认领工作项了。")
     print()
