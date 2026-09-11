@@ -286,9 +286,14 @@ MUTATIONS = [
      "    refusal = check_review_evidence(root, cfg, phase, verdict, entries, message, args)",
      "    refusal = None"),
 
+    # W12 要改写 `to_add = [STATE_REL, SETUP_REPORT_REL] + [` 那一行(报告路径
+    # 按角色取),原锚点一改就失配 —— 而 dev 的 impl 回合改不了本文件,impl
+    # 结束又必须 GREEN。改锚在下一行:它才是这条防护真正生效的地方(add 的
+    # 范围),W12 不需要动它。名字不变,抓手仍是
+    # test_不把工作区里的代码一并提交进基线。
     ("拆掉 verify-setup 的提交范围",
-     '    to_add = [STATE_REL, SETUP_REPORT_REL] + [',
-     '    to_add = ["-A"] + [] + ['),
+     '    git("add", "--", *sorted(set(to_add)), cwd=root)',
+     '    git("add", "-A", cwd=root)'),
 
     # --- 文档规范 -------------------------------------------------------
     ("拆掉评审文件命名检查",
