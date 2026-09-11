@@ -3113,6 +3113,18 @@ def cmd_verify_setup(root, cfg, args):
                  "      如果你是有意自己写的激活说明,忽略这条。"
                  % (f, ENTRY_MARK_BEGIN))
 
+    # --- 契约审查结论读哪一份 ----------------------------------------------
+    # 放在打印警告之前:回落警告要计进下面那个"有 N 条警告"。
+    # 第一版放在摘要之后、直接 print,于是摘要写"有 3 条"而眼前是 4 条 ——
+    # 一个会说错的计数,正是第五轮要修的那一类仪器。
+    report_rel, target_rel, fallback_why = setup_report_paths(root)
+    report = root / report_rel
+    text = report.read_text(encoding="utf-8").strip() if report.exists() else ""
+    # 回落时要说出来 —— 判据是"这条警告出现了"。只在回落的那份真存在时才说:
+    # 两份都没有时走下面"还差最后一步"的指引,在那之前再报一条回落是噪音。
+    if fallback_why and report.exists():
+        warn(fallback_why)
+
     # --- 报告 -------------------------------------------------------------
     print()
     for w in warns:
@@ -3137,14 +3149,6 @@ def cmd_verify_setup(root, cfg, args):
     # --- 契约歧义审查:这一步不能只靠 prose 要求 ---------------------------
     # 脚本查不了歧义,但可以强制"你必须交出一份审查结论"。没有它就不放行 ——
     # 否则这道最关键的门禁会退化成一句可以无视的建议。
-    report_rel, target_rel, fallback_why = setup_report_paths(root)
-    report = root / report_rel
-    text = report.read_text(encoding="utf-8").strip() if report.exists() else ""
-    # 回落时要说出来 —— 判据是"这条警告出现了"。直接打印而不走 warn():
-    # warns 在上面已经打完、计进了"有 N 条警告",这里补一条不该改那个数。
-    if fallback_why and report.exists():
-        print()
-        print("  [警告] %s" % fallback_why)
     if len(text) < MIN_SETUP_REPORT_CHARS:
         print()
         print("=" * 60)
