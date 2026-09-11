@@ -1,8 +1,8 @@
 {
   "round": 9,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W12",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -18,6 +18,6 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "6c585c04b461481500f902aea6b53ec0d21da787",
   "after_rebound": false
 }
