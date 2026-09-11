@@ -175,6 +175,36 @@ class TestNoIndexDiffDoesNotFail(SetupReportBase):
         self.assertNotIn("偷跑的实现", tracked,
                          "verify-setup 不该把角色路径下的改动提交进基线")
 
+    def test_索引里预先暂存了别的东西时照样不提交(self):
+        """**判据是「这次 add 的那批路径」,不是整个索引。** 契约同一句写了两件事:
+        与工作区其余部分无关 —— 上一条守着;**只看 add 的那批** —— 这一条守。
+
+        dev 在 review-test 用变异证明过缺它:把判据换成不带路径的
+        `git diff --cached --quiet`(看整个索引),9 条全绿、全套 356 条全绿。
+        而那**正是路线图开放条目 12 原文给的修法** —— 照着路线图写,
+        正好写出这一版。
+
+        后果落在「提交范围」那条防护要挡的地方:索引里预先暂存了一份实现,
+        原样重跑就会产生一次标题为「通过开工前校验」、里面只有那份实现的提交
+        —— 开工基线里多了实现,spec 阶段"必须 RED"的要求就失效了。
+
+        **查的是 HEAD 的树,不是 `git ls-files`**:后者列的是索引,
+        而那份文件在正确实现与错误实现下**都还留在索引里**,拿它判等于恒绿。"""
+        self.repo.write(OLD, self.REPORT)
+        self.assertAccepted(self.verify("dev"))
+        self.repo.write("src/偷跑的实现", "本该由 dev 在 impl 回合写")
+        self.repo.git("add", "src/偷跑的实现")
+        head = self.repo.git("rev-parse", "HEAD").stdout
+        r = self.verify("dev")
+        self.assertAccepted(r)
+        self.assertIn("没有需要提交的改动", r.text)
+        self.assertEqual(self.repo.git("rev-parse", "HEAD").stdout, head,
+                         "索引里只有 to_add 之外的东西时,不该产生提交")
+        in_head = self.repo.git("ls-tree", "-r", "--name-only",
+                                "HEAD").stdout.decode("utf-8")
+        self.assertNotIn("偷跑的实现", in_head,
+                         "预先暂存的实现被当成开工前校验提交进了基线")
+
 
 if __name__ == "__main__":
     unittest.main()

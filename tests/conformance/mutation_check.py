@@ -295,6 +295,35 @@ MUTATIONS = [
      '    git("add", "--", *sorted(set(to_add)), cwd=root)',
      '    git("add", "-A", cwd=root)'),
 
+    # --- W12:开工前校验的产物与退出码(第五轮)----------------------------
+    # 前七个是 dev 在 impl 回合点名、tester 在 review-impl 隔离副本里逐个复现
+    # 过的(读并集那个是 tester 补的);第八个是 dev 在 review-test 用来打回的
+    # 那个 —— 看整个索引,正是路线图开放条目 12 原文给的修法。
+    ("结论不认角色文件",
+     "    if (root / mine).exists():",
+     "    if False:"),
+    ("拆掉回落警告",
+     "    if fallback_why and report.exists():",
+     "    if False:"),
+    ("回落改回解析不出就停",
+     "    me, _ = try_resolve_role(root)",
+     "    me, _ = resolve_role(root)"),
+    ("索引判据换成工作区",
+     "    if index_has_diff(root, sorted(set(to_add))):",
+     "    if changed_entries(root):"),
+    ("索引判据恒真",
+     "    if index_has_diff(root, sorted(set(to_add))):",
+     "    if True:"),
+    ("索引判据看整个索引",
+     '("git", "diff", "--cached", "--quiet", "--") + tuple(paths)',
+     '("git", "diff", "--cached", "--quiet")'),
+    ("拆掉两个新结论文件名的命名豁免",
+     '"baseline.md",\n                      PurePosixPath(SETUP_REPORT_ROLE_FMT % "tester").name,\n                      PurePosixPath(SETUP_REPORT_ROLE_FMT % "dev").name)',
+     '"baseline.md")'),
+    ("结论读并集",
+     '    text = report.read_text(encoding="utf-8").strip() if report.exists() else ""',
+     '    text = "\\n".join(p.read_text(encoding="utf-8") for p in {report, root / SETUP_REPORT_REL} if p.exists()).strip()'),
+
     # --- 文档规范 -------------------------------------------------------
     ("拆掉评审文件命名检查",
      "    if not bad:\n        return None\n    return (\"拒绝交接 —— 评审目录里",

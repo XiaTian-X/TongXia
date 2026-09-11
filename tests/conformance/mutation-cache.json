@@ -1,11 +1,14 @@
 {
-  "baseline": "1ab9c7c1f1660083",
+  "baseline": "9992103d3f20d871",
   "catchers": {
     "剩余数打成总数": [
       "test_v1_paths.TestIgnorePathsTruncation.test_超过十个只列前十并说明还剩多少"
     ],
     "只认 impl 阶段的异议,漏掉评审打回": [
       "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
+    ],
+    "回落改回解析不出就停": [
+      "test_v1_setup_report.TestFallbackToSharedPath.test_解析不出角色时回落到旧路径并说出来"
     ],
     "契约变更计数恒为 0": [
       "test_v1_frozen.TestReportShowsContractChanges.test_report_那一行跟着契约变更走"
@@ -100,6 +103,9 @@
     "拆掉 verify-setup 门禁": [
       "test_v1_setup.TestVerifySetup.test_未校验时不能认领"
     ],
+    "拆掉两个新结论文件名的命名豁免": [
+      "test_v1_setup_report.TestRoleReportNamesAreExempt.test_dev_的结论文件不挡交接"
+    ],
     "拆掉入口文件合并": [
       "test_v1_brownfield.TestEntryFileMerge.test_不改写别人已有的_frontmatter",
       "test_v1_brownfield.TestEntryFileMerge.test_已有内容保留且协议段落在最前",
@@ -130,6 +136,9 @@
     ],
     "拆掉回合归属检查": [
       "test_turn_and_state.TestTurnOwnership.test_不是自己的回合不能交接"
+    ],
+    "拆掉回落警告": [
+      "test_v1_setup_report.TestFallbackToSharedPath.test_角色文件缺失时回落到旧路径并说出来_且不搬迁旧文件"
     ],
     "拆掉固定名豁免": [
       "test_v1_documents.TestReviewNaming.test_固定名永远放行"
@@ -303,6 +312,21 @@
     ],
     "文档理由不 strip": [
       "test_v1_docreason.TestDocReasonRequired.test_理由只有空白不算数"
+    ],
+    "索引判据恒真": [
+      "test_v1_setup_report.TestNoIndexDiffDoesNotFail.test_原样重跑不再失败"
+    ],
+    "索引判据换成工作区": [
+      "test_v1_setup_report.TestNoIndexDiffDoesNotFail.test_工作区不干净但索引无差异时照样不失败_且照打那段警告"
+    ],
+    "索引判据看整个索引": [
+      "test_v1_setup_report.TestNoIndexDiffDoesNotFail.test_索引里预先暂存了别的东西时照样不提交"
+    ],
+    "结论不认角色文件": [
+      "test_v1_setup_report.TestFallbackToSharedPath.test_角色文件缺失时回落到旧路径并说出来_且不搬迁旧文件"
+    ],
+    "结论读并集": [
+      "test_v1_setup_report.TestReportIsPerRole.test_角色文件在就只读它_不回落也不读并集"
     ],
     "裁判副本改成 strip 后比": [
       "test_v1_judge.TestJudgeSyncAtClaim.test_只差一个空白字符也要拦"
