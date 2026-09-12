@@ -238,7 +238,7 @@
     W11 的 approve)
   - 对应契约:`docs/pair-run/CONTRACT.md` → 校验与沉淀的有效期
 
-- [ ] **W14** [feature] — 声明与统计对齐:只在生效时留痕,`report` 分开净回合
+- [x] **W14** [feature] — 声明与统计对齐:只在生效时留痕,`report` 分开净回合
   - **必须排在 W13 之后 —— 这个顺序是承重的,不是排版。** 笔记晋升闸的条件是
     `len(note) >= MIN_NOTE_PROMOTE_CHARS and not mine and not args.no_decision`
     (写这一条时的原样;W13 落地后是 `not settled`),而 W13 要改的正是里面那个 `mine` 的判据;
