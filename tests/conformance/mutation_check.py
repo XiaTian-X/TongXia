@@ -523,6 +523,62 @@ MUTATIONS = [
     ("校验通过后不记契约",
      '        state["setup_verified_contract"] = rec',
      "        pass"),
+
+    # --- W14:声明只在生效时留痕,report 分开净回合 ---------------------------
+    # 形状由 dev 定、dev 在 impl 笔记里点名、tester 在 review-impl 隔离复现。
+    # 最后两个是 review-test 打回时两边都没想到的方向(只守了不生效那一侧),
+    # 连同前 11 个一起在这个打回回合登记 —— 不必再欠到 W15。
+    ("声明恒写-未留决策",
+     "    if args.no_decision and no_decision_read:",
+     "    if args.no_decision:"),
+
+    ("晋升闸读旗标时不看已沉淀",
+     "    return len(note) >= MIN_NOTE_PROMOTE_CHARS and not settled",
+     "    return len(note) >= MIN_NOTE_PROMOTE_CHARS"),
+
+    ("晋升闸读旗标时不看完成",
+     '    if not memory_on(cfg) or target != "DONE":',
+     "    if not memory_on(cfg):"),
+
+    ("声明恒写-文档理由",
+     "    if args.doc_reason and touched_docs:",
+     "    if args.doc_reason:"),
+
+    ("声明恒写-改写依据",
+     "    if args.basis and ROADMAP_REL in touched_docs and has_rewrite(root, ROADMAP_REL):",
+     "    if args.basis:"),
+
+    ("依据从不写",
+     "    if args.basis and ROADMAP_REL in touched_docs and has_rewrite(root, ROADMAP_REL):",
+     "    if False:"),
+
+    ("声明恒写-契约变更",
+     "    if args.contract_change and changed_named_frozen:",
+     "    if args.contract_change:"),
+
+    ("声明恒写-删除测试",
+     "    if args.allow_deletion and deleted:",
+     "    if args.allow_deletion:"),
+
+    ("判定行只在空转时写",
+     '        body += "\\n%s: %s" % (IDLE_JUDGMENT, "是" if idle else "否")',
+     '        body += ("\\n%s: 是" % IDLE_JUDGMENT) if idle else ""'),
+
+    ("判定行不看阶段",
+     '    if phase == "impl" and not is_dispute:',
+     "    if not is_dispute:"),
+
+    ("判定行不排除异议",
+     '    if phase == "impl" and not is_dispute:',
+     '    if phase == "impl":'),
+
+    ("承重文件的交付算成空转",
+     "                    or (args.contract_change and changed_named_frozen))",
+     "                    or False)"),
+
+    ("没有判定行的 impl 交接不单独计",
+     "                unjudged += 1           # 没有判定行的 impl 交接不猜,单独计",
+     "                pass"),
 ]
 
 # unittest 的失败行有两种形态:

@@ -1,6 +1,21 @@
 {
-  "baseline": "67d38c7724b372b1",
+  "baseline": "602d01f1b3ccf84c",
   "catchers": {
+    "claim 不拦过期的校验": [
+      "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
+    ],
+    "依据从不写": [
+      "test_v1_effective.TestBasisOnlyWhenRewrite.test_有改写时_basis_照样留痕"
+    ],
+    "判定行不排除异议": [
+      "test_v1_effective.TestReportSplitsRounds.test_异议回合不算开销"
+    ],
+    "判定行不看阶段": [
+      "test_v1_effective.TestReportSplitsRounds.test_只改了承重文件的_impl_回合不算开销"
+    ],
+    "判定行只在空转时写": [
+      "test_v1_effective.TestUnjudgedHistory.test_全是新提交时未判定为零"
+    ],
     "剩余数打成总数": [
       "test_v1_paths.TestIgnorePathsTruncation.test_超过十个只列前十并说明还剩多少"
     ],
@@ -10,11 +25,32 @@
     "回落改回解析不出就停": [
       "test_v1_setup_report.TestFallbackToSharedPath.test_解析不出角色时回落到旧路径并说出来"
     ],
+    "声明恒写-删除测试": [
+      "test_v1_effective.TestOtherFlagsOnlyWhenRead.test_没删测试时_allow_deletion_不留痕"
+    ],
+    "声明恒写-契约变更": [
+      "test_v1_effective.TestOtherFlagsOnlyWhenRead.test_完成时脚本自己勾选_PLAN_不算承重文件改动"
+    ],
+    "声明恒写-改写依据": [
+      "test_v1_effective.TestBasisOnlyWhenRewrite.test_纯追加时_basis_不留痕_理由照留"
+    ],
+    "声明恒写-文档理由": [
+      "test_v1_effective.TestOtherFlagsOnlyWhenRead.test_没碰规范性文档时_doc_reason_不留痕"
+    ],
+    "声明恒写-未留决策": [
+      "test_v1_effective.TestNoDecisionOnlyWhenRead.test_不在完成那一次时不留痕"
+    ],
     "契约变更计数恒为 0": [
       "test_v1_frozen.TestReportShowsContractChanges.test_report_那一行跟着契约变更走"
     ],
+    "契约读不到时放行": [
+      "test_v1_validity.TestContractChangeInvalidatesVerification.test_契约文件读不到时拒绝"
+    ],
     "当场留决策改成按工作项算": [
       "test_v1_validity.TestSameTurnGatesUnchanged.test_带声明改契约_更早回合的决策不算当场"
+    ],
+    "承重文件的交付算成空转": [
+      "test_v1_effective.TestReportSplitsRounds.test_只改了承重文件的_impl_回合不算开销"
     ],
     "把 RED 豁免放宽成整个红绿豁免": [
       "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
@@ -316,11 +352,35 @@
     "文档理由不 strip": [
       "test_v1_docreason.TestDocReasonRequired.test_理由只有空白不算数"
     ],
+    "晋升闸读旗标时不看完成": [
+      "test_v1_effective.TestNoDecisionOnlyWhenRead.test_不在完成那一次时不留痕"
+    ],
+    "晋升闸读旗标时不看已沉淀": [
+      "test_v1_effective.TestNoDecisionOnlyWhenRead.test_笔记已沉淀成同_id_决策时不留痕"
+    ],
+    "校验比对端取 HEAD": [
+      "test_v1_validity.TestContractChangeInvalidatesVerification.test_人类没提交的契约改动也算_且重跑之后不会锁死"
+    ],
+    "校验记录变回全局单值": [
+      "test_v1_validity.TestContractChangeInvalidatesVerification.test_只有_dev_校验过时_tester_不能认领"
+    ],
+    "校验记录端取 HEAD": [
+      "test_v1_validity.TestContractChangeInvalidatesVerification.test_人类没提交的契约改动也算_且重跑之后不会锁死"
+    ],
+    "校验记录缺失时放行": [
+      "test_v1_validity.TestContractChangeInvalidatesVerification.test_只有_dev_校验过时_tester_不能认领"
+    ],
+    "校验通过后不记契约": [
+      "test_v1_setup.TestVerifySetup.test_交了结论后通过并允许认领"
+    ],
     "沉淀不认工作项 id": [
       "test_v1_validity.TestSettledByItem.test_只有别的工作项的决策时_契约变更照样要记录"
     ],
     "沉淀改回按回合算": [
       "test_v1_validity.TestSettledByItem.test_契约变更_决策在_spec_回合留过_完成时放行"
+    ],
+    "没有判定行的 impl 交接不单独计": [
+      "test_v1_effective.TestUnjudgedHistory.test_旧提交单独计数_新的不算未判定"
     ],
     "第二次打回改成按工作项算": [
       "test_v1_validity.TestSameTurnGatesUnchanged.test_第二次打回_更早回合的决策不算"
@@ -348,6 +408,9 @@
     ],
     "规范性文档不算删除": [
       "test_v1_docreason.TestDocReasonRequired.test_删掉一份规范性文档同样要理由"
+    ],
+    "门禁没开也拦过期的校验": [
+      "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝"
     ]
   }
 }

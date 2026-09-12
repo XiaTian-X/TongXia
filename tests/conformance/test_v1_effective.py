@@ -66,6 +66,11 @@ class TestNoDecisionOnlyWhenRead(DeclBase):
         self.assertNotIn("未留决策(已声明)", self.body())
 
     def test_不在完成那一次时不留痕(self):
+        """**先写一份够长的笔记**,再在 spec 回合带上旗标 —— 这样"不生效"的原因
+        只剩"不是完成那一次"。第一版没写笔记,笔记长度那一项先把条件否掉了,
+        于是"看不看 `target == DONE`"根本分不出来:dev 在 review-test 实测,
+        把 `no_decision_is_read` 里的 `or target != "DONE"` 去掉,全套 0 条红。"""
+        self.repo.write("docs/notes/W1.md", LONG_NOTE)
         self.assertAccepted(self.spec_handoff("--no-decision", "顺手带上"))
         self.assertNotIn("未留决策(已声明)", self.body())
 
@@ -123,6 +128,19 @@ class TestBasisOnlyWhenRewrite(DeclBase):
         body = self.body()
         self.assertIn("文档改动理由", body, "理由这次是生效的,应当留痕")
         self.assertNotIn("改写依据", body)
+
+    def test_有改写时_basis_照样留痕(self):
+        """反面,五个旗标里只有 `--basis` 缺这一条:dev 在 review-test 实测,
+        把那一行换成 `if False:`(从不写依据),全套 **0 条红** —— 另外四个旗标
+        改成从不写都各有 1-3 条既有用例接住。契约要的是"在它实际生效时才写进",
+        两个方向都要钉。"""
+        self.assertAccepted(self.repo.run("claim", "W1", role="tester"))
+        self.repo.write("tests/W1")
+        self.repo.write(ROADMAP, "# 路线图\n\n- 第一条(改写过)\n")
+        r = self.repo.run("handoff", "W1 的失败用例", "--doc-reason", "第一条的说法会误导",
+                          "--basis", "docs/DECISIONS.md", role="tester")
+        self.assertAccepted(r)
+        self.assertIn("改写依据", self.body())
 
 
 class ReportRoundsBase(DeclBase):
