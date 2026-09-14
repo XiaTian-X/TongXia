@@ -1,5 +1,5 @@
 {
-  "baseline": "602d01f1b3ccf84c",
+  "baseline": "5ec024408fab873a",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
@@ -348,6 +348,12 @@
     ],
     "拆掉重钉后 sha 的 strip": [
       "test_v1_judge.TestJudgeRepinAtDone.test_写进正文的值不带换行"
+    ],
+    "提交不限定路径": [
+      "test_v1_setup_commit.TestOnlyTheAddedBatchIsCommitted.test_结论有改动时_预先暂存的实现不进这次提交_仍留在索引里"
+    ],
+    "提交范围回到第一版的全部 to_add": [
+      "test_v1_setup_commit.TestOnlyTheAddedBatchIsCommitted.test_评审目录里暂存后又删掉的文件不让提交失败"
     ],
     "文档理由不 strip": [
       "test_v1_docreason.TestDocReasonRequired.test_理由只有空白不算数"

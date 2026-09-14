@@ -2999,6 +2999,23 @@ def index_has_diff(root, paths):
     return proc.returncode != 0
 
 
+def staged_paths(root, paths):
+    """`paths` 里在索引中相对 HEAD **真有差异**的那些 —— `verify-setup` 提交的就是这一批。
+
+    和 `index_has_diff` 判的是同一个集合:它非空,那个函数才会是真。
+
+    **不能直接把 `paths` 全交给 `git commit --`。** 带路径的提交要求每个路径 git
+    都认得(在索引或 HEAD 里)。`shared_paths` 下暂存为新增、随后又从工作区删掉的
+    文件(porcelain `AD`),被前面那次 `git add` 拿出索引之后就谁都不认得了,
+    提交报 pathspec 不匹配、整条命令 exit 1 —— 而状态位已经写进工作区。
+
+    `-z` 切开:中文路径不带 `-z` 会被 `core.quotepath` 转义,转义后的名字
+    交回给 git 当路径是对不上的。
+    """
+    out = git("diff", "--cached", "--name-only", "-z", "--", *paths, cwd=root)
+    return [p for p in out.split("\0") if p]
+
+
 def cmd_verify_setup(root, cfg, args):
     fails, warns = [], []
 
@@ -3366,8 +3383,11 @@ def cmd_verify_setup(root, cfg, args):
     # 状态是对的、退出码是错的,而调用方只看退出码。所以先问索引。
     # 只改"索引里没有差异"这一种情形,有差异时一个字不变。
     if index_has_diff(root, sorted(set(to_add))):
+        # 提交也只带这一批:不带路径的 commit 提交的是整个索引,有人事先
+        # `git add` 的实现会跟着结论进开工基线。索引里的其他东西原样留着。
+        staged = staged_paths(root, sorted(set(to_add)))
         git("commit", "-q", "-m", "chore(pair): 通过开工前校验,含契约审查结论",
-            "-m", drafter_line, cwd=root)
+            "-m", drafter_line, "--", *staged, cwd=root)
     else:
         print()
         print("  没有需要提交的改动 —— 状态位与结论都和上次提交时一样,"
