@@ -379,3 +379,8 @@
 - 理由: W15 的 spec 用例把判据侧的转义坑修得很彻底(`git_paths` 不带 `-z` 直接炸、三处死断言改成整路径比),但**被测代码** `staged_paths` 里同一个 `-z` 没有任何用例经过 —— 进入 `git commit --` 的路径全是 ASCII(`setup-verification.md`、`.pair/state.json`),唯一的中文名 `草稿.md` 恰恰是**不进**提交的那个。去掉 `-z` 全套 0 红,而真实后果是 `docs/reviews/` 下一份中文名评审就让 `verify-setup` exit 1、状态位留在工作区。这个缺口不是任何一方读错了契约:两边都知道"中文路径会被转义",tester 把它用在判据上、dev 把它用在实现上,**没有人把两件事连起来问"测试数据里有没有让实现的 -z 起作用的输入"**。它是在 dev 按 W14 教训"两个方向都探"时才露出来的 —— 探针表只列放宽方向时,这个变异根本不会被写出来。可复用的判据:**实现里每一处为某类输入做的特殊处理(-z、strip、NFKC、转义),都要问测试数据里有没有一条输入会让那处处理起作用。**
 - 已否决: 让 harness 统一 `core.quotepath=false` —— 那会让测试环境比真实环境更宽容,`-z` 的缺陷在测试里永远不可见,等于把这一类输入从测试数据里系统性地删掉。也否决了只写在笔记里:笔记随工作项作废,而这条判据下一轮任何带编码处理的工作项都用得上。
 - 影响路径: `tests/conformance/test_v1_setup_commit.py`, `tests/conformance/harness.py`, `.agents/skills/pair-protocol/scripts/pair.py`
+## SETUP — 第六轮修开放条目 18–22，人类裁决开始修复，dev 代笔立项并选定五处方向
+
+- 理由: 人类在第五轮收尾时裁决"开始修复"。五处方向由代笔人选定:18 让评审阶段执行者只追加 `review_append_paths` 名下已在 HEAD 里的文件(本仓库即 `MUTATIONS`);19 让 review-test 打回后的 spec 回合 GREEN 且没改承重文件时直接进 review-test;21 让评审目录顶层已提交的文件不能有删除行;20 让 `claim` 看两个角色;22 给 `report` 加 `--since`。顺序按"越早落地对后面越有用",18 第一。19、21、20 在隔离克隆里做了原型:19 全套 0 红(没有既有用例钉着那条边)、21 行为用例 0 红、20 红 6 条行为用例(名单写进契约,按新行为改不删)。独立运行实验挪到第七轮。
+- 已否决: 18 让 dev 在 impl 登记自己的锚点 —— 被测方挑考题;18 写成 DONE 前强制检查 —— 要从散文笔记里解析锚点。19 让判定行携带"为什么空" —— 回合不存在就不需要解释。20 只对 tester 提示 —— dev 那一半从此没人管,而照契约写实现的正是 dev。21 只认新文件 —— W13 起的约定就是往结论末尾追加。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`, `.pair/config.json`

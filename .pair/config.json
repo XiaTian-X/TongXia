@@ -38,5 +38,10 @@
   "decisions_file": "docs/pair-run/DECISIONS.md",
   "sync": false,
   "require_setup_verification": true,
-  "memory": true
+  "memory": true,
+  "review_append_paths": {
+    "tester": [
+      "tests/conformance/mutation_check.py"
+    ]
+  }
 }
