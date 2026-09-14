@@ -90,6 +90,29 @@ class TestOnlyTheAddedBatchIsCommitted(CommitScopeBase):
         self.assertAccepted(r)
         self.assertIn("补了一句", self.committed_report())
 
+    def test_中文名的评审文件跟着结论提交_不让提交失败(self):
+        """**被测代码里的 `-z` 也要有用例守着。** 我给 harness 加了"不带 `-z` 直接炸"
+        的 `git_paths`、修了三处死断言 —— 守住了"判据别被转义骗",却没守"实现别被
+        转义骗"。前两条里进入 `git commit --` 的路径全是 ASCII(`AD` 那条的
+        `草稿.md` 恰恰是**不进**提交的那个),dev 在 impl 回合实测:`staged_paths`
+        去掉 `-z`、按换行切,全套 0 红。
+
+        场景:结论改一句,同时在 `shared_paths` 下新写一份中文名的评审(不预先暂存,
+        由 `verify-setup` 自己 add)。不带 `-z` 时 `git diff` 输出的是
+        `"docs/reviews/\344\270\255…"`,交回给 `git commit --` 报 pathspec 不匹配、
+        `exit 1`,而状态位已经写进工作区 —— 和 `AD` 同一类故障。契约给集合时写的就是
+        `-z`,又写了"路径在 add 之后已不被 git 认得时不能让提交失败"。"""
+        self.repo.write(OLD, self.REPORT)
+        self.assertAccepted(self.verify())
+        self.repo.write(OLD, self.REPORT + "\n(补了一句)\n")
+        review = REVIEWS + "/中文评审.md"
+        self.repo.write(review, "一份中文文件名的评审记录")
+
+        r = self.verify()
+        self.assertAccepted(r)
+        self.assertIn(review, self.repo.git_paths("ls-tree", "-r", "-z", "--name-only", "HEAD"),
+                      "shared_paths 下的中文名评审没有跟着结论进这次提交")
+
 
 if __name__ == "__main__":
     unittest.main()

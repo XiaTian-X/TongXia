@@ -592,6 +592,20 @@ MUTATIONS = [
     ("提交范围回到第一版的全部 to_add",
      '            "-m", drafter_line, "--", *staged, cwd=root)',
      '            "-m", drafter_line, "--", *sorted(set(to_add)), cwd=root)'),
+
+    # 以下两个锚在 dev 写的 `staged_paths` 上,dev 在 impl 回合探出、tester 在
+    # review-impl 复现,review-test 打回回 spec 时登记。`return [p for p in
+    # out.split("\0") if p]` 在 pair.py 里单独出现两次,所以不带 -z 那个连同
+    # 上一行 `git("diff", …)` 一起锚。"退回全部 to_add"与上面那条是同一个行为,不重复。
+    ("提交路径不带 -z",
+     '    out = git("diff", "--cached", "--name-only", "-z", "--", *paths, cwd=root)\n'
+     '    return [p for p in out.split("\\0") if p]',
+     '    out = git("diff", "--cached", "--name-only", "--", *paths, cwd=root)\n'
+     '    return [p for p in out.split("\\n") if p]'),
+
+    ("提交路径不看索引",
+     '    out = git("diff", "--cached", "--name-only", "-z", "--", *paths, cwd=root)',
+     '    out = git("diff", "--name-only", "-z", "--", *paths, cwd=root)'),
 ]
 
 # unittest 的失败行有两种形态:
