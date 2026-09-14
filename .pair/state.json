@@ -1,10 +1,10 @@
 {
   "round": 12,
-  "phase": "review-test",
+  "phase": "spec",
   "item": "W15",
   "item_type": "feature",
-  "last_actor": "tester",
-  "changes_count": 0,
+  "last_actor": "dev",
+  "changes_count": 1,
   "completed_items": [
     "W2",
     "W3",
@@ -25,5 +25,5 @@
   "setup_verified_contract": {
     "tester": "4b1b3c560710d9106fb8a294850966d5161a3c7d"
   },
-  "after_rebound": false
+  "after_rebound": true
 }
