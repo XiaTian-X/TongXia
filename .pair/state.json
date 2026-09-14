@@ -23,7 +23,7 @@
   "deadlock_hits": [],
   "contract_sha": null,
   "setup_verified_contract": {
-    "tester": "96bedabe344e82006cf82380d32f802074d26b80"
+    "tester": "4b1b3c560710d9106fb8a294850966d5161a3c7d"
   },
   "after_rebound": false
 }
