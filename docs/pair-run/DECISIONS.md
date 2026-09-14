@@ -374,3 +374,8 @@
 - 理由: W14 的 review-impl 走了两次(中间我在 review-test 打回一次),第二次 approve 把 `docs/reviews/W14-review-impl.md` 整份改写(-72/+48),第一次的逐段对契约表与 11 个变异复现表在工作区里没了。`DECISIONS.md` 有追加式保护(改写会被拒),**评审记录没有**,而文件名按"工作项+阶段"固定,同一阶段第二次就只能同名。这一次 tester 在开头留了指针写明上一版在 `44f5a35`,是自觉、不是强制 —— 换一个 agent 悄悄改写,红绿、边界、命名、评审格式没有一条抓得到,而被改写的是**已经进了提交记录的评审证据**。判据方向:评审文件只认新增(git status `??`)、不认修改(`M`),或者同一阶段第二次落 `-2` 后缀(本次 review-test 的第二份就是 `W14-review-test-2.md`,`PHASE_BRIEF` 自己会算这个名字 —— 说明信息是够的,缺的是写侧的拒绝)。
 - 已否决: 在 W14 里顺手加 —— 本项契约是「声明的生效条件与 report 的净回合」,评审记录的写入规则不在其中,而且 dev 的 review-test 回合只读。也否决了打回:tester 没有违反任何现行规则,为腾一个回合打回已在决策里写明不做。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/notes/`
+## W15 — 测试数据的形状替实现挡掉了一类输入：进入 git commit -- 的路径全是 ASCII，被测代码里的 -z 无人守着
+
+- 理由: W15 的 spec 用例把判据侧的转义坑修得很彻底(`git_paths` 不带 `-z` 直接炸、三处死断言改成整路径比),但**被测代码** `staged_paths` 里同一个 `-z` 没有任何用例经过 —— 进入 `git commit --` 的路径全是 ASCII(`setup-verification.md`、`.pair/state.json`),唯一的中文名 `草稿.md` 恰恰是**不进**提交的那个。去掉 `-z` 全套 0 红,而真实后果是 `docs/reviews/` 下一份中文名评审就让 `verify-setup` exit 1、状态位留在工作区。这个缺口不是任何一方读错了契约:两边都知道"中文路径会被转义",tester 把它用在判据上、dev 把它用在实现上,**没有人把两件事连起来问"测试数据里有没有让实现的 -z 起作用的输入"**。它是在 dev 按 W14 教训"两个方向都探"时才露出来的 —— 探针表只列放宽方向时,这个变异根本不会被写出来。可复用的判据:**实现里每一处为某类输入做的特殊处理(-z、strip、NFKC、转义),都要问测试数据里有没有一条输入会让那处处理起作用。**
+- 已否决: 让 harness 统一 `core.quotepath=false` —— 那会让测试环境比真实环境更宽容,`-z` 的缺陷在测试里永远不可见,等于把这一类输入从测试数据里系统性地删掉。也否决了只写在笔记里:笔记随工作项作废,而这条判据下一轮任何带编码处理的工作项都用得上。
+- 影响路径: `tests/conformance/test_v1_setup_commit.py`, `tests/conformance/harness.py`, `.agents/skills/pair-protocol/scripts/pair.py`

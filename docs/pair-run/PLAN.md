@@ -270,7 +270,7 @@
   - **不拒绝**带了不生效的声明 —— 这一条治的是统计被污染,不是用法不整洁
   - 对应契约:`docs/pair-run/CONTRACT.md` → 声明的生效条件与 report 的净回合
 
-- [ ] **W15** [feature] — verify-setup 的提交只带它自己 add 的那批路径
+- [x] **W15** [feature] — verify-setup 的提交只带它自己 add 的那批路径
   - **来源**:W12 的 dev 在 review-test 实测发现;W12 契约写明"有差异时一个字不变",
     所以单开。人类授权 dev 代笔立项;tester 开工前的独立审查挑出三处缺陷
     (`docs/pair-run/notes/W15.md`),已在 W12 收尾那次交接里带声明改进契约
