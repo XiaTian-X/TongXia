@@ -183,9 +183,11 @@ class TestVerifySetup(PairTestCase):
         self.assertAccepted(r)
         self.assertIn("未提交的代码改动", r.text)
         self.assertIn("偷跑的实现", r.text)
-        tracked = self.repo.git("ls-files").stdout.decode("utf-8")
-        self.assertNotIn("偷跑的实现", tracked,
-                         "verify-setup 不该把角色路径下的改动提交进基线")
+        # 按 -z 整条路径比(W15 ⑦):原先是在不带 -z 的 ls-files 输出里找子串,
+        # 中文路径被转义,那一句恒真。这一句同时守 W15 的⑥:范围之外、没暂存的
+        # 工作区改动,verify-setup 之后仍不在索引里。
+        self.assertNotIn("src/偷跑的实现", self.repo.git_paths("ls-files", "-z"),
+                         "verify-setup 不该把角色路径下的改动加进索引或提交进基线")
 
     def test_契约审查结论本身会被提交(self):
         self.repo.write("docs/reviews/setup-verification.md", self.REPORT)

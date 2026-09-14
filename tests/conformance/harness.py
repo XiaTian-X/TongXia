@@ -215,6 +215,17 @@ class PairRepo:
         return subprocess.run(("git",) + args, cwd=self.dir,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
+    def git_paths(self, *args):
+        """git 列出的路径集合,判"在不在"用它、按**整条路径相等**比。
+
+        **必须带 `-z`**:不带时中文路径会按 `core.quotepath` 转义成
+        `"\\345\\201…"`,拿子串判 `assertNotIn("偷跑的实现", 输出)` 不管实现
+        怎样都成立。W12 两个角色都踩过,而且都把病因认错成"索引还是 HEAD"。
+        不带 `-z` 直接炸,免得下一个人再写出一条恒绿的断言。"""
+        assert "-z" in args, "git_paths 必须带 -z,否则中文路径会被转义"
+        out = self.git(*args).stdout.decode("utf-8")
+        return {p for p in out.split("\0") if p}
+
     def run(self, *args, role="tester", env=None):
         e = dict(os.environ)
         e.pop("PAIR_TEST_CMD", None)

@@ -171,9 +171,11 @@ class TestNoIndexDiffDoesNotFail(SetupReportBase):
         self.assertIn("没有需要提交的改动", r.text)
         self.assertIn("未提交的代码改动", r.text)
         self.assertIn("偷跑的实现", r.text)
-        tracked = self.repo.git("ls-files").stdout.decode("utf-8")
-        self.assertNotIn("偷跑的实现", tracked,
-                         "verify-setup 不该把角色路径下的改动提交进基线")
+        # 按 -z 整条路径比(W15 ⑦):原先是在不带 -z 的 ls-files 输出里找子串,
+        # 中文路径被转义,那一句恒真。这一句同时守 W15 的⑥:范围之外、没暂存的
+        # 工作区改动,verify-setup 之后仍不在索引里。
+        self.assertNotIn("src/偷跑的实现", self.repo.git_paths("ls-files", "-z"),
+                         "verify-setup 不该把角色路径下的改动加进索引或提交进基线")
 
     def test_索引里预先暂存了别的东西时照样不提交(self):
         """**判据是「这次 add 的那批路径」,不是整个索引。** 契约同一句写了两件事:
@@ -189,7 +191,11 @@ class TestNoIndexDiffDoesNotFail(SetupReportBase):
         —— 开工基线里多了实现,spec 阶段"必须 RED"的要求就失效了。
 
         **查的是 HEAD 的树,不是 `git ls-files`**:后者列的是索引,
-        而那份文件在正确实现与错误实现下**都还留在索引里**,拿它判等于恒绿。"""
+        而那份文件在正确实现与错误实现下**都还留在索引里**,拿它判等于恒绿。
+
+        **更正(W15 的 spec 回合)**:上面那句只对了一半。第一版查的 `ls-tree`
+        **没带 `-z`**,中文路径被转义,那一句断言同样恒真 —— 这条用例当时靠的是
+        `rev-parse HEAD` 没变那一句。真正的坑是转义,不是"索引还是 HEAD"。"""
         self.repo.write(OLD, self.REPORT)
         self.assertAccepted(self.verify("dev"))
         self.repo.write("src/偷跑的实现", "本该由 dev 在 impl 回合写")
@@ -200,9 +206,8 @@ class TestNoIndexDiffDoesNotFail(SetupReportBase):
         self.assertIn("没有需要提交的改动", r.text)
         self.assertEqual(self.repo.git("rev-parse", "HEAD").stdout, head,
                          "索引里只有 to_add 之外的东西时,不该产生提交")
-        in_head = self.repo.git("ls-tree", "-r", "--name-only",
-                                "HEAD").stdout.decode("utf-8")
-        self.assertNotIn("偷跑的实现", in_head,
+        in_head = self.repo.git_paths("ls-tree", "-r", "-z", "--name-only", "HEAD")
+        self.assertNotIn("src/偷跑的实现", in_head,
                          "预先暂存的实现被当成开工前校验提交进了基线")
 
 

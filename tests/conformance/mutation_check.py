@@ -579,6 +579,19 @@ MUTATIONS = [
     ("没有判定行的 impl 交接不单独计",
      "                unjudged += 1           # 没有判定行的 impl 交接不猜,单独计",
      "                pass"),
+
+    # --- W15:verify-setup 的提交只带它自己 add 的那批路径 ----------------------
+    # 契约允许 tester 在 spec 回合把 `git commit` 那一行"只带这批路径"写成锚点。
+    # 只定**这一行**与变量名 `staged`;列路径的小函数由 dev 定(`index_has_diff`
+    # 与它身上两个既有锚点不要动)。这两个锚点在 impl 落地前不匹配 —— 同第四轮
+    # 「文档理由不 strip」的先例,`test_变异点仍能匹配到源码` 今天是红的。
+    ("提交不限定路径",
+     '            "-m", drafter_line, "--", *staged, cwd=root)',
+     '            "-m", drafter_line, cwd=root)'),
+
+    ("提交范围回到第一版的全部 to_add",
+     '            "-m", drafter_line, "--", *staged, cwd=root)',
+     '            "-m", drafter_line, "--", *sorted(set(to_add)), cwd=root)'),
 ]
 
 # unittest 的失败行有两种形态:
