@@ -242,6 +242,11 @@ DEFAULT_STATE = {
     # 套件整体就是绿的,而 feature 的 spec 要求 RED。不记这一笔,
     # "打回 → 修正"这条路会在下一回合把自己卡死。
     "after_rebound": False,
+    # W17:只涉及测试的打回走捷径要的两笔。`rebound_from` 是上一次打回来自哪一阶段;
+    # `reviewed_contract` 是 review-impl approve 那一刻契约的**工作区内容** sha
+    # (W13 口径)—— 实现是在那一刻被审过的。老状态里没有这两个键 = 不走捷径。
+    "rebound_from": None,
+    "reviewed_contract": None,
 }
 
 # `- [ ] **W1** [bug] — 标题`,类型可省略(缺省 feature)
@@ -785,6 +790,31 @@ def stale_verification(root, cfg, state, role):
             "每个角色各记一份:对方重跑不能替你解锁 —— 照契约写断言的是 tester,\n"
             "它读的若是旧契约,两边就会各自\"对\"、合起来是废的。重跑:\n"
             "  python3 %s verify-setup --drafter self|other" % (why, PROG_HINT))
+
+
+def rebound_shortcut(root, cfg, state, green, changed_named_frozen):
+    """review-test 打回之后的 spec 回合,能不能跳过 impl 与 review-impl 直接进 review-test(W17)。
+
+    走捷径时,实现在 review-impl approve 之后没有任何人能改过:review-test 只读,
+    spec 只能写测试与 `shared_paths`。能让"已审过的实现"失去依据的只有承重文件,
+    所以两个来源都排除 —— 这一回合实际改的(按改动判,不按旗标判),与 review-impl
+    approve 之后被提交的(比那一刻记下的契约工作区 sha)。规划文件不改变契约 sha,
+    只能靠前一条管。
+
+    **没有记录一律不走**:老状态没有 `rebound_from` / `reviewed_contract`,
+    不猜。`None == sha` 本来就不成立,不另写一句判空。
+
+    **不另判"是不是 spec、有没有裁决"。** `rebound_from` 只在打回那一次写成
+    "review-test"、下一次交接就清掉,而 review-test 打回之后的下一次交接只能是
+    spec 回合 —— 另判一遍是拆掉也没有用例能红的防护(W14 付过这个代价)。
+    """
+    if not green:
+        return False
+    if state.get("rebound_from") != "review-test":
+        return False
+    if changed_named_frozen:
+        return False
+    return state.get("reviewed_contract") == worktree_sha(root, cfg["contract_file"])
 
 
 def blob_sha(root, path):
@@ -2144,6 +2174,10 @@ def cmd_handoff(root, cfg, args):
         die("%s 阶段结束时测试必须是 GREEN,现在是 RED。\n"
             "看 %s。还没弄绿就不要交接。" % (phase, TESTLOG_REL))
 
+    # --- 只涉及测试的打回不再经过 impl(W17)-----------------------------------
+    if target == "impl" and rebound_shortcut(root, cfg, state, green, changed_named_frozen):
+        target = "review-test"
+
     # --- 死锁保护 ---------------------------------------------------------
     changes_n = state["changes_count"]
     if verdict == "changes":
@@ -2185,6 +2219,9 @@ def cmd_handoff(root, cfg, args):
     # 任何打回都算 —— review-test 以"覆盖不足"打回时,tester 要补的那条
     # 回归测试按定义是绿的(修复已经落地)。只认 impl 阶段的异议会漏掉这条入口。
     state["after_rebound"] = (verdict == "changes")
+    state["rebound_from"] = phase if verdict == "changes" else None
+    if phase == "review-impl" and verdict == "approve":
+        state["reviewed_contract"] = worktree_sha(root, cfg["contract_file"])
     save_state(root, state)
 
     # --- 裁判副本重钉 -----------------------------------------------------

@@ -131,6 +131,7 @@ agent 被人类唤醒
 
 打回:`review-impl changes` → impl;`review-test changes` → spec;
 `impl changes`(异议)→ spec。异议路径**豁免红绿检查**。
+`review-test changes` 之后的 spec 回合若 GREEN 且契约自实现被审过之后没变,直接回 review-test。
 
 ## 强制力分布
 

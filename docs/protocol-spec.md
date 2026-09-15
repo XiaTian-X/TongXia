@@ -81,6 +81,11 @@
 
 不在表内的 `(阶段, 裁决)` 组合被拒绝,提示"状态可能已损坏"。
 
+**只涉及测试的打回走捷径**(`feature` / `bug`):`review-test changes` 之后的 spec 回合,若交接时
+**GREEN**、这一回合**实际没改**规划或契约、且契约与最近一次 review-impl approve 时的工作区内容相同,
+下一阶段是 **review-test**,跳过 impl 与 review-impl —— 实现在那之后没有人能改过。
+任一条件不满足、或状态里没有记录(老状态),照旧进 impl。死锁计数不因捷径清零。
+
 ### 3.3 认领
 
 `claim <ID>` 的前置条件,任一不满足即拒绝:
@@ -383,6 +388,8 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 | `contract_sha` | string\|null | claim 时契约文件的 blob sha |
 | `setup_verified_contract` | object | 按角色记:该角色上次通过开工前校验时,契约文件**工作区内容**的 blob sha。`claim` 现场比对;与 `contract_sha`(按工作项记、取 HEAD)是两回事 |
 | `after_rebound` | bool | 上一次交接是不是一次打回(异议或评审 changes)。打回之后的 spec 回合豁免 **RED** 要求(不豁免 GREEN) |
+| `rebound_from` | string\|null | 上一次打回来自哪一阶段;不是打回的交接清成 `null`。只涉及测试的打回走捷径要看它 |
+| `reviewed_contract` | string\|null | 最近一次 review-impl approve 时契约文件**工作区内容**的 blob sha。捷径要求现在的契约与它相同 |
 
 老状态文件缺少新键时取默认值,对应检查自动跳过 —— 存量仓库零成本升级。
 **例外是 `setup_verified_contract`**:缺失时 `claim` 要求重跑一次 `verify-setup`。
