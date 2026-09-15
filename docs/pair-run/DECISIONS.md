@@ -384,3 +384,8 @@
 - 理由: 人类在第五轮收尾时裁决"开始修复"。五处方向由代笔人选定:18 让评审阶段执行者只追加 `review_append_paths` 名下已在 HEAD 里的文件(本仓库即 `MUTATIONS`);19 让 review-test 打回后的 spec 回合 GREEN 且没改承重文件时直接进 review-test;21 让评审目录顶层已提交的文件不能有删除行;20 让 `claim` 看两个角色;22 给 `report` 加 `--since`。顺序按"越早落地对后面越有用",18 第一。19、21、20 在隔离克隆里做了原型:19 全套 0 红(没有既有用例钉着那条边)、21 行为用例 0 红、20 红 6 条行为用例(名单写进契约,按新行为改不删)。独立运行实验挪到第七轮。
 - 已否决: 18 让 dev 在 impl 登记自己的锚点 —— 被测方挑考题;18 写成 DONE 前强制检查 —— 要从散文笔记里解析锚点。19 让判定行携带"为什么空" —— 回合不存在就不需要解释。20 只对 tester 提示 —— dev 那一半从此没人管,而照契约写实现的正是 dev。21 只认新文件 —— W13 起的约定就是往结论末尾追加。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`, `.pair/config.json`
+## W16 — git mv 能绕过删除测试防护:dev 在 impl 挪走红的测试即可绿着交接
+
+- 理由: 审 W16 时撞见的既有漏洞。`changed_entries` 解析 `git status -z`,改名只取新路径、跳过旧路径,于是旧路径那一侧的删除对写权限边界、删除测试防护、红绿不变量全部不可见。隔离克隆实测:dev 在 impl 直接删 `tests/W1` 被拒;`git mv tests/W1 docs/reviews/…` 放行、exit 0、进 review-impl、`tests/W1` 不在 HEAD(`docs/reviews/` 是 `shared_paths`,dev 可写;挪走后套件绿,impl 的 GREEN 要求也满足)。tester 在 spec 同样放行。review-impl 看 diff 看得见,但没有任何检查会说话。修法方向:`git status` 带 `--no-renames`,改名拆成删除 + 新增,既有检查自然接住。第七轮独立运行若由驱动器跑、没人盯 diff,这是最省事的作弊路径。
+- 已否决: 在 W16 里顺手修 —— 不在本项契约里,且 review-impl 只读。只记在评审文件里 —— 评审文件随工作项沉底。tester 将在 W17 的 spec 回合带 `--contract-change` 把它立成第六轮的一项,dev 可打回。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`
