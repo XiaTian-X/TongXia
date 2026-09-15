@@ -80,11 +80,18 @@ class TestAnythingElseIsRefused(AppendBase):
         self.assertEqual(self.phase(), "review-impl")
 
     def test_改名被拒(self):
-        """改名在 HEAD 那一侧就是一次删除。"""
+        """**改名的目标放在评审回合本来可写的 `shared_paths` 下。** 第一版挪进 `checks/`,
+        拒它的是越界(评审回合 `checks/` 不可写),不是本节 —— dev 在 review-test 实测:
+        挪进 `docs/reviews/` 就退出码 0、进 review-test、登记表不在 HEAD 了。
+        和删整个文件那条同一个形状:被另一道检查替本节挡了。
+
+        根子在 `changed_entries`:`git status` 默认把改名合成一条、只给新路径,
+        旧路径那一侧的删除谁都看不见。"""
         self.repo.advance_to("review-impl")
-        self.repo.git("mv", REG, "checks/改了名.txt")
+        self.repo.git("mv", REG, "docs/reviews/W1-挪走的登记表.md")
         self.assertRefused(self.approve_impl())
         self.assertEqual(self.phase(), "review-impl")
+        self.assertIn(REG, self.repo.git_paths("ls-tree", "-r", "-z", "--name-only", "HEAD"))
 
     def test_不在_HEAD_里的名下路径_新建被拒(self):
         """**新建文件不算追加** —— 否则评审回合能新写一整个测试文件。`has_rewrite` 对
@@ -167,6 +174,57 @@ class TestStatusMarksAppendOnly(AppendBase):
         self.assertAccepted(r)
         self.assertIn(REG, r.text)
         self.assertIn("只追加", r.text)
+
+    def test_非执行者看到的头部那一行也标出只追加(self):
+        """"只追加"出现在两处:`status` 的头部与执行者的简报。上一条以执行者身份跑、
+        断言整段输出,两处都命中 —— dev 在 impl 回合实测,把任何一处改回旧写法都没有用例红。
+        非执行者没有简报,只有头部那一行。"""
+        self.repo.advance_to("review-impl")
+        r = self.repo.run("status", role="dev")
+        self.assertAccepted(r)
+        line = [l for l in r.text.splitlines() if "可写路径" in l]
+        self.assertTrue(line, r.text)
+        self.assertIn("只追加", line[0])
+
+    def test_执行者看到的只能写那一行也标出只追加(self):
+        """另一处在执行者才看得到的回合说明里:`【本回合只读】只能写:…` 那一行。"""
+        self.repo.advance_to("review-impl")
+        r = self.repo.run("status", role="tester")
+        self.assertAccepted(r)
+        line = [l for l in r.text.splitlines() if "只能写" in l]
+        self.assertTrue(line, r.text)
+        self.assertIn(REG, line[0])
+        self.assertIn("只追加", line[0])
+
+
+class TestRenameIsDeletion(PairTestCase):
+    """**改名在 HEAD 那一侧就是一次删除 —— 对所有检查都是。** `git status` 默认把改名合成
+    一条、只给新路径;旧路径的删除对写权限边界、删除测试防护、红绿不变量全部不可见。
+    tester 在 W16 的 review-impl 实测:dev 在 impl 回合把红的测试 `git mv` 进 `docs/reviews/`,
+    退出码 0、进 review-impl、测试不在 HEAD 了。W16 验收标准 ② 要求改名被拒,这是它的一般形式,
+    带声明并进本项。"""
+
+    def test_dev_在_impl_把红的测试挪进评审目录被拒(self):
+        self.repo.advance_to("impl")
+        self.repo.git("mv", "tests/W1", "docs/reviews/W1-挪走的测试.md")
+        r = self.repo.run("handoff", "实现 W1", role="dev")
+        # 拒它的是写权限边界(dev 在 impl 回合写不了 tests/),不是删除测试防护 ——
+        # 两道都该拦,断言只钉"拒了、点名了那条测试、它还在 HEAD",不钉是哪一道。
+        self.assertRefused(r, "tests/W1")
+        self.assertEqual(self.repo.state()["phase"], "impl")
+        self.assertIn("tests/W1", self.repo.git_paths("ls-tree", "-r", "-z", "--name-only", "HEAD"))
+
+    def test_tester_在_spec_不带声明挪走已有测试被拒(self):
+        self.repo.write("tests/W0")
+        self.repo.write("src/W0")
+        self.repo.git("add", "-A")
+        self.repo.git("commit", "-q", "-m", "人类:已有一条测试与实现")
+        self.assertAccepted(self.repo.run("claim", "W1", role="tester"))
+        self.repo.write("tests/W1")
+        self.repo.git("mv", "tests/W0", "docs/reviews/W1-挪走的旧测试.md")
+        r = self.repo.run("handoff", "W1 的失败用例", role="tester")
+        self.assertRefused(r, "删除了已有测试")
+        self.assertEqual(self.repo.state()["phase"], "spec")
 
 
 if __name__ == "__main__":

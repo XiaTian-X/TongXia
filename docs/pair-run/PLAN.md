@@ -303,7 +303,10 @@
     拒绝文案说明"只能追加";③名下路径在 HEAD 里**不存在**(新建文件)时拒绝;
     ④没配置的测试文件照旧越界;⑤不配这个键时行为一个字不变;⑥名下路径**不**并进
     `shared_paths` 的语义(`idle` 阶段不可写、异议举证不认它);⑦`status` 的可写路径里
-    标出它们是"只追加";⑧变异点:去掉"只追加"的判定、去掉"HEAD 里要存在"的判定,各有用例红
+    标出它们是"只追加";⑧变异点:去掉"只追加"的判定、去掉"HEAD 里要存在"的判定,各有用例红;
+    ⑨(打回后带声明并进)**改名要被看成删除**:`changed_entries` 的 `git status` 带 `--no-renames` ——
+    评审回合把登记表挪进 `shared_paths` 被拒;dev 在 impl 回合把红的测试挪进评审目录被拒;
+    tester 在 spec 回合不带 `--allow-deletion` 挪走已有测试被拒
   - **本仓库**:`.pair/config.json` 已由代笔提交配好 `{"tester": ["tests/conformance/mutation_check.py"]}`
     (键在实现落地前是惰性的,隔离克隆里验过全套照旧全绿)
   - 对应契约:`docs/pair-run/CONTRACT.md` → 评审回合可以只追加变异点登记

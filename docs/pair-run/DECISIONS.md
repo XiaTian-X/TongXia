@@ -389,3 +389,8 @@
 - 理由: 审 W16 时撞见的既有漏洞。`changed_entries` 解析 `git status -z`,改名只取新路径、跳过旧路径,于是旧路径那一侧的删除对写权限边界、删除测试防护、红绿不变量全部不可见。隔离克隆实测:dev 在 impl 直接删 `tests/W1` 被拒;`git mv tests/W1 docs/reviews/…` 放行、exit 0、进 review-impl、`tests/W1` 不在 HEAD(`docs/reviews/` 是 `shared_paths`,dev 可写;挪走后套件绿,impl 的 GREEN 要求也满足)。tester 在 spec 同样放行。review-impl 看 diff 看得见,但没有任何检查会说话。修法方向:`git status` 带 `--no-renames`,改名拆成删除 + 新增,既有检查自然接住。第七轮独立运行若由驱动器跑、没人盯 diff,这是最省事的作弊路径。
 - 已否决: 在 W16 里顺手修 —— 不在本项契约里,且 review-impl 只读。只记在评审文件里 —— 评审文件随工作项沉底。tester 将在 W17 的 spec 回合带 `--contract-change` 把它立成第六轮的一项,dev 可打回。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`
+## W16 — 改名要被看成删除:--no-renames 并进 W16,兑现验收标准 ②
+
+- 理由: dev 在 W16 的 review-test 打回:验收标准 ② 要求"改名被拒",而 `test_改名被拒` 把登记表挪进 `checks/`,拒它的是越界不是本节;挪进 `docs/reviews/` 就退出码 0、登记表不在 HEAD。根子是 tester 在 review-impl 记下的那个既有漏洞 —— `changed_entries` 的 `git status` 把改名合成一条、只给新路径。修法一个旗标 `--no-renames`,dev 在隔离克隆验过全套 409 条 0 红。原计划 W17 的 spec 回合单独立项;并进 W16 是兑现 ② 本身,分开做的话 W16 要么带着没兑现的验收标准 DONE、要么先打一个下一项推倒的补丁。用例补了三条一般形式:评审回合挪登记表、dev 在 impl 挪红的测试、tester 在 spec 不带声明挪已有测试。
+- 已否决: 在 W17 单独立项 —— 理由见上。只修本节、在 `append_only_violation` 里对改名特判 —— 删除测试防护与红绿不变量照样看不见旧路径,dev 挪走红测试那条路仍然开着。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_review_append.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`

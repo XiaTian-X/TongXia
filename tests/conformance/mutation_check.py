@@ -606,6 +606,50 @@ MUTATIONS = [
     ("提交路径不看索引",
      '    out = git("diff", "--cached", "--name-only", "-z", "--", *paths, cwd=root)',
      '    out = git("diff", "--name-only", "-z", "--", *paths, cwd=root)'),
+
+    # --- W16:评审回合可以只追加变异点登记 ------------------------------------
+    # 前九个是 dev 在 impl 回合点名、tester 在 review-impl 隔离复现的;在打回回的 spec
+    # 回合登记,没有欠到下一项。最后一个是并进本项的 `--no-renames`,字面在 spec 定死
+    # (照抄那一行既有写法,只加一个旗标),落地前不匹配。
+    ("只追加路径不在 HEAD 也放行",
+     '    if not blob_sha(root, path):',
+     '    if False:'),
+
+    ("只追加路径有删除行也放行",
+     '    if has_rewrite(root, path):',
+     '    if False:'),
+
+    ("不单独判只追加路径",
+     '        if matches_any(path, appendable):',
+     '        if False:'),
+
+    ("只追加的拒绝理由不落地",
+     '            if why:',
+     '            if False:'),
+
+    ("只追加路径不分阶段",
+     '    if phase not in REVIEW_PHASES:',
+     '    if False:'),
+
+    ("只追加路径合并所有角色名下",
+     '    return list((cfg.get("review_append_paths") or {}).get(PHASE_OWNER[phase], []))',
+     '    return [p for v in (cfg.get("review_append_paths") or {}).values() for p in v]'),
+
+    ("可写路径不标只追加",
+     '    parts += ["%s(只追加)" % p for p in review_append_paths(cfg, phase)]',
+     '    pass'),
+
+    ("status 头部不标只追加",
+     '    print(" 可写路径 : %s" % writable_display(cfg, phase))',
+     '    print(" 可写路径 : %s" % " ".join(writable_paths(cfg, phase)))'),
+
+    ("简报不标只追加",
+     '        "paths": writable_display(cfg, phase),',
+     '        "paths": " ".join(writable_paths(cfg, phase)),'),
+
+    ("改名合成一条只给新路径",
+     '    out = git("status", "--porcelain=v1", "-z", "--untracked-files=all", "--no-renames", cwd=root)',
+     '    out = git("status", "--porcelain=v1", "-z", "--untracked-files=all", cwd=root)'),
 ]
 
 # unittest 的失败行有两种形态:
