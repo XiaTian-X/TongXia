@@ -394,3 +394,8 @@
 - 理由: dev 在 W16 的 review-test 打回:验收标准 ② 要求"改名被拒",而 `test_改名被拒` 把登记表挪进 `checks/`,拒它的是越界不是本节;挪进 `docs/reviews/` 就退出码 0、登记表不在 HEAD。根子是 tester 在 review-impl 记下的那个既有漏洞 —— `changed_entries` 的 `git status` 把改名合成一条、只给新路径。修法一个旗标 `--no-renames`,dev 在隔离克隆验过全套 409 条 0 红。原计划 W17 的 spec 回合单独立项;并进 W16 是兑现 ② 本身,分开做的话 W16 要么带着没兑现的验收标准 DONE、要么先打一个下一项推倒的补丁。用例补了三条一般形式:评审回合挪登记表、dev 在 impl 挪红的测试、tester 在 spec 不带声明挪已有测试。
 - 已否决: 在 W17 单独立项 —— 理由见上。只修本节、在 `append_only_violation` 里对改名特判 —— 删除测试防护与红绿不变量照样看不见旧路径,dev 挪走红测试那条路仍然开着。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_review_append.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`
+## W17 — 捷径还要求契约自 review-impl approve 之后没变过,不只看这一回合的改动
+
+- 理由: 契约原文的安全论证是"承重文件是唯一能让已审过的实现失去依据的东西",判据是"这一回合实际改动了规划或契约"。但这一回合的改动只是工作区那一批,**review-impl approve 之后被提交的契约变更它看不见** —— 第五轮 W15 那一节就是在 W12 进行中、tester 的回合里由代笔人直接提交的(`e62bdf5`),真实发生过。那种情况下捷径会放行一个契约已变、实现没被重审的工作项。改成:review-impl approve 时按 W13 的口径记下契约的工作区 sha,捷径还要求现在与那时相同,没有记录不走捷径。tester 在第六轮开工前的独立审查里挑出(③)。
+- 已否决: 用 `claim` 时记的 `contract_sha` 比 —— 那是 HEAD 口径,而且工作项开头到 review-impl 之间的契约改动(本轮常态)会让捷径几乎永远走不通;实现是在 review-impl approve 那一刻被审过的,基准就该是那一刻。只改"按改动判"那一条 —— 规划文件的变化不改变契约 sha,那一条仍要留着管它。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`
