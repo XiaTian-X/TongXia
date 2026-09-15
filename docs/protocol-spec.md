@@ -131,6 +131,8 @@
 
 `.pair/.last-test.log` 与 `ignore_paths` 命中的路径完全不参与边界检查。
 
+`review_append_paths` 里评审阶段执行者名下的路径单独判:文件必须已在 HEAD 里、相对 HEAD 没有删除行,否则拒绝;满足就放行,不再走越界判定。
+
 支持的通配:`*`(不跨 `/`)、`**`(跨 `/`)、`?`、`[...]`。
 不含通配字符的模式按**前缀目录**匹配(`tests` 匹配 `tests/a/b.py`)。
 
@@ -320,6 +322,7 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 | `shared_paths` | string[] | `["docs/reviews"]` | 双方任何阶段都能写。异议举证认这里 |
 | `frozen_paths` | string[] | `["docs/PLAN.md","docs/CONTRACT.md",".agents",".claude",".pair"]` | agent 一律不得修改 |
 | `ignore_paths` | string[] | `[]` | 完全不参与边界检查的构建副产物 |
+| `review_append_paths` | object | `{}` | `{角色: [路径]}`。评审阶段的执行者可以往自己名下**已提交**的这些文件**只追加**(没有删除行,中间插入也算);不是 `shared_paths`,其他阶段不可写 |
 | `scope` | string[] | `[]` | 本轮结对能碰的范围。空 = 不限。评审目录与记忆层豁免 |
 | `full_test_cmd` | string\|null | `null` | 全量套件。只在工作项完成时跑一次,**只报告不阻断**(退出码 2) |
 | `plan_file` | string | `docs/PLAN.md` | — |

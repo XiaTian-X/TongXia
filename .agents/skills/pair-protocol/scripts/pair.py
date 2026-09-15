@@ -602,6 +602,42 @@ def writable_paths(cfg, phase):
     return list(cfg["roles"][PHASE_OWNER[phase]]) + shared
 
 
+def review_append_paths(cfg, phase):
+    """评审阶段执行者名下、**只能追加**的路径(`review_append_paths`,W16)。
+
+    **不并进 `writable_paths`。** 那里评审与 idle 返回的是 `shared_paths`,而
+    `shared_paths` 另有语义(任何阶段都可写、异议举证认它)。这批路径只在评审阶段、
+    只对阶段执行者放开,而且放开的不是"可写",是"只追加" —— 在写权限边界里单独判。
+    """
+    if phase not in REVIEW_PHASES:
+        return []
+    return list((cfg.get("review_append_paths") or {}).get(PHASE_OWNER[phase], []))
+
+
+def writable_display(cfg, phase):
+    """`status` 与简报里"可写路径"那一行:只追加的路径标出来,免得被读成可写。"""
+    parts = list(writable_paths(cfg, phase))
+    parts += ["%s(只追加)" % p for p in review_append_paths(cfg, phase)]
+    return " ".join(parts)
+
+
+def append_only_violation(root, path):
+    """这份只追加路径本回合的改动是不是"只追加"。返回拒绝理由;None 放行。
+
+    **"追加" = 相对 HEAD 没有删除行**,不是"加在末尾":`MUTATIONS` 的新条目必须插在
+    收尾的 `]` 之前。删掉整个文件、改名,都有删除行。
+
+    **必须已在 HEAD 里。** `has_rewrite` 对未跟踪文件的删除行数是 0,会把新建当成
+    纯追加 —— 那等于评审回合能新写一整个测试文件。
+    """
+    if not blob_sha(root, path):
+        return ("评审回合只能往已提交的文件追加,这份文件不在 HEAD 里 —— "
+                "新建不算追加")
+    if has_rewrite(root, path):
+        return "评审回合只能往它追加,不能改或删已有行"
+    return None
+
+
 def run_tests(root, cfg, cmd=None, log_rel=None):
     cmd = cmd or os.environ.get("PAIR_TEST_CMD") or cfg.get("test_cmd")
     if not cmd:
@@ -1156,7 +1192,7 @@ def _brief_vars(cfg, state, phase):
     return {
         "plan": cfg["plan_file"],
         "contract": cfg["contract_file"],
-        "paths": " ".join(writable_paths(cfg, phase)),
+        "paths": writable_display(cfg, phase),
         "prog": PROG_HINT,
         "redgreen": rg,
         "notes": notes,
@@ -1232,7 +1268,7 @@ def cmd_status(root, cfg, args):
     print(" 当前工作项: %s" % item_label)
     print(" 当前阶段 : %s   → 归属: %s" % (phase, owner))
     print(" 测试状态 : %s   (详见 %s)" % ("GREEN" if green else "RED", TESTLOG_REL))
-    print(" 可写路径 : %s" % " ".join(writable_paths(cfg, phase)))
+    print(" 可写路径 : %s" % writable_display(cfg, phase))
     print(" 已完成项 : %d" % len(state["completed_items"]))
     if state["deadlock_hits"]:
         print(" 曾触发死锁闸: %s" % "、".join(state["deadlock_hits"]))
@@ -1861,6 +1897,7 @@ def cmd_handoff(root, cfg, args):
 
     # --- 写权限边界校验 ---------------------------------------------------
     allowed = writable_paths(cfg, phase)
+    appendable = review_append_paths(cfg, phase)
     exempt_from_scope = list(cfg["shared_paths"])
     if memory_on(cfg):
         exempt_from_scope += [cfg["notes_dir"], cfg["decisions_file"]]
@@ -1881,6 +1918,12 @@ def cmd_handoff(root, cfg, args):
                            if path_matches(path, f)), None)
         if hit_frozen is not None:
             violations.append((path, "冻结路径 %s 之下,agent 不得修改" % hit_frozen))
+            continue
+        # 只追加路径(W16):不进 allowed,在这里单独判,判完就不再走越界那一道。
+        if matches_any(path, appendable):
+            why = append_only_violation(root, path)
+            if why:
+                violations.append((path, why))
             continue
         if not matches_any(path, allowed):
             who = ("本回合是只读评审" if phase in REVIEW_PHASES
