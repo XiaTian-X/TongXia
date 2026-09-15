@@ -210,10 +210,7 @@
       "test_v1_documents.TestBaselineNote.test_收窄了套件却没有基线说明会被警告"
     ],
     "拆掉契约依据必填": [
-      "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝",
-      "test_boundaries.TestDeletionGuard.test_声明的删除理由会进提交记录",
-      "test_boundaries.TestDeletionGuard.test_显式声明后允许删除",
-      "test_boundaries.TestReviewIsReadOnly.test_评审时不能改实现"
+      "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝"
     ],
     "拆掉契约依据的可断言检查": [
       "test_v1_brownfield.TestContractProvenance.test_待核实的规格不能开_feature"
@@ -231,18 +228,13 @@
       "test_v1_documents.TestSetupReportNamesSections.test_把契约粘进围栏不算点名"
     ],
     "拆掉契约审查门禁": [
-      "test_v1_setup.TestVerifySetup.test_敷衍的结论不算数",
-      "test_v1_setup.TestVerifySetup.test_未交结论时给出明确指引",
-      "test_v1_setup.TestVerifySetup.test_没交契约审查结论时不放行"
+      "test_v1_setup.TestVerifySetup.test_敷衍的结论不算数"
     ],
     "拆掉契约小节重名检测": [
       "test_v1_brownfield.TestContractSectionParsing.test_重名小节被当成歧义拦下"
     ],
     "拆掉契约覆盖度检查": [
-      "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝",
-      "test_boundaries.TestDeletionGuard.test_声明的删除理由会进提交记录",
-      "test_boundaries.TestDeletionGuard.test_显式声明后允许删除",
-      "test_boundaries.TestReviewIsReadOnly.test_评审时不能改实现"
+      "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝"
     ],
     "拆掉子目录豁免": [
       "test_invariants.TestDeadlockGate.test_同一工作项打回三次触发死锁闸"
