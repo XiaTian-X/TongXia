@@ -650,6 +650,34 @@ MUTATIONS = [
     ("改名合成一条只给新路径",
      '    out = git("status", "--porcelain=v1", "-z", "--untracked-files=all", "--no-renames", cwd=root)',
      '    out = git("status", "--porcelain=v1", "-z", "--untracked-files=all", cwd=root)'),
+
+    # --- W17:只涉及测试的打回不再经过 impl ---------------------------------------
+    # W16 落地后第一个在 review-impl 当场登记的工作项(只追加)。锚点 dev 点名、tester 在
+    # review-impl 复现。dev 删掉了原型里两个死重的判定,另两个等价变异(外层 `target == "impl"`、
+    # `rebound_from` 随非打回清空)照它的说明不登记。
+    ("捷径不看 GREEN",
+     '    if not green:\n        return False\n    if state.get("rebound_from") != "review-test":',
+     '    if False:\n        return False\n    if state.get("rebound_from") != "review-test":'),
+
+    ("捷径不看回弹来源",
+     '    if state.get("rebound_from") != "review-test":',
+     '    if False:'),
+
+    ("捷径不看本回合承重文件改动",
+     '    if changed_named_frozen:\n        return False',
+     '    if False:\n        return False'),
+
+    ("捷径不比 review-impl 时的契约",
+     '    return state.get("reviewed_contract") == worktree_sha(root, cfg["contract_file"])',
+     '    return True'),
+
+    ("捷径的契约在打回时才记",
+     '    if phase == "review-impl" and verdict == "approve":\n        state["reviewed_contract"] = worktree_sha(root, cfg["contract_file"])',
+     '    if verdict == "changes":\n        state["reviewed_contract"] = worktree_sha(root, cfg["contract_file"])'),
+
+    ("捷径从不生效",
+     '        target = "review-test"',
+     '        pass'),
 ]
 
 # unittest 的失败行有两种形态:

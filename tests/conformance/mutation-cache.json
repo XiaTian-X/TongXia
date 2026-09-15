@@ -1,5 +1,5 @@
 {
-  "baseline": "24846351ecb53509",
+  "baseline": "9bcdaf389b99c45b",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
@@ -372,6 +372,24 @@
     ],
     "拆掉重钉后 sha 的 strip": [
       "test_v1_judge.TestJudgeRepinAtDone.test_写进正文的值不带换行"
+    ],
+    "捷径不比 review-impl 时的契约": [
+      "test_v1_rebound_shortcut.TestShortcutNotTaken.test_review_test_期间契约被人提交过_照旧进_impl"
+    ],
+    "捷径不看 GREEN": [
+      "test_v1_rebound_shortcut.TestShortcutNotTaken.test_以红结束_照旧进_impl"
+    ],
+    "捷径不看回弹来源": [
+      "test_v1_effective.TestReportSplitsRounds.test_两数之和恒等于交接提交"
+    ],
+    "捷径不看本回合承重文件改动": [
+      "test_v1_rebound_shortcut.TestShortcutNotTaken.test_这一回合改了规划_照旧进_impl"
+    ],
+    "捷径从不生效": [
+      "test_v1_rebound_shortcut.TestShortcutTaken.test_带了声明但没真改承重文件_照样走捷径"
+    ],
+    "捷径的契约在打回时才记": [
+      "test_v1_rebound_shortcut.TestShortcutNotTaken.test_review_test_期间契约被人提交过_照旧进_impl"
     ],
     "提交不限定路径": [
       "test_v1_setup_commit.TestOnlyTheAddedBatchIsCommitted.test_结论有改动时_预先暂存的实现不进这次提交_仍留在索引里"
