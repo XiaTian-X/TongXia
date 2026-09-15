@@ -1,10 +1,10 @@
 {
   "round": 13,
-  "phase": "review-test",
+  "phase": "spec",
   "item": "W16",
   "item_type": "feature",
-  "last_actor": "tester",
-  "changes_count": 0,
+  "last_actor": "dev",
+  "changes_count": 1,
   "completed_items": [
     "W2",
     "W3",
@@ -27,5 +27,5 @@
     "tester": "840b62c3a77e5f87095d378349966dee2cc93607",
     "dev": "840b62c3a77e5f87095d378349966dee2cc93607"
   },
-  "after_rebound": false
+  "after_rebound": true
 }
