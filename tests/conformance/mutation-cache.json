@@ -1,8 +1,14 @@
 {
-  "baseline": "51d08073339c0f90",
+  "baseline": "0f65e8838a73f5bf",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
+    ],
+    "status 头部不标只追加": [
+      "test_v1_review_append.TestStatusMarksAppendOnly.test_非执行者看到的头部那一行也标出只追加"
+    ],
+    "不单独判只追加路径": [
+      "test_v1_review_append.TestAnythingElseIsRefused.test_改了已有行被拒_文案说只能追加"
     ],
     "依据从不写": [
       "test_v1_effective.TestBasisOnlyWhenRewrite.test_有改写时_basis_照样留痕"
@@ -21,6 +27,24 @@
     ],
     "只认 impl 阶段的异议,漏掉评审打回": [
       "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
+    ],
+    "只追加的拒绝理由不落地": [
+      "test_v1_review_append.TestAnythingElseIsRefused.test_不在_HEAD_里的名下路径_新建被拒"
+    ],
+    "只追加路径不分阶段": [
+      "test_v1_review_append.TestNotSharedPaths.test_idle_时可写路径里没有它"
+    ],
+    "只追加路径不在 HEAD 也放行": [
+      "test_v1_review_append.TestAnythingElseIsRefused.test_不在_HEAD_里的名下路径_新建被拒"
+    ],
+    "只追加路径合并所有角色名下": [
+      "test_v1_review_append.TestNotSharedPaths.test_评审阶段只放开执行者名下的"
+    ],
+    "只追加路径有删除行也放行": [
+      "test_v1_review_append.TestAnythingElseIsRefused.test_删掉整个文件被拒"
+    ],
+    "可写路径不标只追加": [
+      "test_v1_review_append.TestStatusMarksAppendOnly.test_执行者看到的只能写那一行也标出只追加"
     ],
     "回落改回解析不出就停": [
       "test_v1_setup_report.TestFallbackToSharedPath.test_解析不出角色时回落到旧路径并说出来"
@@ -361,6 +385,9 @@
     "提交路径不看索引": [
       "test_v1_setup_commit.TestOnlyTheAddedBatchIsCommitted.test_结论有改动时_预先暂存的实现不进这次提交_仍留在索引里"
     ],
+    "改名合成一条只给新路径": [
+      "test_v1_review_append.TestAnythingElseIsRefused.test_改名被拒"
+    ],
     "文档理由不 strip": [
       "test_v1_docreason.TestDocReasonRequired.test_理由只有空白不算数"
     ],
@@ -396,6 +423,9 @@
     ],
     "第二次打回改成按工作项算": [
       "test_v1_validity.TestSameTurnGatesUnchanged.test_第二次打回_更早回合的决策不算"
+    ],
+    "简报不标只追加": [
+      "test_v1_review_append.TestStatusMarksAppendOnly.test_执行者看到的只能写那一行也标出只追加"
     ],
     "索引判据恒真": [
       "test_v1_setup_report.TestNoIndexDiffDoesNotFail.test_原样重跑不再失败"

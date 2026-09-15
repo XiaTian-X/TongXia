@@ -474,7 +474,7 @@ def resolve_role(root):
 
 def changed_entries(root):
     """[(xy, path)]。用 -z 输出,绕开中文/空格路径的转义问题。"""
-    out = git("status", "--porcelain=v1", "-z", "--untracked-files=all", cwd=root)
+    out = git("status", "--porcelain=v1", "-z", "--untracked-files=all", "--no-renames", cwd=root)
     parts = out.split("\0")
     entries, i = [], 0
     while i < len(parts):
