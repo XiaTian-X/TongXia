@@ -1,5 +1,5 @@
 {
-  "baseline": "8096932c68e3f0fd",
+  "baseline": "581c98eb7e667d11",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
@@ -460,6 +460,24 @@
     ],
     "规范性文档不算删除": [
       "test_v1_docreason.TestDocReasonRequired.test_删掉一份规范性文档同样要理由"
+    ],
+    "评审记录改写 handoff 不判": [
+      "test_v1_review_immutable.TestRewriteIsRefused.test_不分角色不分阶段_dev_在_impl_改写也被拒"
+    ],
+    "评审记录改写 verify-setup 不判": [
+      "test_v1_review_immutable.TestVerifySetupSide.test_改写已提交的结论被拒_且拒绝早于写状态"
+    ],
+    "评审记录改写不看删除行": [
+      "test_v1_review_immutable.TestAppendAndNewAreAllowed.test_纯追加放行"
+    ],
+    "评审记录改写不看顶层范围": [
+      "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝"
+    ],
+    "评审记录改写不豁免 ignore": [
+      "test_v1_review_immutable.TestAppendAndNewAreAllowed.test_ignore_paths_豁免"
+    ],
+    "评审记录改写的拒绝晚于写状态": [
+      "test_v1_review_immutable.TestVerifySetupSide.test_改写已提交的结论被拒_且拒绝早于写状态"
     ],
     "门禁没开也拦过期的校验": [
       "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝"

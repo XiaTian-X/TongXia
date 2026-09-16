@@ -678,6 +678,42 @@ MUTATIONS = [
     ("捷径从不生效",
      '        target = "review-test"',
      '        pass'),
+
+    # --- W18:评审记录只能追加 ------------------------------------------------
+    # dev 点名、tester 在 review-impl 当场登记(W16)。"已在 HEAD 里"那一项是等价变异
+    # (未跟踪文件删除行恒为 0),PLAN ⑥′ 已带声明改成不要求变异点,故不在此列。
+    # `if not _review_top_level(cfg, path):` 这一行 check_review_names 里也有一句一模一样的,
+    # 锚要带上后两行才唯一。
+    ("评审记录改写不看顶层范围",
+     '    if not _review_top_level(cfg, path):\n        return None\n'
+     '    if matches_any(path, cfg["ignore_paths"]) or path in PROTOCOL_LOGS:',
+     '    if False:\n        return None\n'
+     '    if matches_any(path, cfg["ignore_paths"]) or path in PROTOCOL_LOGS:'),
+
+    ("评审记录改写不豁免 ignore",
+     '    if matches_any(path, cfg["ignore_paths"]) or path in PROTOCOL_LOGS:\n'
+     '        return None\n    if blob_sha(root, path) is None:',
+     '    if False:\n        return None\n    if blob_sha(root, path) is None:'),
+
+    ("评审记录改写不看删除行",
+     '    if not has_rewrite(root, path):',
+     '    if False:'),
+
+    ("评审记录改写 handoff 不判",
+     '        rewrite = review_rewrite_violation(root, cfg, path)',
+     '        rewrite = None'),
+
+    ("评审记录改写 verify-setup 不判",
+     '    rewrite = review_rewrite_violation(root, cfg, report_rel)',
+     '    rewrite = None'),
+
+    # 顺序变异:在**检查之前**先落一次盘 —— 等价于"拒绝晚于写状态"。
+    # 第一版写成在 `state["setup_verified"] = True` 之后插一次 save_state,那是在拒绝
+    # **之后**,die 早就退出了,拆了等于没拆 —— mutation_check 如实报了"存活"。
+    ("评审记录改写的拒绝晚于写状态",
+     '    rewrite = review_rewrite_violation(root, cfg, report_rel)\n',
+     '    state["setup_verified"] = True\n    save_state(root, state)\n'
+     '    rewrite = review_rewrite_violation(root, cfg, report_rel)\n'),
 ]
 
 # unittest 的失败行有两种形态:
