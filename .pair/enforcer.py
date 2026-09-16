@@ -1636,6 +1636,39 @@ def _review_top_level(cfg, path):
     return any(parent == str(PurePosixPath(sp)) for sp in cfg["shared_paths"])
 
 
+def review_rewrite_violation(root, cfg, path):
+    """这份改动是不是在**改写**一份已提交的评审记录。返回拒绝理由;None 放行(W18)。
+
+    评审记录是双方共识的凭据,和 `DECISIONS.md` 同级 —— 那边改写会被拒,这边一直不会。
+    W14、W15 的第二次 review-impl 各把上一版整份改写,而简报其实一直给着正确的名字
+    (`review_file_for` 在打回过之后算的是 `-2`),缺的只是写侧这一道。
+
+    范围与命名检查同一个:评审目录的**顶层 `.md`**。判据与 `--basis` 判改写同口径:
+    相对 HEAD 有删除行。删除整份、改名(W16 起改名拆成删除 + 新增)都有删除行。
+
+    **两处措辞是故意跟既有变异锚点岔开的**:`blob_sha(...) is None` 与
+    `not has_rewrite(...)` —— W16 的两个锚点是 `if not blob_sha(root, path):` 与
+    `if has_rewrite(root, path):`,照抄会让那两个锚点各匹配两处,
+    `test_变异点仍能匹配到源码` 当场红。
+    """
+    if not _review_top_level(cfg, path):
+        return None
+    if matches_any(path, cfg["ignore_paths"]) or path in PROTOCOL_LOGS:
+        return None
+    if blob_sha(root, path) is None:
+        return None
+    if not has_rewrite(root, path):
+        return None
+    return "评审记录只能追加:这份文件已经提交过,不能改或删它已有的行"
+
+
+def review_rewrite_hint(cfg, state, phase):
+    """改写评审记录被拒时,告诉它本回合该写哪个文件、以及不要撤销别人的东西。"""
+    name = review_file_for(cfg, state, phase)
+    where = "本回合该写的是 %s" % name if name else "要另写就新建一份文件"
+    return "%s。\n      如果这份改动不是你做的,不要撤销,也不要改名 —— 告诉人类。" % where
+
+
 def check_review_names(root, cfg, entries, item_ids):
     """评审记录的文件名要能对上某个工作项。返回拒绝理由;None 放行。
 
@@ -1969,6 +2002,11 @@ def cmd_handoff(root, cfg, args):
                                      "不是你顺手能做的 —— 写进 %s 说明理由。"
                                % (" ".join(cfg["scope"]),
                                   " ".join(cfg["shared_paths"]))))
+
+    for xy, path in entries:
+        rewrite = review_rewrite_violation(root, cfg, path)
+        if rewrite:
+            violations.append((path, rewrite + "。" + review_rewrite_hint(cfg, state, phase)))
 
     # 孤儿要单独说。开工前的警告和真正撞上的时刻隔着几十个回合,而撞上的那个
     # 文件多半是人类刚改的 —— 让 agent"撤销这些改动"就会撤销掉不是它写的东西。
@@ -3443,6 +3481,15 @@ def cmd_verify_setup(root, cfg, args):
     # 状态位与那份契约审查结论。曾经这里是 `git add -A` —— 那会把工作区里
     # 任何东西一并提交进基线,包括结对开始前就被写好的实现,而那恰好会让
     # spec 阶段的 RED 要求失效(测试一上来就是绿的)。
+    # 这份结论也不能改写(W18)。**拒绝必须在写状态之前** —— 放在 save_state 之后
+    # 就是 W12、W15 两次治过的"状态对、退出码错",而且这回状态位还留在工作区,
+    # 下一次交接会判它篡改。
+    rewrite = review_rewrite_violation(root, cfg, report_rel)
+    if rewrite:
+        die(rewrite + "。\n\n"
+            "%s 是上一次校验留下的凭据,契约变了就往它**末尾追加**一段补记,\n"
+            "不要覆盖(W13 起两个角色都是这么做的)。\n\n"
+            "如果这份改动不是你做的,不要撤销 —— 告诉人类。" % report_rel)
     state["setup_verified"] = True
     # 按角色记下这次校验的是哪一份契约(工作区内容)。先复制再写:load_state
     # 是浅拷贝,直接往默认值里的 dict 写会改到 DEFAULT_STATE 本身。
