@@ -399,3 +399,13 @@
 - 理由: 契约原文的安全论证是"承重文件是唯一能让已审过的实现失去依据的东西",判据是"这一回合实际改动了规划或契约"。但这一回合的改动只是工作区那一批,**review-impl approve 之后被提交的契约变更它看不见** —— 第五轮 W15 那一节就是在 W12 进行中、tester 的回合里由代笔人直接提交的(`e62bdf5`),真实发生过。那种情况下捷径会放行一个契约已变、实现没被重审的工作项。改成:review-impl approve 时按 W13 的口径记下契约的工作区 sha,捷径还要求现在与那时相同,没有记录不走捷径。tester 在第六轮开工前的独立审查里挑出(③)。
 - 已否决: 用 `claim` 时记的 `contract_sha` 比 —— 那是 HEAD 口径,而且工作项开头到 review-impl 之间的契约改动(本轮常态)会让捷径几乎永远走不通;实现是在 review-impl approve 那一刻被审过的,基准就该是那一刻。只改"按改动判"那一条 —— 规划文件的变化不改变契约 sha,那一条仍要留着管它。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`
+## W18 — verify-setup 那一侧的拒绝必须早于写状态
+
+- 理由: 契约原文只说"要提交的那份结论若已在 HEAD 里且有删除行,拒绝,不提交",没说拒绝在哪一步。`cmd_verify_setup` 的顺序是:结论长度与点名检查 → 起草人声明 → `state["setup_verified"] = True` → `save_state` → `git add` / 提交。新检查若插在写状态之后,就是 W12(索引无差异时空提交)与 W15(pathspec 不匹配)两次治过的同一个形状:**状态是对的、退出码是错的**,而且这回状态位留在工作区,下一次交接会判它篡改。补写明"拒绝发生在写状态之前",可断言"拒绝后状态文件不变、HEAD 不变"。tester 在第六轮开工前的独立审查里挑出(④)。
+- 已否决: 留给实现方自己把握 —— 前两轮的实测说明这个顺序错了不会有任何用例红,除非写进判据。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`
+## W18 — 「已在 HEAD 里」是死条件,不要求变异点;判据要让状态真的会变
+
+- 理由: 两件都是在隔离副本里写完整参考实现时实测出来的。①PLAN ⑥ 原文要求"去掉「已在 HEAD 里」有用例红",但那是**等价变异**:未跟踪文件相对 HEAD 的删除行恒为 0,`has_rewrite` 已经放行它,拆掉那一项全套 0 红。留着它当可读性可以,登记变异点则是登记一条永远抓不到的账。②`verify-setup` 那一侧"拒绝早于写状态"的用例,第一版让 `verify-setup` 先通过一次再改写结论 —— 那时 `setup_verified` 已是 `true`,第二次写状态字节相同,**把拒绝挪到 `save_state` 之后照样绿**。改成结论由人类提交、`setup_verified` 仍为假时第一次校验,拒绝挪到 `save_state` 之后就红了。契约里补了这句判据要求。
+- 已否决: 把"已在 HEAD 里"从实现里删掉 —— 它让"新建不算改写"这件事在代码里看得见,留着不花钱。给它硬造一条用例(比如伪造一个不在 HEAD 却有删除行的路径)—— git 里不存在这种状态。
+- 影响路径: `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_review_immutable.py`
