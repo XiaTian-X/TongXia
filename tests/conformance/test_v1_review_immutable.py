@@ -15,7 +15,7 @@
 
 import unittest
 
-from harness import EVIDENCE, PairTestCase, VERIFY_OK, setup_report
+from harness import EVIDENCE, PairTestCase, VERIFY_OK, setup_report, with_loc
 
 REVIEWS = "docs/reviews"
 DONE_FILE = REVIEWS + "/W1-review-impl.md"
@@ -40,12 +40,27 @@ class ImmutableBase(PairTestCase):
 class TestRewriteIsRefused(ImmutableBase):
 
     def test_评审回合改写已提交的评审记录被拒_文案给出该写的文件名(self):
+        """**先打回一次,让"本回合该写的"与"被改写的那份"不同名。**
+
+        第一版直接在第一次 review-impl 里改写 `W1-review-impl.md`,断言文案含
+        `W1-review-impl.md` —— 而被拒的路径本来就会被打进拒绝清单里,那一句**恒成立**:
+        dev 在 review-test 实测,把 `review_rewrite_hint` 整句删掉,全套 0 红。
+
+        打回一次之后 `changes_count` 是 1,简报算出的名字是 `W1-review-impl-2.md`,
+        而被改写的仍是 `W1-review-impl.md` —— 这时文案里出现 `-2` 才说明"该写的文件名"
+        真的被打出来了。"""
         self.commit_review()
         self.repo.advance_to("review-impl")
+        self.assertAccepted(self.repo.run("handoff", "changes", with_loc("这里不对"),
+                                          role="tester"))
+        self.assertAccepted(self.repo.run("handoff", "改好了", role="dev"))
+        self.assertEqual(self.repo.state()["changes_count"], 1)
+
         self.repo.write(DONE_FILE, "# W1 review-impl\n\n裁决: approve。\n(上一版没了)\n")
         r = self.approve_impl()
         self.assertRefused(r, DONE_FILE, "不要撤销", "告诉人类")
-        self.assertIn("W1-review-impl.md", r.text, "文案要给出本回合该写的文件名")
+        self.assertIn("W1-review-impl-2.md", r.text,
+                      "文案要给出本回合该写的文件名,而不只是被拒的那条路径")
         self.assertEqual(self.phase(), "review-impl")
 
     def test_删掉整份评审记录被拒(self):
