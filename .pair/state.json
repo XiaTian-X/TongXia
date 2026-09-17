@@ -1,10 +1,10 @@
 {
   "round": 17,
-  "phase": "review-test",
+  "phase": "spec",
   "item": "W20",
   "item_type": "feature",
-  "last_actor": "tester",
-  "changes_count": 0,
+  "last_actor": "dev",
+  "changes_count": 1,
   "completed_items": [
     "W2",
     "W3",
@@ -31,7 +31,7 @@
     "tester": "fcea4e44a8ce5f6a3829faf9aca72c25bc3aedc2",
     "dev": "fcea4e44a8ce5f6a3829faf9aca72c25bc3aedc2"
   },
-  "after_rebound": false,
-  "rebound_from": null,
+  "after_rebound": true,
+  "rebound_from": "review-test",
   "reviewed_contract": "fb9f20a8bff901866b8cc39af233125e93f4db36"
 }
