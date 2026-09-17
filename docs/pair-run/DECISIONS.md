@@ -429,3 +429,8 @@
 - 理由: W20 完成之后拿 `report --since db90b04` 看第六轮,`--no-decision` / `--contract-change` 的分母是 6,而第六轮只完成了 W16–W20 五项。多出来的那次是 `136cabd`(W20 的 review-impl approve):tester 的 `--checked` 原样进正文,里面有一句 `finished 只数 … phase=… -> idle 的交接`,而 dev 写的计数正则 `phase=\S+ -> idle ` 没有锚定行首,`…` 匹配了 `\S+`,这次交接正文里又有协议生成的 `item=W20` 行,于是被计成完成。**这正是 tester 在 W14 review-impl 里警告过的那一类**(自由文本旗标能伪造 report 要解析的行),dev 在 W20 又写出了一个。同一类的既有写法还有 `"phase=impl -> " in body`(未判定的 impl 回合)。修法方向:只认协议生成的那一行,`^role=\S+ phase=\S+ -> idle item=`(`re.M`),两处一起改,并补一条"旗标散文里出现同样字样时不计"的用例。
 - 已否决: 在 W20 里修 —— W20 已经 DONE,PLAN 全部完成,协议不再轮转,改代码需要一个工作项。只写在笔记里 —— 笔记随工作项沉底,而这个偏差会让第七轮独立运行的两条比率从第一天起就偏高。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_report_since.py`, `tests/conformance/test_v1_report.py`
+## SETUP — 第六轮收尾追加 W21:report 只认协议写进提交正文的那几行,人类裁决先修复
+
+- 理由: W20 完成后发现 report 的完成计数被评审散文伪造(`136cabd`),人类裁决先修复、再做第七轮独立运行。立项时把五处"整段正文找子串"都拿锚定口径对全部历史比过,又找到一处:人类手写的 `0aea588` 正文提到 `item=`,被算成一次交接。所以 W21 管五处而不是一处。类型定为 `bug`:缺陷今天就能被失败用例复现,spec 必须 RED。
+- 已否决: 只修 `-> idle` 那一处 —— 同一类另外四处漏洞相同,其中交接那一处已经在本仓库算错。顺带让 `handoff` 拒绝旗标值里的换行 —— 那是另一处行为变化,伪造需要刻意为之;本节只修不需要任何恶意就会发生的那一类。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
