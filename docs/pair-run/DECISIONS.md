@@ -424,3 +424,8 @@
 - 理由: dev 在 impl 回合实测:旁支上的提交当起点,`report` 退出 0、报交接 3 次,读的人以为是"那个提交之后",实际是两条分支的差集。契约只写了"解析不成提交时拒绝",dev 没越界实现,把判断交给 tester。`report` 存在的理由是让指标不静默偏;修法一行(`merge-base --is-ancestor`),行为可断言。参考实现全套 463 OK,拆掉那一项只红新用例。连带撤掉已登记的「report 起点不限定为提交」:祖先判定对树对象同样拒,拆掉 `^{commit}` 在参考实现里存活,是等价变异。
 - 已否决: 只在命令参考写注意 —— 读报告的人不会先读参考;印一条警告但照常统计 —— 驱动器与脚本只看退出码,等于没有。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_report_since.py`
+## W20 — report 的完成计数没锚定到协议生成的那一行:评审散文里的 phase=… -> idle 被算成一次完成
+
+- 理由: W20 完成之后拿 `report --since db90b04` 看第六轮,`--no-decision` / `--contract-change` 的分母是 6,而第六轮只完成了 W16–W20 五项。多出来的那次是 `136cabd`(W20 的 review-impl approve):tester 的 `--checked` 原样进正文,里面有一句 `finished 只数 … phase=… -> idle 的交接`,而 dev 写的计数正则 `phase=\S+ -> idle ` 没有锚定行首,`…` 匹配了 `\S+`,这次交接正文里又有协议生成的 `item=W20` 行,于是被计成完成。**这正是 tester 在 W14 review-impl 里警告过的那一类**(自由文本旗标能伪造 report 要解析的行),dev 在 W20 又写出了一个。同一类的既有写法还有 `"phase=impl -> " in body`(未判定的 impl 回合)。修法方向:只认协议生成的那一行,`^role=\S+ phase=\S+ -> idle item=`(`re.M`),两处一起改,并补一条"旗标散文里出现同样字样时不计"的用例。
+- 已否决: 在 W20 里修 —— W20 已经 DONE,PLAN 全部完成,协议不再轮转,改代码需要一个工作项。只写在笔记里 —— 笔记随工作项沉底,而这个偏差会让第七轮独立运行的两条比率从第一天起就偏高。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_report_since.py`, `tests/conformance/test_v1_report.py`
