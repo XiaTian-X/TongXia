@@ -161,7 +161,7 @@ pair.py verify-setup --drafter self|other
 这份结论的证明力因此打折。声明写进提交正文,不写在结论里 ——
 用参数而不是搜措辞的理由见 [ADR-024](design-decisions.md)。
 
-开工前**一次性**的只读校验,由**还没动手的那一方**跑。检查配置自洽、基线全绿、
+开工前的只读校验,由**两个角色各跑一次**(`claim` 要求两份校验都作数)。检查配置自洽、基线全绿、
 PLAN 格式、契约覆盖度、记忆层路径合法性、入口文件齐备 ——
 完整检查表见 [protocol-spec.md §5.4](protocol-spec.md#54-verify-setup)。
 
@@ -262,7 +262,7 @@ pair.py whose-turn
 
 ```
 turn tester        接下来轮到 tester
-turn dev           接下来轮到 dev
+turn dev           接下来轮到 dev(idle 时也可能是它:tester 的校验作数、dev 的不作数,dev 要先重跑 verify-setup)
 stop <理由>        该停下来交给人类
 ```
 

@@ -65,7 +65,7 @@ python3 .agents/skills/pair-protocol/scripts/pair.py status
 
 ## 开工前:verify-setup
 
-结对开始前,由**还没动手的那一方**跑一次:
+结对开始前,**两个角色各跑一次** —— `claim` 要求两份都作数,契约之后变了就两边都要重跑:
 
 ```
 python3 .agents/skills/pair-protocol/scripts/pair.py verify-setup --drafter self|other

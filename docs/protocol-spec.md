@@ -93,9 +93,14 @@
 - 执行者是 `tester`
 - 当前阶段是 `idle`
 - `require_setup_verification` 为真时,`state.setup_verified` 必须为真
-- 同上为真时,**执行者这个角色**上次通过校验时读的契约
-  (`state.setup_verified_contract[<角色>]`,取**工作区内容**的 blob sha)必须和现在
-  工作区里的一致;记录缺失或契约读不到都算不一致 —— 契约改过就要重跑 `verify-setup`
+- 同上为真时,**两个角色**上次通过校验时读的契约
+  (`state.setup_verified_contract[<角色>]`,取**工作区内容**的 blob sha)都必须和现在
+  工作区里的一致;记录缺失或契约读不到都算不一致 —— 契约改过就要重跑 `verify-setup`。
+  拒绝文案点名是哪个角色,只有那个角色自己重跑才能解锁
+
+**idle 时轮到谁**:门禁开着、tester 那一份作数而 dev 那一份不作数时,idle 的归属是 **dev**
+(`whose-turn` 输出 `turn dev`,dev 的 `status` 给出重跑指引)—— 否则只有 dev 能解锁、
+归属却是 tester,驱动器会反复调度 tester。tester 那一份不作数时照旧先轮到 tester。
 - 工作项存在于 PLAN、未完成、类型合法
 - `state.json` 未被篡改
 
@@ -206,7 +211,7 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 
 ### 5.4 verify-setup
 
-开工前一次性只读校验,由**还没动手的那一方**跑。检查项:
+开工前只读校验,由**两个角色各跑一次**(`claim` 要求两份校验都作数)。检查项:
 
 | 检查 | 级别 |
 |---|---|

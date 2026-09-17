@@ -781,15 +781,17 @@ def stale_verification(root, cfg, state, role):
     seen = (state.get("setup_verified_contract") or {}).get(role)
     if seen == now:
         return None
-    why = ("状态里没有你(%s)上次校验时读的是哪一份契约 —— 存量项目升级上来就是这样,\n"
+    why = ("状态里没有 %s 上次校验时读的是哪一份契约 —— 存量项目升级上来就是这样,\n"
            "\"不知道校验的是哪一份\"和\"校验的是另一份\"风险一样" % role
            if seen is None else
-           "%s 在你(%s)上次通过开工前校验之后变过(比的是工作区内容,\n"
+           "%s 在 %s 上次通过开工前校验之后变过(比的是工作区内容,\n"
            "人类还没提交的改动也算)" % (rel, role))
     return ("%s。\n\n"
-            "每个角色各记一份:对方重跑不能替你解锁 —— 照契约写断言的是 tester,\n"
-            "它读的若是旧契约,两边就会各自\"对\"、合起来是废的。重跑:\n"
-            "  python3 %s verify-setup --drafter self|other" % (why, PROG_HINT))
+            "每个角色各记一份,**只有 %s 自己重跑才能解锁** —— 照契约写断言的是 tester、\n"
+            "写实现的是 dev,任何一方读的若是旧契约,两边就会各自\"对\"、合起来是废的。\n"
+            "%s 重跑:\n"
+            "  PAIR_ROLE=%s python3 %s verify-setup --drafter self|other"
+            % (why, role, role, role, PROG_HINT))
 
 
 def rebound_shortcut(root, cfg, state, green, changed_named_frozen):
@@ -815,6 +817,34 @@ def rebound_shortcut(root, cfg, state, green, changed_named_frozen):
     if changed_named_frozen:
         return False
     return state.get("reviewed_contract") == worktree_sha(root, cfg["contract_file"])
+
+
+def phase_owner(root, cfg, state):
+    """当前阶段归谁。只有 idle 有一处例外(W19)。
+
+    `claim` 要求两个角色的开工前校验都作数之后,dev 那一份过期时**唯一能解锁的是 dev**,
+    而 idle 的归属写死是 tester —— 驱动器会反复调度 tester、tester 反复被拒。所以:
+    tester 那一份作数、dev 那一份不作数 → 归 dev;tester 不作数 → 照旧 tester
+    (先让认领的一方读新契约);都作数 → tester。`whose-turn` 与 `status` 共用这一个判定。
+
+    **不另判 `setup_verified`**:tester 那一份作数就意味着它校验过,
+    另判一遍是拆掉也没有用例能红的防护。
+    """
+    phase = state["phase"]
+    if phase == "idle" and cfg["require_setup_verification"]:
+        if (stale_verification(root, cfg, state, "tester") is None
+                and stale_verification(root, cfg, state, "dev")):
+            return "dev"
+    return PHASE_OWNER[phase]
+
+
+IDLE_REVERIFY_BRIEF = """  当前没有进行中的工作项,但**你那一份开工前校验不作数了** —— 契约在你上次校验之后变过,
+  或者你从没校验过。tester 认领会被拒,而只有你自己重跑才能解锁:
+
+    PAIR_ROLE=dev python3 %(prog)s verify-setup --drafter self|other
+
+  先通读契约里变了的那几节,往 docs/reviews/setup-verification-dev.md **末尾追加**
+  一段补记(评审记录只能追加),再跑上面这条。"""
 
 
 def blob_sha(root, path):
@@ -1282,7 +1312,7 @@ def cmd_status(root, cfg, args):
     me, source = resolve_role(root)
     state = load_state(root)
     phase = state["phase"]
-    owner = PHASE_OWNER[phase]
+    owner = phase_owner(root, cfg, state)
 
     tampered = state_is_tampered(root)
     green = run_tests(root, cfg)
@@ -1363,7 +1393,10 @@ def cmd_status(root, cfg, args):
     print()
     print(">>> 轮到你了。本阶段任务:")
     print()
-    print(PHASE_BRIEF[phase] % _brief_vars(cfg, state, phase))
+    if phase == "idle" and owner == "dev":
+        print(IDLE_REVERIFY_BRIEF % {"prog": PROG_HINT})
+    else:
+        print(PHASE_BRIEF[phase] % _brief_vars(cfg, state, phase))
     print()
 
     # 记忆层召回。status 是协议强制的第一条命令,也是唯一能跨 harness
@@ -1464,9 +1497,9 @@ def cmd_claim(root, cfg, args):
     # 只作用于 claim:工作项中途契约变了不挡交接(本轮每一项都要改契约),
     # whose-turn 也不因此输出 stop。门禁没开时这一条不存在。
     if cfg["require_setup_verification"]:
-        stale = stale_verification(root, cfg, state, me)
-        if stale:
-            die("拒绝认领 —— " + stale)
+        stales = [s for s in (stale_verification(root, cfg, state, r) for r in ROLES) if s]
+        if stales:
+            die("拒绝认领 —— " + "\n\n".join(stales))
 
     # --- 裁判副本必须与正本一致 -------------------------------------------
     # 校验放在 claim 不放在 handoff:工作项进行中 dev 正在改正本,两者本来
@@ -2448,7 +2481,7 @@ def cmd_whose_turn(root, cfg, args):
         print("stop %s 被改动过,先跑 status 确认真实状态" % STATE_REL)
         return 0
 
-    print("turn %s" % PHASE_OWNER[state["phase"]])
+    print("turn %s" % phase_owner(root, cfg, state))
     return 0
 
 

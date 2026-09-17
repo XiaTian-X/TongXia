@@ -369,7 +369,7 @@ python3 .agents/skills/pair-protocol/scripts/drive.py --both "claude -p"
 
 ### 开工顺序
 
-1. 让**还没动手的那一方**跑 `pair.py verify-setup --drafter self|other`。
+1. 让**两个角色各跑一次** `pair.py verify-setup --drafter self|other`(`claim` 要求两份都作数)。
    它会要求通读契约、把歧义写进 `docs/reviews/setup-verification-<角色>.md`
    (按角色分开,两边各写各的)并逐节点名
    —— **交出这份结论之前校验不通过,也不能认领工作项**。
