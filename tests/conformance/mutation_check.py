@@ -760,9 +760,9 @@ MUTATIONS = [
      '    span = ("%s..HEAD" % since,) if since else ()',
      '    span = ()'),
 
-    ('report 起点不限定为提交',
-     '"-q", args.since + "^{commit}",',
-     '"-q", args.since,'),
+    # 「report 起点不限定为提交」W20 第二次 spec 回合撤掉:契约补了"起点必须是 HEAD 的祖先"之后,
+    # 树对象过不了祖先判定(merge-base --is-ancestor 对非提交报错),拆掉 ^{commit} 照样被拒 ——
+    # 参考实现里实测存活,是等价变异。"不是提交也拒绝"这个性质仍由 test_不是提交的对象也拒绝 守。
 
     ('report 非法起点不拒',
      '        if since is None:\n            die("report --since',
@@ -779,6 +779,15 @@ MUTATIONS = [
     ('report 表头不写起点',
      '    if since:\n        print(" 起点',
      '    if False:\n        print(" 起点'),
+
+    # W20 review-test 打回后补的两处。
+    ('report 不带起点时分母也用区间',
+     '    per_done = finished if since else done',
+     '    per_done = finished'),
+
+    ('report 偏高判定照读状态',
+     '"!  偏高" if per_done and no_decision > per_done / 2.0 else "—")',
+     '"!  偏高" if done and no_decision > done / 2.0 else "—")'),
 ]
 
 # unittest 的失败行有两种形态:

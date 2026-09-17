@@ -100,6 +100,19 @@ class TestSinceCountsOnlyAfter(SinceBase):
 
 class TestSinceBadRev(SinceBase):
 
+    def test_不是_HEAD_祖先的起点拒绝(self):
+        """旁支上的提交能解析成提交,但 `<它>..HEAD` 是两条分支的差集,不是"那个提交之后" ——
+        退出 0 的一张看起来合理的表,正是 report 要消灭的那种静默偏差(W20 spec 回合带声明补)。"""
+        self.cycle("W1")
+        self.repo.git("checkout", "-q", "-b", "旁支", "HEAD~2")
+        self.repo.git("commit", "-q", "--allow-empty", "-m", "旁支上的提交")
+        side = self.head()
+        self.repo.git("checkout", "-q", "-")
+        r = self.repo.run("report", "--since", side, role="tester")
+        self.assertNotEqual(r.code, 0, r)
+        self.assertNotIn("Traceback", r.text)
+        self.assertIn(side, r.text, "要点名是哪个起点")
+
     def test_不是合法提交时非零退出_没有_traceback(self):
         r = self.repo.run("report", "--since", "没有这个提交", role="tester")
         self.assertNotEqual(r.code, 0, r)
@@ -148,6 +161,16 @@ class TestRatesUseCompletionsInRange(SinceBase):
         self.assertEqual(self.row(self.report("--since", since), "--no-decision"), "100% (1/1)")
         self.assertEqual(self.row(self.report(), "--no-decision"), "100% (2/2)")
 
+    def test_偏高判定也用区间内的完成数(self):
+        """区间里 1/1 是偏高;判定若照读状态里的 2,`1 > 2/2` 不成立,比率写着 100% 却不报。"""
+        self.cycle_with("W1")
+        since = self.head()
+        self.cycle_with("W2", note=True)
+        out = self.report("--since", since)
+        line = re.search(r"^\s*--no-decision\s.*$", out, re.M).group(0)
+        self.assertIn("100% (1/1)", line, out)
+        self.assertIn("偏高", line, out)
+
     def test_区间外的声明不进分子(self):
         self.cycle_with("W1", note=True)
         since = self.head()
@@ -171,6 +194,15 @@ class TestRatesUseCompletionsInRange(SinceBase):
 
 
 class TestWithoutSinceUnchanged(SinceBase):
+
+    def test_不带_since_时两条比率的分母照读状态(self):
+        """测试仓库里状态完成数与历史里推进到完成的交接数恒等,分不出两种口径;
+        本仓库这两个数是 17 与 18。造一次历史里多出来的完成交接(旧版本、人类手工操作
+        都会留下这种提交),不带 `--since` 时分母必须仍是状态里的 1。"""
+        self.cycle_with("W1", note=True)
+        self.repo.git("commit", "-q", "--allow-empty", "-m", "review(test)/approve: 历史里多出来的一次完成",
+                      "-m", "role=dev phase=review-test -> idle item=W9 type=feature")
+        self.assertEqual(self.row(self.report(), "--no-decision"), "100% (1/1)")
 
     def test_不带_since_时不出现起点(self):
         """「一个字不变」由既有 report 用例整体守;这里只钉不带时不去解析起点。"""

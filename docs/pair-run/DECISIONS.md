@@ -419,3 +419,8 @@
 - 理由: 契约原文把"已完成工作项"归进读状态、不受 `--since` 影响,这对表头那一行是对的;但 `--no-decision` 与 `--contract-change` 两行的分母也是它,分子却已经只数区间 —— 区间外完成 1 项、区间内完成 1 项带 1 次生效声明,会显示 `50% (1/2)`。背景点名要修的正是这两行,照原文实现修完仍要人手工算。改成带 `--since` 时这两行分母用区间里推进到完成的交接数,没有完成按样本 0 处理;「决策/完成项」照旧读状态。参考实现里"分母仍读状态"有 5 条用例红。tester 在第六轮开工前的独立审查里挑出(②)。
 - 已否决: 把表头「已完成工作项」也改成区间内 —— 契约明写它读状态,人类要的是"现在完成了几项"。不带 `--since` 时也改用交接数 —— 违反"一个字不变",而且老项目的历史交接不全。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_report_since.py`
+## W20 — --since 的起点必须是 HEAD 的祖先
+
+- 理由: dev 在 impl 回合实测:旁支上的提交当起点,`report` 退出 0、报交接 3 次,读的人以为是"那个提交之后",实际是两条分支的差集。契约只写了"解析不成提交时拒绝",dev 没越界实现,把判断交给 tester。`report` 存在的理由是让指标不静默偏;修法一行(`merge-base --is-ancestor`),行为可断言。参考实现全套 463 OK,拆掉那一项只红新用例。连带撤掉已登记的「report 起点不限定为提交」:祖先判定对树对象同样拒,拆掉 `^{commit}` 在参考实现里存活,是等价变异。
+- 已否决: 只在命令参考写注意 —— 读报告的人不会先读参考;印一条警告但照常统计 —— 驱动器与脚本只看退出码,等于没有。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_report_since.py`

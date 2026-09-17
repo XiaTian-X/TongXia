@@ -37,9 +37,6 @@
     "report 表头不写起点": [
       "test_v1_report_since.TestSinceCountsOnlyAfter.test_交接与认领只数起点之后"
     ],
-    "report 起点不限定为提交": [
-      "test_v1_report_since.TestSinceBadRev.test_不是提交的对象也拒绝"
-    ],
     "report 非法起点不拒": [
       "test_v1_report_since.TestSinceBadRev.test_不是合法提交时非零退出_没有_traceback"
     ],
