@@ -750,6 +750,35 @@ MUTATIONS = [
     ("dev 在 idle 看到认领说明",
      '    if phase == "idle" and owner == "dev":',
      '    if False:'),
+
+    # W20 的 report --since(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('report 忽略起点',
+     '    rows = _handoff_log(root, since)',
+     '    rows = _handoff_log(root)'),
+
+    ('report 区间不生效',
+     '    span = ("%s..HEAD" % since,) if since else ()',
+     '    span = ()'),
+
+    ('report 起点不限定为提交',
+     '"-q", args.since + "^{commit}",',
+     '"-q", args.since,'),
+
+    ('report 非法起点不拒',
+     '        if since is None:\n            die("report --since',
+     '        if False:\n            die("report --since'),
+
+    ('report 分母照读状态',
+     '    per_done = finished if since else done',
+     '    per_done = done'),
+
+    ('report 完成数不看 idle',
+     '            if re.search(r"phase=\\S+ -> idle ", body):',
+     '            if True:'),
+
+    ('report 表头不写起点',
+     '    if since:\n        print(" 起点',
+     '    if False:\n        print(" 起点'),
 ]
 
 # unittest 的失败行有两种形态:

@@ -1,5 +1,5 @@
 {
-  "baseline": "1f93908ad7c54d14",
+  "baseline": "3c7b56048bfaf499",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
@@ -21,6 +21,27 @@
     ],
     "idle 归属例外不限 idle": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_工作项进行中_dev_过期也不改归属"
+    ],
+    "report 分母照读状态": [
+      "test_v1_report_since.TestRatesUseCompletionsInRange.test_contract_change_的分母是区间内的完成数"
+    ],
+    "report 区间不生效": [
+      "test_v1_report_since.TestRatesUseCompletionsInRange.test_contract_change_的分母是区间内的完成数"
+    ],
+    "report 完成数不看 idle": [
+      "test_v1_report_since.TestRatesUseCompletionsInRange.test_contract_change_的分母是区间内的完成数"
+    ],
+    "report 忽略起点": [
+      "test_v1_report_since.TestRatesUseCompletionsInRange.test_contract_change_的分母是区间内的完成数"
+    ],
+    "report 表头不写起点": [
+      "test_v1_report_since.TestSinceCountsOnlyAfter.test_交接与认领只数起点之后"
+    ],
+    "report 起点不限定为提交": [
+      "test_v1_report_since.TestSinceBadRev.test_不是提交的对象也拒绝"
+    ],
+    "report 非法起点不拒": [
+      "test_v1_report_since.TestSinceBadRev.test_不是合法提交时非零退出_没有_traceback"
     ],
     "status 不用 idle 例外": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_的_status_归属那一行是_dev_且给出重跑指引"
