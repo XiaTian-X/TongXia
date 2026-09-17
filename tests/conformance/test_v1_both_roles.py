@@ -100,6 +100,9 @@ class TestWhoseTurnAtIdle(BothRolesBase):
         self.assertAccepted(r)
         self.assertIn("归属: dev", r.text)
         self.assertIn("verify-setup", r.text)
+        # 上一句单独守不住回合说明:status 先打的"校验不作数"提示里早有 verify-setup,
+        # idle 归 dev 时照旧打认领说明它也成立。dev 认领不了,所以说明里不该叫它去认领。
+        self.assertNotIn("claim <ID>", r.text)
 
     def test_dev_重跑之后又轮到_tester(self):
         self.verify("tester")
@@ -118,6 +121,30 @@ class TestWhoseTurnAtIdle(BothRolesBase):
         self.verify("tester")
         self.verify("dev")
         self.assertEqual(self.whose_turn(), "turn tester")
+
+    def test_工作项进行中_dev_过期也不改归属(self):
+        """例外只在 idle:进行中契约变了、tester 在 spec 里重跑、dev 没跑 ——
+        仍是 tester 的回合,驱动器不能在这时去调度 dev。"""
+        self.verify("tester")
+        self.verify("dev")
+        self.assertAccepted(self.claim())
+        self.change_contract()
+        self.verify("tester")
+        self.assertEqual(self.repo.state()["phase"], "spec")
+        self.assertEqual(self.whose_turn(), "turn tester")
+
+
+class TestWhoseTurnGateOff(BothRolesBase):
+    """门禁关着时 dev 根本不需要校验,tester 顺手校验过也不该把 idle 让给 dev。"""
+
+    config = {"require_setup_verification": False}
+
+    def test_门禁关着_只有_tester_校验过时照旧轮到_tester(self):
+        self.verify("tester")
+        self.assertEqual(self.whose_turn(), "turn tester")
+        r = self.repo.run("status", role="tester")
+        self.assertAccepted(r)
+        self.assertIn("归属: tester", r.text)
 
 
 if __name__ == "__main__":

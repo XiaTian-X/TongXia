@@ -1,9 +1,9 @@
 {
   "round": 16,
-  "phase": "spec",
+  "phase": "review-test",
   "item": "W19",
   "item_type": "feature",
-  "last_actor": "dev",
+  "last_actor": "tester",
   "changes_count": 1,
   "completed_items": [
     "W2",
@@ -30,7 +30,7 @@
     "tester": "e633577cce9bdc03853d4e26c94e25fb160d4af9",
     "dev": "840b62c3a77e5f87095d378349966dee2cc93607"
   },
-  "after_rebound": true,
-  "rebound_from": "review-test",
+  "after_rebound": false,
+  "rebound_from": null,
   "reviewed_contract": "fcea4e44a8ce5f6a3829faf9aca72c25bc3aedc2"
 }

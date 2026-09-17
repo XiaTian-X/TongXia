@@ -737,6 +737,19 @@ MUTATIONS = [
     ("whose-turn 不用 idle 例外",
      '    print("turn %s" % phase_owner(root, cfg, state))',
      '    print("turn %s" % PHASE_OWNER[state["phase"]])'),
+
+    # W19 review-test 打回后补的三处(字面见 notes/W19.md)。
+    ("idle 归属例外不限 idle",
+     '    if phase == "idle" and cfg["require_setup_verification"]:',
+     '    if cfg["require_setup_verification"]:'),
+
+    ("门禁没开也改 idle 归属",
+     '    if phase == "idle" and cfg["require_setup_verification"]:',
+     '    if phase == "idle":'),
+
+    ("dev 在 idle 看到认领说明",
+     '    if phase == "idle" and owner == "dev":',
+     '    if False:'),
 ]
 
 # unittest 的失败行有两种形态:

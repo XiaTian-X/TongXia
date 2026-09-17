@@ -1,11 +1,14 @@
 {
-  "baseline": "ca396c60ff6aaba0",
+  "baseline": "d3631df9c0064af4",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
     ],
     "claim 只看执行者自己那一份": [
       "test_v1_both_roles.TestClaimLooksAtBothRoles.test_只有_tester_校验过时拒绝_点名_dev"
+    ],
+    "dev 在 idle 看到认领说明": [
+      "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_的_status_归属那一行是_dev_且给出重跑指引"
     ],
     "idle 例外从不生效": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_的_status_归属那一行是_dev_且给出重跑指引"
@@ -15,6 +18,9 @@
     ],
     "idle 归 dev 不看 tester 作数": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_tester_过期时照旧轮到_tester"
+    ],
+    "idle 归属例外不限 idle": [
+      "test_v1_both_roles.TestWhoseTurnAtIdle.test_工作项进行中_dev_过期也不改归属"
     ],
     "status 不用 idle 例外": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_的_status_归属那一行是_dev_且给出重跑指引"
@@ -499,6 +505,9 @@
     ],
     "门禁没开也拦过期的校验": [
       "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝"
+    ],
+    "门禁没开也改 idle 归属": [
+      "test_v1_both_roles.TestWhoseTurnGateOff.test_门禁关着_只有_tester_校验过时照旧轮到_tester"
     ]
   }
 }
