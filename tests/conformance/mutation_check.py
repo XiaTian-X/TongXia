@@ -716,6 +716,27 @@ MUTATIONS = [
      '    rewrite = review_rewrite_violation(root, cfg, report_rel)\n',
      '    state["setup_verified"] = True\n    save_state(root, state)\n'
      '    rewrite = review_rewrite_violation(root, cfg, report_rel)\n'),
+
+    # W19 的 idle 归属(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ("idle 归 dev 不看 tester 作数",
+     '        if (stale_verification(root, cfg, state, "tester") is None',
+     '        if (True'),
+
+    ("idle 归 dev 不看 dev 不作数",
+     '                and stale_verification(root, cfg, state, "dev")):',
+     '                and True):'),
+
+    ("idle 例外从不生效",
+     '            return "dev"\n    return PHASE_OWNER[phase]',
+     '            pass\n    return PHASE_OWNER[phase]'),
+
+    ("status 不用 idle 例外",
+     '    owner = phase_owner(root, cfg, state)',
+     '    owner = PHASE_OWNER[phase]'),
+
+    ("whose-turn 不用 idle 例外",
+     '    print("turn %s" % phase_owner(root, cfg, state))',
+     '    print("turn %s" % PHASE_OWNER[state["phase"]])'),
 ]
 
 # unittest 的失败行有两种形态:

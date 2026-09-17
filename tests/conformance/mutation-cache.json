@@ -1,5 +1,5 @@
 {
-  "baseline": "c69dc02ad24eec6f",
+  "baseline": "ca396c60ff6aaba0",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
@@ -7,8 +7,23 @@
     "claim 只看执行者自己那一份": [
       "test_v1_both_roles.TestClaimLooksAtBothRoles.test_只有_tester_校验过时拒绝_点名_dev"
     ],
+    "idle 例外从不生效": [
+      "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_的_status_归属那一行是_dev_且给出重跑指引"
+    ],
+    "idle 归 dev 不看 dev 不作数": [
+      "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_重跑之后又轮到_tester"
+    ],
+    "idle 归 dev 不看 tester 作数": [
+      "test_v1_both_roles.TestWhoseTurnAtIdle.test_tester_过期时照旧轮到_tester"
+    ],
+    "status 不用 idle 例外": [
+      "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_的_status_归属那一行是_dev_且给出重跑指引"
+    ],
     "status 头部不标只追加": [
       "test_v1_review_append.TestStatusMarksAppendOnly.test_非执行者看到的头部那一行也标出只追加"
+    ],
+    "whose-turn 不用 idle 例外": [
+      "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_重跑之后又轮到_tester"
     ],
     "不单独判只追加路径": [
       "test_v1_review_append.TestAnythingElseIsRefused.test_改了已有行被拒_文案说只能追加"
