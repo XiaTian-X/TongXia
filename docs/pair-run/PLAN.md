@@ -350,7 +350,7 @@
     否则驱动器反复调度 tester、tester 反复被拒,死循环
   - 对应契约:`docs/pair-run/CONTRACT.md` → claim 看两个角色的开工前校验
 
-- [ ] **W20** [feature] — report 可以只统计某个起点之后
+- [x] **W20** [feature] — report 可以只统计某个起点之后
   - **来源**:开放条目 22。本仓库 `report` 的未判定 25、历史里不生效的声明照旧计数,
     实验的数只能靠人手工减
   - 验收标准:①`report --since <rev>` 只统计 `<rev>..HEAD` 之间的提交,表头写明起点;

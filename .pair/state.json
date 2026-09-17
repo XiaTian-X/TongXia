@@ -1,10 +1,10 @@
 {
-  "round": 17,
-  "phase": "review-test",
-  "item": "W20",
-  "item_type": "feature",
-  "last_actor": "tester",
-  "changes_count": 1,
+  "round": 18,
+  "phase": "idle",
+  "item": null,
+  "item_type": null,
+  "last_actor": "dev",
+  "changes_count": 0,
   "completed_items": [
     "W2",
     "W3",
@@ -22,11 +22,12 @@
     "W16",
     "W17",
     "W18",
-    "W19"
+    "W19",
+    "W20"
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": "fcea4e44a8ce5f6a3829faf9aca72c25bc3aedc2",
+  "contract_sha": null,
   "setup_verified_contract": {
     "tester": "fcea4e44a8ce5f6a3829faf9aca72c25bc3aedc2",
     "dev": "fcea4e44a8ce5f6a3829faf9aca72c25bc3aedc2"

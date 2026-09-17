@@ -2503,10 +2503,11 @@ REPORT_SEP = "\x1f"
 IDLE_JUDGMENT = "空转判定"
 
 
-def _handoff_log(root):
-    """[(subject, body)],按时间正序。"""
+def _handoff_log(root, since=None):
+    """[(subject, body)],按时间正序。`since` 是起点提交的 sha 时只读 `<since>..HEAD`(W20)。"""
     fmt = "%s" + REPORT_SEP + "%b" + REPORT_SEP + "%x00"
-    out = git("log", "--reverse", "--format=" + fmt, cwd=root, check=False) or ""
+    span = ("%s..HEAD" % since,) if since else ()
+    out = git("log", "--reverse", "--format=" + fmt, *span, cwd=root, check=False) or ""
     rows = []
     for rec in out.split("\x00"):
         rec = rec.strip("\n")
@@ -2552,12 +2553,28 @@ def cmd_report(root, cfg, args):
 
     区间之外不等于错,等于值得看一眼。
     """
-    rows = _handoff_log(root)
+    # 起点(W20):只认**提交**。`^{commit}` 让树、blob 这类合法对象也被拒 ——
+    # `<tree>..HEAD` 不成立,git 会报错,而 check=False 会把它吞成"区间为空"。
+    since = None
+    if args.since is not None:
+        since = (git("rev-parse", "--verify", "-q", args.since + "^{commit}",
+                     cwd=root, check=False) or "").strip() or None
+        if since is None:
+            die("report --since %s:这不是本仓库里的一个提交。\n"
+                "起点要能解析成提交:sha、分支名、HEAD~3 这类。" % args.since)
+        # 旁支上的提交也能解析成提交,但 `<它>..HEAD` 是两条分支的差集,不是"它之后" ——
+        # 退出 0、看起来合理的一张表,正是这个参数要消灭的静默偏差。
+        if git("merge-base", "--is-ancestor", since, "HEAD", cwd=root, check=False) is None:
+            die("report --since %s:这个提交不在当前分支的历史上(不是 HEAD 的祖先)。\n"
+                "拿它当起点,统计的会是两条分支的差集,而不是\"它之后\"。\n"
+                "换一个当前分支历史上的提交。" % args.since)
+    rows = _handoff_log(root, since)
     state = load_state(root)
 
     reviews = changes = disputes = 0
     claimed = deadlocks = no_decision = contract_changes = 0
     idle_rounds = unjudged = 0          # W14:空转的 impl 回合 / 没有判定行的 impl 回合
+    finished = 0                        # W20:区间里把工作项推进到完成的交接
     rounds_by_item = {}
 
     for subject, body in rows:
@@ -2583,6 +2600,8 @@ def cmd_report(root, cfg, args):
             # **空转只认那一行**,不在这里再按阶段过滤:写不写判定行是 handoff 的
             # 职责(只写在 impl、非异议的交接上)。两边各过滤一遍的话,拆掉任何
             # 一边都没有用例看得见 —— 冗余的防护等于没有可测的防护。
+            if re.search(r"phase=\S+ -> idle ", body):
+                finished += 1
             j = re.search(r"^%s: (是|否)$" % IDLE_JUDGMENT, body, re.M)
             if j and j.group(1) == "是":
                 idle_rounds += 1
@@ -2602,6 +2621,9 @@ def cmd_report(root, cfg, args):
           % (done, state["item"] or "(无)"))
     print(" 交接提交     : %d        认领: %d"
           % (sum(rounds_by_item.values()), claimed))
+    if since:
+        print(" 起点         : %s(只作用于从提交里数的行;已完成工作项、进行中、"
+              "决策/完成项照读状态)" % since[:12])
     print("-" * 62)
 
     def row(name, value, verdict):
@@ -2623,13 +2645,16 @@ def cmd_report(root, cfg, args):
     row("测试异议", "%d 次" % disputes, "—")
     row("决策/完成项", "%d / %d" % (decisions, done),
         "!! 记忆层空转" if done >= MIN_SAMPLE and not decisions else "—")
-    row("--no-decision", _fmt_rate(no_decision, done),
-        "!  偏高" if done and no_decision > done / 2.0 else "—")
+    # 两条声明比率的分母跟着起点走(W20):分子只数区间里的声明,分母若仍读状态里的
+    # 全部历史完成数,区间里完成 1 项、带 1 次生效声明会显示 50% (1/2)。
+    per_done = finished if since else done
+    row("--no-decision", _fmt_rate(no_decision, per_done),
+        "!  偏高" if per_done and no_decision > per_done / 2.0 else "—")
     # 承重文件不再冻结,换来的是"改了必有人知道"。频率是这笔交易唯一的
     # 观测量:弱版本对"两个 agent 合谋改契约去迁就实现"的防护弱于双方签字,
     # 异常了就该收紧。
-    row("--contract-change", _fmt_rate(contract_changes, done),
-        "!  偏高" if done and contract_changes > done else "—")
+    row("--contract-change", _fmt_rate(contract_changes, per_done),
+        "!  偏高" if per_done and contract_changes > per_done else "—")
     print("=" * 62)
     print()
 
@@ -3607,7 +3632,9 @@ def main(argv=None):
                       help="approve 必填:你知道还没被覆盖到的是什么(没有就写\"无\")")
 
     sub.add_parser("whose-turn", help="一行输出:接下来该谁,或为什么该停")
-    sub.add_parser("report", help="协议健康度:打回率等指标,只读")
+    p_rep = sub.add_parser("report", help="协议健康度:打回率等指标,只读")
+    p_rep.add_argument("--since", metavar="<rev>",
+                       help="只统计这个提交之后的交接(<rev>..HEAD)")
     p_in = sub.add_parser("inbox", help="对方上一回合做了什么")
     p_in.add_argument("count", nargs="?", type=int, default=1)
 
