@@ -1,5 +1,5 @@
 {
-  "baseline": "3c7b56048bfaf499",
+  "baseline": "313bae5454fc723b",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
@@ -21,6 +21,12 @@
     ],
     "idle 归属例外不限 idle": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_工作项进行中_dev_过期也不改归属"
+    ],
+    "report 不带起点时分母也用区间": [
+      "test_v1_report_since.TestWithoutSinceUnchanged.test_不带_since_时两条比率的分母照读状态"
+    ],
+    "report 偏高判定照读状态": [
+      "test_v1_report_since.TestRatesUseCompletionsInRange.test_偏高判定也用区间内的完成数"
     ],
     "report 分母照读状态": [
       "test_v1_report_since.TestRatesUseCompletionsInRange.test_contract_change_的分母是区间内的完成数"

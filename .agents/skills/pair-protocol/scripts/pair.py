@@ -2562,6 +2562,12 @@ def cmd_report(root, cfg, args):
         if since is None:
             die("report --since %s:这不是本仓库里的一个提交。\n"
                 "起点要能解析成提交:sha、分支名、HEAD~3 这类。" % args.since)
+        # 旁支上的提交也能解析成提交,但 `<它>..HEAD` 是两条分支的差集,不是"它之后" ——
+        # 退出 0、看起来合理的一张表,正是这个参数要消灭的静默偏差。
+        if git("merge-base", "--is-ancestor", since, "HEAD", cwd=root, check=False) is None:
+            die("report --since %s:这个提交不在当前分支的历史上(不是 HEAD 的祖先)。\n"
+                "拿它当起点,统计的会是两条分支的差集,而不是\"它之后\"。\n"
+                "换一个当前分支历史上的提交。" % args.since)
     rows = _handoff_log(root, since)
     state = load_state(root)
 
