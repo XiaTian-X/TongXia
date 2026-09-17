@@ -1,8 +1,8 @@
 {
   "round": 17,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W20",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -26,7 +26,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "fcea4e44a8ce5f6a3829faf9aca72c25bc3aedc2",
   "setup_verified_contract": {
     "tester": "fcea4e44a8ce5f6a3829faf9aca72c25bc3aedc2",
     "dev": "fcea4e44a8ce5f6a3829faf9aca72c25bc3aedc2"
