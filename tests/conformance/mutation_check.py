@@ -788,6 +788,11 @@ MUTATIONS = [
     ('report 偏高判定照读状态',
      '"!  偏高" if per_done and no_decision > per_done / 2.0 else "—")',
      '"!  偏高" if done and no_decision > done / 2.0 else "—")'),
+
+    # W20 起点必须是 HEAD 的祖先(dev 第二次 impl 给的锚点,review-impl 登记)。
+    ('report 不查起点是不是祖先',
+     '        if git("merge-base", "--is-ancestor", since, "HEAD", cwd=root, check=False) is None:',
+     '        if False:'),
 ]
 
 # unittest 的失败行有两种形态:
