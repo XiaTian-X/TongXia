@@ -1081,6 +1081,21 @@ W13 的原则不变);两个都过期时两个都点名。
 **不变的** `setup_verified` 那道既有门禁;工作项中途契约变了不挡交接;`whose-turn` 不输出
 stop;`status` 的提示 —— 它现在有了一个必须处理的时机,不再是常驻的。
 
+**idle 时轮到谁**(W19 的 spec 回合带声明补) —— `claim` 要求 dev 那一份也不过期之后,
+**唯一能解锁的是 dev,而 idle 的归属是 tester**:`whose-turn` 照旧输出 `turn tester`、tester 认领被拒、
+dev 会话跑 `status` 看到"不是你的回合"就停。交给人类时这只是多一次唤醒,**交给驱动器时是死循环**。
+所以 idle 且门禁开着时:
+
+- tester 那一份作数、**dev 那一份过期或没有记录** → 归属是 **dev**:`whose-turn` 输出 `turn dev`,
+  `status` 的归属那一行是 dev,dev 的回合说明给出重跑 `verify-setup` 的指引;
+- tester 那一份过期(不管 dev 那一份怎样)→ 归属照旧是 tester —— 先让认领的一方读新契约;
+- 两份都作数 → tester,照旧。
+
+`whose-turn` 仍然不输出 stop;工作项进行中不受影响(那时契约变了本来就不挡交接)。
+
+> tester 在第六轮开工前的独立审查(`setup-verification-tester.md` 的 ①)挑出。
+
+
 **被本节取代的用例** 隔离克隆里原型(`claim` 对两个角色逐个判)实测会红 6 条行为用例,
 它们都只让 tester 校验就去认领:`tests/conformance/test_v1_validity.py` 的
 `test_人类没提交的契约改动也算_且重跑之后不会锁死`、`test_工作项中途契约变了不挡交接`、

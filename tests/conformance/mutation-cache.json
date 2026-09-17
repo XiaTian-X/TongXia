@@ -1,5 +1,5 @@
 {
-  "baseline": "581c98eb7e667d11",
+  "baseline": "4367e91c5563df32",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"

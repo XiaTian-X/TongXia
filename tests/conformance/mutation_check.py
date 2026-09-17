@@ -486,8 +486,10 @@ MUTATIONS = [
     # 形状由 dev 定,dev 在 impl 笔记里点名、tester 在 review-impl 隔离复现过,
     # 在 W14 的 spec 回合登记(W13 本项里 tester 唯一能写 tests/ 的回合漏了,
     # 见 DECISIONS.md 的 `## W13 — claim 侧的 8 个变异点欠着`)。
+    # W19 的 spec 回合重锚:claim 要看两个角色,那一段必然改写。新字面照原来那几行派生,
+    # 在 spec 回合定死(「三节共同」),落地前这两个锚点不匹配。
     ("claim 不拦过期的校验",
-     '            die("拒绝认领 —— " + stale)',
+     '            die("拒绝认领 —— " + "\\n\\n".join(stales))',
      "            pass"),
 
     ("校验比对端取 HEAD",
@@ -512,13 +514,13 @@ MUTATIONS = [
 
     ("门禁没开也拦过期的校验",
      '    if cfg["require_setup_verification"]:\n'
-     "        stale = stale_verification(root, cfg, state, me)\n"
-     "        if stale:\n"
-     "            die(",
+     "        stales = [s for s in (stale_verification(root, cfg, state, r) for r in ROLES) if s]",
      "    if True:\n"
-     "        stale = stale_verification(root, cfg, state, me)\n"
-     "        if stale:\n"
-     "            die("),
+     "        stales = [s for s in (stale_verification(root, cfg, state, r) for r in ROLES) if s]"),
+
+    ("claim 只看执行者自己那一份",
+     "(stale_verification(root, cfg, state, r) for r in ROLES)",
+     "(stale_verification(root, cfg, state, r) for r in (me,))"),
 
     ("校验通过后不记契约",
      '        state["setup_verified_contract"] = rec',

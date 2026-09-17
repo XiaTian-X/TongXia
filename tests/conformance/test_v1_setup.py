@@ -172,6 +172,8 @@ class TestVerifySetup(PairTestCase):
         r = self.repo.run(*VERIFY_OK, role="tester")
         self.assertAccepted(r)
         self.assertTrue(self.repo.state()["setup_verified"])
+        # W19 起 claim 看两个角色:dev 也要校验过这一份契约。
+        self.assertAccepted(self.repo.run(*VERIFY_OK, role="dev"))
         self.assertAccepted(self.repo.run("claim", "W1", role="tester"))
 
     def test_不把工作区里的代码一并提交进基线(self):

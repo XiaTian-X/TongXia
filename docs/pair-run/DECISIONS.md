@@ -409,3 +409,8 @@
 - 理由: 两件都是在隔离副本里写完整参考实现时实测出来的。①PLAN ⑥ 原文要求"去掉「已在 HEAD 里」有用例红",但那是**等价变异**:未跟踪文件相对 HEAD 的删除行恒为 0,`has_rewrite` 已经放行它,拆掉那一项全套 0 红。留着它当可读性可以,登记变异点则是登记一条永远抓不到的账。②`verify-setup` 那一侧"拒绝早于写状态"的用例,第一版让 `verify-setup` 先通过一次再改写结论 —— 那时 `setup_verified` 已是 `true`,第二次写状态字节相同,**把拒绝挪到 `save_state` 之后照样绿**。改成结论由人类提交、`setup_verified` 仍为假时第一次校验,拒绝挪到 `save_state` 之后就红了。契约里补了这句判据要求。
 - 已否决: 把"已在 HEAD 里"从实现里删掉 —— 它让"新建不算改写"这件事在代码里看得见,留着不花钱。给它硬造一条用例(比如伪造一个不在 HEAD 却有删除行的路径)—— git 里不存在这种状态。
 - 影响路径: `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_review_immutable.py`
+## W19 — idle 时 tester 那一份作数、dev 那一份过期,归属是 dev
+
+- 理由: 契约原文让 `claim` 看两个角色,但没管"谁来解锁"。`claim` 只有 tester 能跑,dev 那一份过期时唯一能解锁的是 dev,而 idle 的归属写死是 tester:`whose-turn` 输出 `turn tester`,tester 认领被拒,dev 会话跑 `status` 看到"不是你的回合"就停。人类在场时多一次唤醒,**驱动器在跑时是死循环** —— 第七轮的独立运行很可能正是驱动器在跑。补一条:idle 且门禁开着、tester 作数而 dev 过期或缺失时,归属是 dev(`whose-turn` 与 `status` 同口径);tester 过期时照旧 tester 先。tester 在第六轮开工前的独立审查里挑出(①)。
+- 已否决: 让 `whose-turn` 在这种情况下输出 stop —— 这不是要人类裁决的事,dev 自己跑一次 `verify-setup` 就解开了,停下来等于把一件机器能做的事推给人。让 tester 的拒绝文案"提醒人类去叫 dev" —— 驱动器读不懂文案,它只认 `whose-turn` 那一行。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`

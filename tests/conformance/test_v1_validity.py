@@ -88,8 +88,10 @@ class TestContractChangeInvalidatesVerification(ValidityBase):
 
     def test_重跑校验之后恢复(self):
         self.verify("tester")
+        self.verify("dev")
         self.change_contract()
         self.verify("tester")
+        self.verify("dev")                    # W19 起 claim 看两个角色
         self.assertAccepted(self.claim())
 
     def test_dev_重跑不替_tester_解锁(self):
@@ -123,6 +125,7 @@ class TestContractChangeInvalidatesVerification(ValidityBase):
         self.repo.write(CONTRACT, self.repo.read(CONTRACT) + "\n**补充** 还没提交。\n")
         self.assertRefused(self.claim(), "verify-setup")
         self.verify("tester")                 # 契约改动仍未提交
+        self.verify("dev")                    # W19 起 claim 看两个角色
         self.assertTrue(self.repo.git("status", "--porcelain", "--", CONTRACT).stdout,
                         "场景前提:契约改动应当还在工作区里")
         self.assertAccepted(self.claim())
@@ -132,6 +135,7 @@ class TestContractChangeInvalidatesVerification(ValidityBase):
         self.verify("tester")
         self.repo.write(CONTRACT, self.repo.read(CONTRACT) + "\n**补充** 先改后提交。\n")
         self.verify("tester")
+        self.verify("dev")                    # W19 起 claim 看两个角色
         self.repo.git("add", "--", CONTRACT)
         self.repo.git("commit", "-q", "-m", "docs: 人类提交了契约改动")
         self.assertAccepted(self.claim())
@@ -147,6 +151,7 @@ class TestContractChangeInvalidatesVerification(ValidityBase):
         self.repo.git("commit", "-q", "-m", "chore: 升级前的状态文件")
         self.assertRefused(self.claim(), "verify-setup")
         self.verify("tester")
+        self.verify("dev")                    # W19 起 claim 看两个角色
         self.assertAccepted(self.claim())
 
     def test_契约文件读不到时拒绝(self):
@@ -163,6 +168,7 @@ class TestContractChangeInvalidatesVerification(ValidityBase):
         """**只作用于 `claim`。** 本轮每一个工作项都要改契约,
         挡在交接上等于每一项都半途停摆。"""
         self.verify("tester")
+        self.verify("dev")                    # W19 起 claim 看两个角色
         self.assertAccepted(self.claim())
         self.change_contract()
         self.repo.write("tests/W1")
