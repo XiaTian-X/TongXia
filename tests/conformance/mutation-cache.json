@@ -1,5 +1,5 @@
 {
-  "baseline": "4bdf2ae3be76769d",
+  "baseline": "9b994e90524c5e3b",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
@@ -84,6 +84,15 @@
     ],
     "依据从不写": [
       "test_v1_effective.TestBasisOnlyWhenRewrite.test_有改写时_basis_照样留痕"
+    ],
+    "共用目录警告不看 sync": [
+      "test_v1_shared_dir_role.TestNoWarningWhenSynced.test_sync_为真时不警告"
+    ],
+    "共用目录警告不看来源": [
+      "test_v1_shared_dir_role.TestWarnsWhenRoleIsNotFromEnv.test_角色来自_PAIR_ROLE_时不警告"
+    ],
+    "共用目录警告写法角色写死": [
+      "test_v1_shared_dir_role.TestWarnsWhenRoleIsNotFromEnv.test_给出的写法用的是读到的那个角色"
     ],
     "判定行不排除异议": [
       "test_v1_effective.TestReportSplitsRounds.test_异议回合不算开销"

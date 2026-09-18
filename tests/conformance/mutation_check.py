@@ -824,6 +824,19 @@ MUTATIONS = [
     ('report 契约变更不锚行首',
      'CONTRACT_CHANGE_LINE_RE = re.compile(r"^契约变更',
      'CONTRACT_CHANGE_LINE_RE = re.compile(r"契约变更'),
+
+    # W22 共用目录时角色要来自 PAIR_ROLE(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('共用目录警告不看 sync',
+     '    if not cfg.get("sync") and source != ROLE_FROM_ENV:',
+     '    if source != ROLE_FROM_ENV:'),
+
+    ('共用目录警告不看来源',
+     '    if not cfg.get("sync") and source != ROLE_FROM_ENV:',
+     '    if not cfg.get("sync"):'),
+
+    ('共用目录警告写法角色写死',
+     '        print("  PAIR_ROLE=%s python3 %s <命令>" % (me, PROG_HINT))',
+     '        print("  PAIR_ROLE=%s python3 %s <命令>" % ("dev", PROG_HINT))'),
 ]
 
 # unittest 的失败行有两种形态:
