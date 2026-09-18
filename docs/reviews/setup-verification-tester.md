@@ -261,3 +261,31 @@ dev 的 `status` / 简报在这种情况下给出"重跑 `verify-setup`"而不�
 - 「不做」换行伪造:同意放过。dev 担心的"偏高误报"我认:但需要执行者在旗标值里刻意写一整行协议格式,
   不是顺带提到;要堵得改 `handoff` 的用户可见行为,应单独立项,记进路线图而不是塞进 bug 修复。
 - 认领数是 `subject.startswith("chore(pair): 认领工作项")`,已锚定;打回/异议按主题前缀,前缀是协议生成的,成立。
+
+## 补记(第八轮 W22–W24 立项之后重跑)
+
+上次校验之后契约变了:W21 我第二次 spec 回合补的第六处(已完成),与新增「第八轮」三节(dev 代笔)。
+逐节核了实现与 harness 的现状,**一处缺陷、两处判据提醒**。
+
+### ⑥〔中〕「出厂样板项目要能不经人类定稿就开工」:验收 ② 是单向的,③ 没有可落的地方
+
+② "样板项目跑 `verify-setup` 不再出现'没声明保护它的测试'" —— **把那条警告从 `pair.py` 里整个拆掉,它照样成立。**
+全套里没有任何用例断言 `verify-setup` 对一个没声明保护测试的 refactor 项**会**警告(`grep` 过:那句只在
+`test_v1_brownfield` 的 `claim` 拒绝里出现),`MUTATIONS` 里也没有这条警告的锚点。于是 ③ "保护测试的检查放宽,
+用例要红" 找不到能红的用例:① 读的是样板 PLAN 这份数据,② 是"不出现"。**修法方向**:补一条正面 ——
+`verify-setup` 对没声明保护测试的 refactor 项照旧打这条警告;③ 落在"拆掉这条警告"上。**在 W24 的 spec 回合带声明补。**
+
+### 判据提醒(不改契约,spec 回合照做)
+
+- **「共用目录时角色要来自 PAIR_ROLE」(W22):"点名来源"断言不出来** ——`status` 的表头本来就有 `角色来源 : .pair/whoami` / `git 分支名 pair/dev`,
+  断言输出里含来源恒真 —— 本轮第五次那个形状。可断言的是 `PAIR_ROLE=<角色>`(契约给了这个写法):
+  正面断言含,反面(来源是 `PAIR_ROLE`、`sync` 为真)同一设置下断言**不含**。`sync` 为真的用例要一个真的远端
+  (`status` 先 `pull --rebase`,没远端就停),用本地裸仓库。
+- **「验证用的副本放在 .pair/scratch/」(W23):harness 不用 `GITIGNORE_LINES`** ——`install_protocol` 手写 `.gitignore`(只有两行)。评审回合写 `.pair/scratch/`
+  的用例若靠在 harness 里手加一行,就与实现无关、⑤ 的变异点不会红。用例要从 `pair.py` 的 `GITIGNORE_LINES` 取那几行写进去。
+
+### 核过、成立的
+
+- W22 不拒绝的理由(sync 为假也可能只有一个 agent)成立;`try_resolve_role` 的三种来源字符串可区分。
+- W23 "被忽略的文件不出现在 `git status` 里":`changed_entries` 用 `--porcelain -z --untracked-files=all`,不带 `--ignored`,成立。
+  `test_gitignore_跟得上_GITIGNORE_LINES` 会让 ④ 自动被守。
