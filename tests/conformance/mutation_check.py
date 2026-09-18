@@ -794,6 +794,31 @@ MUTATIONS = [
     ('report 不查起点是不是祖先',
      '        if git("merge-base", "--is-ancestor", since, "HEAD", cwd=root, check=False) is None:',
      '        if False:'),
+
+    # W21 report 只认协议写进提交的那几行(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('report 死锁回到主题子串',
+     '        if DEADLOCK_SUBJECT_RE.match(subject):',
+     '        if "触发死锁闸" in subject:'),
+
+    ('report 未留决策回到子串',
+     '        if NO_DECISION_LINE_RE.search(body):',
+     '        if "未留决策(已声明)" in body:'),
+
+    ('report 契约变更回到子串',
+     '        if CONTRACT_CHANGE_LINE_RE.search(body):',
+     '        if "契约变更(已声明)" in body:'),
+
+    ('report 协议行不锚行首',
+     'PROTOCOL_LINE_RE = re.compile(r"^role=',
+     'PROTOCOL_LINE_RE = re.compile(r"role='),
+
+    ('report 未留决策不锚行首',
+     'NO_DECISION_LINE_RE = re.compile(r"^未留决策',
+     'NO_DECISION_LINE_RE = re.compile(r"未留决策'),
+
+    ('report impl 回到子串',
+     '            elif j is None and m.group(1) == "impl" and prefix != "dispute":',
+     '            elif j is None and "phase=impl -> " in body and prefix != "dispute":'),
 ]
 
 # unittest 的失败行有两种形态:
