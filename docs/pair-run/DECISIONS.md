@@ -439,3 +439,8 @@
 - 理由: 立项的五处都在正文里,而「死锁工作项占比」是 `"触发死锁闸" in subject` —— 交接提交的主题后半句是执行者写的自由文本,评审写"再打回两次就触发死锁闸"不需要任何恶意,与 `0aea588`、`136cabd` 同一个成因。今天的历史里两种口径一致,漏洞相同。改成整行匹配 `chore(pair): 工作项 <ID> 打回 <N> 次,触发死锁闸`。参考实现全套 475 OK;拆回子串只红新用例。顺带补了此前没有的正面:`report` 里数一次真的死锁。另外 `136cabd` 那句散文是我写的 —— W14 我警告过这一类,W20 的 review-impl 里自己没看出 dev 的正则没锚行首。
 - 已否决: 留给下一项 —— 同一个 bug 的同一类,分开修要再立一项、再过一遍 report 的锚点。按主题前缀 `chore(pair):` 加子串判 —— 人类手写 `chore(pair):` 前缀的提交同样会中。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_report_anchored.py`
+## SETUP — 第八轮修第七轮暴露的四处,人类裁决先修复;条目 26 并进 W23 的文档
+
+- 理由: 第七轮独立运行暴露四处(开放条目 23–26)。W22:`sync` 为假即共用目录,角色来自 `whoami` 或分支名时两边会读成同一个角色,`status` 警告;不拒绝,因为 sync 为假也可能只有一个 agent 在这个目录。W23:`.pair/scratch/` 加进 `GITIGNORE_LINES`,被忽略的文件不出现在 git status 里,写权限边界与提交都看不见,不需要新判定。W24:样板 PLAN 的 refactor 项缺保护测试是能写成失败用例的缺陷,契约措辞随实现交。
+- 已否决: 条目 26 单独立项 —— 它是写法建议,没有能写成失败用例的行为,凑一条用例只会是恒绿的判据。W22 直接拒绝非 PAIR_ROLE 来源 —— 会误伤单 agent 目录。W23 给 scratch 单独的写权限规则 —— 忽略就够,多一条规则多一处可拆的分支。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/SKILL.md`, `.agents/skills/pair-protocol/references/rules.md`, `examples/demo-project`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
