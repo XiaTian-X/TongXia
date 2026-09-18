@@ -1,5 +1,5 @@
 {
-  "baseline": "e830699e050687bc",
+  "baseline": "26f1e4721985536e",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
@@ -42,6 +42,9 @@
     ],
     "report 协议行不锚行首": [
       "test_v1_report_anchored.TestHandoffLine.test_散文里写出完整的协议行也不算_只要不在行首"
+    ],
+    "report 契约变更不锚行首": [
+      "test_v1_report_anchored.TestDeclarationLines.test_契约变更写出冒号也不算_只要不在行首"
     ],
     "report 契约变更回到子串": [
       "test_v1_report_anchored.TestDeclarationLines.test_散文里提到契约变更不算声明"

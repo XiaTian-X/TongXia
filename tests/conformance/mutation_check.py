@@ -819,6 +819,11 @@ MUTATIONS = [
     ('report impl 回到子串',
      '            elif j is None and m.group(1) == "impl" and prefix != "dispute":',
      '            elif j is None and "phase=impl -> " in body and prefix != "dispute":'),
+
+    # W21 review-test 打回后补的一处。
+    ('report 契约变更不锚行首',
+     'CONTRACT_CHANGE_LINE_RE = re.compile(r"^契约变更',
+     'CONTRACT_CHANGE_LINE_RE = re.compile(r"契约变更'),
 ]
 
 # unittest 的失败行有两种形态:

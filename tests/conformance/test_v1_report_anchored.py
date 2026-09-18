@@ -113,6 +113,12 @@ class TestDeclarationLines(AnchoredBase):
         self.finish("W1", review_test=checked("别处常见的写法是 未留决策(已声明): 某某理由"))
         self.assertEqual(self.row(self.report(), "--no-decision"), "0% (0/1)")
 
+    def test_契约变更写出冒号也不算_只要不在行首(self):
+        """上一条只守了未留决策:`契约变更` 那条散文没有冒号,不锚行首的正则照样匹配不上它
+        —— dev 在 W21 的 review-test 里实测拆掉 `^` 全套 0 红。"""
+        self.finish("W1", review_impl=checked("别处常见的写法是 契约变更(已声明): 某某路径"))
+        self.assertEqual(self.row(self.report(), "--contract-change"), "0% (0/1)")
+
 
 class TestDeadlockSubject(AnchoredBase):
     """死锁只认 `handoff` 生成的那个完整主题(W21 的 spec 回合带声明补)。"""
