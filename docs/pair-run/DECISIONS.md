@@ -434,3 +434,8 @@
 - 理由: W20 完成后发现 report 的完成计数被评审散文伪造(`136cabd`),人类裁决先修复、再做第七轮独立运行。立项时把五处"整段正文找子串"都拿锚定口径对全部历史比过,又找到一处:人类手写的 `0aea588` 正文提到 `item=`,被算成一次交接。所以 W21 管五处而不是一处。类型定为 `bug`:缺陷今天就能被失败用例复现,spec 必须 RED。
 - 已否决: 只修 `-> idle` 那一处 —— 同一类另外四处漏洞相同,其中交接那一处已经在本仓库算错。顺带让 `handoff` 拒绝旗标值里的换行 —— 那是另一处行为变化,伪造需要刻意为之;本节只修不需要任何恶意就会发生的那一类。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W21 — 第六处同类:死锁数只认 handoff 生成的完整主题
+
+- 理由: 立项的五处都在正文里,而「死锁工作项占比」是 `"触发死锁闸" in subject` —— 交接提交的主题后半句是执行者写的自由文本,评审写"再打回两次就触发死锁闸"不需要任何恶意,与 `0aea588`、`136cabd` 同一个成因。今天的历史里两种口径一致,漏洞相同。改成整行匹配 `chore(pair): 工作项 <ID> 打回 <N> 次,触发死锁闸`。参考实现全套 475 OK;拆回子串只红新用例。顺带补了此前没有的正面:`report` 里数一次真的死锁。另外 `136cabd` 那句散文是我写的 —— W14 我警告过这一类,W20 的 review-impl 里自己没看出 dev 的正则没锚行首。
+- 已否决: 留给下一项 —— 同一个 bug 的同一类,分开修要再立一项、再过一遍 report 的锚点。按主题前缀 `chore(pair):` 加子串判 —— 人类手写 `chore(pair):` 前缀的提交同样会中。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_report_anchored.py`

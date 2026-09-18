@@ -772,8 +772,9 @@ MUTATIONS = [
      '    per_done = finished if since else done',
      '    per_done = done'),
 
+    # W21 的 spec 回合重锚(「三节共同」):完成数只认行首协议行的去向,字面按参考实现定死。
     ('report 完成数不看 idle',
-     '            if re.search(r"phase=\\S+ -> idle ", body):',
+     '            if m.group(2) == "idle":',
      '            if True:'),
 
     ('report 表头不写起点',
