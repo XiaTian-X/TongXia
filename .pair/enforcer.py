@@ -2503,6 +2503,17 @@ REPORT_SEP = "\x1f"
 IDLE_JUDGMENT = "空转判定"
 
 
+# report 只认协议写进提交里的那几行(W21)。正文里还有评审旗标的值、人类手写的散文 ——
+# 在整段正文里找子串,顺带提到一句就被算进去:`0aea588`(路线图散文里的 `item=`)被算成交接,
+# `136cabd`(评审 `--checked` 里的 `phase=… -> idle`)被算成完成。**必须在行首、必须是完整形状。**
+# 组:1 = 来源阶段,2 = 去向,3 = 工作项。与 handoff 里 `body = "role=%s phase=%s -> %s item=%s type=%s"` 同形。
+PROTOCOL_LINE_RE = re.compile(r"^role=\S+ phase=(\S+) -> (\S+) item=(\S+) type=", re.M)
+NO_DECISION_LINE_RE = re.compile(r"^未留决策\(已声明\): ", re.M)
+CONTRACT_CHANGE_LINE_RE = re.compile(r"^契约变更\(已声明\): ", re.M)
+# 主题的后半句是执行者写的自由文本,只认 handoff 触发死锁闸时生成的那个完整主题。
+DEADLOCK_SUBJECT_RE = re.compile(r"^chore\(pair\): 工作项 \S+ 打回 \d+ 次,触发死锁闸$")
+
+
 def _handoff_log(root, since=None):
     """[(subject, body)],按时间正序。`since` 是起点提交的 sha 时只读 `<since>..HEAD`(W20)。"""
     fmt = "%s" + REPORT_SEP + "%b" + REPORT_SEP + "%x00"
@@ -2587,25 +2598,25 @@ def cmd_report(root, cfg, args):
             disputes += 1
         if subject.startswith("chore(pair): 认领工作项"):
             claimed += 1
-        if "触发死锁闸" in subject:
+        if DEADLOCK_SUBJECT_RE.match(subject):
             deadlocks += 1
-        if "未留决策(已声明)" in body:
+        if NO_DECISION_LINE_RE.search(body):
             no_decision += 1
-        if "契约变更(已声明)" in body:
+        if CONTRACT_CHANGE_LINE_RE.search(body):
             contract_changes += 1
-        m = re.search(r"item=(\S+)", body)
-        if m and m.group(1) != "none":
-            rounds_by_item[m.group(1)] = rounds_by_item.get(m.group(1), 0) + 1
+        m = PROTOCOL_LINE_RE.search(body)
+        if m and m.group(3) != "none":
+            rounds_by_item[m.group(3)] = rounds_by_item.get(m.group(3), 0) + 1
             # 只在表头计入的提交里数,两数之和才恒等于「交接提交」。
             # **空转只认那一行**,不在这里再按阶段过滤:写不写判定行是 handoff 的
             # 职责(只写在 impl、非异议的交接上)。两边各过滤一遍的话,拆掉任何
             # 一边都没有用例看得见 —— 冗余的防护等于没有可测的防护。
-            if re.search(r"phase=\S+ -> idle ", body):
+            if m.group(2) == "idle":
                 finished += 1
             j = re.search(r"^%s: (是|否)$" % IDLE_JUDGMENT, body, re.M)
             if j and j.group(1) == "是":
                 idle_rounds += 1
-            elif j is None and "phase=impl -> " in body and prefix != "dispute":
+            elif j is None and m.group(1) == "impl" and prefix != "dispute":
                 unjudged += 1           # 没有判定行的 impl 交接不猜,单独计
 
     done = len(state["completed_items"])
