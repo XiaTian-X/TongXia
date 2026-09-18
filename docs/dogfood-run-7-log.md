@@ -104,7 +104,7 @@ whose-turn: turn dev
 人类指示"按最优方案继续"。编排者代人类定稿,提交 621cbd5(只动 CONTRACT、PLAN、DECISIONS、config):
 - slugify:非 ASCII 字母数字原样保留、按 str.lower() 小写化(W3 仍是 cover);空白按 str.split();- 与 _ 作分隔符;"!!!" 抛 ValueError;导入路径
 - truncate:正好前 n-1;先类型后取值;bool 照 int 接受;导入路径
-- PLAN:W4 补保护测试 tests/test_slugify.py、建议排在 W5 之后;新增 W5 [bug](分隔符与空结果)
+- PLAN:W4 补保护测试 tests/test_slugify.py、建议排在 W5 之后;新增 W5 [bug] (分隔符与空结果)
 - config:8 个孤儿入口文件冻结
 whose-turn: turn tester(契约变了,两份校验都过期,tester 先)
 
@@ -226,7 +226,7 @@ whose-turn: turn tester
 ### 30 → tester(固定提示)
 轮到你了。按 SKILL.md 的规矩走这一回合:先跑 status,照它说的做,做完用 handoff 交接。不要越界,不要替对方做事。
 
-**tester 回合 15 结果**:认领 W4 [refactor](d21ceaa),直接进 impl。认领后刻意不写任何文件(连笔记都不写),免得在 dev 的回合里留下未提交的改动 —— 对"回合与工作区"关系的正确理解。
+**tester 回合 15 结果**:认领 W4 [refactor] (d21ceaa),直接进 impl。认领后刻意不写任何文件(连笔记都不写),免得在 dev 的回合里留下未提交的改动 —— 对"回合与工作区"关系的正确理解。
 whose-turn: turn dev
 
 ### 31 → dev(固定提示)
