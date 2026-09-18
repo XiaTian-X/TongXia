@@ -437,6 +437,10 @@ ROLE_HELP = """无法确定你的角色,已停止。
 """
 
 
+# 角色来自环境变量时的来源说明。status 的表头打它,W22 的警告靠它区分来源 —— 一个常量,不写两遍字面。
+ROLE_FROM_ENV = "PAIR_ROLE 环境变量"
+
+
 def try_resolve_role(root):
     """同 `resolve_role`,但**什么都没配**时返回 `(None, None)`,不停下。
 
@@ -448,7 +452,7 @@ def try_resolve_role(root):
     if env:
         if env not in ROLES:
             die("PAIR_ROLE='%s' 无效,只能是 tester 或 dev。" % env)
-        return env, "PAIR_ROLE 环境变量"
+        return env, ROLE_FROM_ENV
 
     whoami = root / WHOAMI_REL
     if whoami.exists():
@@ -1333,6 +1337,17 @@ def cmd_status(root, cfg, args):
     if state["deadlock_hits"]:
         print(" 曾触发死锁闸: %s" % "、".join(state["deadlock_hits"]))
     print("=" * 52)
+
+    # 共用一个目录时角色要来自 PAIR_ROLE(W22)。`.pair/whoami` 只有一个文件、同一目录里只有一个分支,
+    # 两边会读成同一个角色,而谁都不会被拒绝。只警告不拒绝:sync 为假也可能只有一个 agent 在这个目录里。
+    # 必须打在"不是你的回合"那一支之前 —— 那一支提前结束。
+    if not cfg.get("sync") and source != ROLE_FROM_ENV:
+        print()
+        print(">>> 警告:你的角色来自 %s,而两个 agent 共用这个目录(sync 为假)。<<<" % source)
+        print("它在同一个目录里只有一份,两个 agent 会读成同一个角色,谁都不会被拒绝。")
+        print("每条协议命令都带上前缀:")
+        print("  PAIR_ROLE=%s python3 %s <命令>" % (me, PROG_HINT))
+        print("(只有一个 agent 在这个目录里工作时,这条可以忽略。)")
 
     if tampered:
         print()

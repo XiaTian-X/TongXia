@@ -61,6 +61,10 @@ python3 .agents/skills/pair-protocol/scripts/pair.py status
 
 角色由 `pair.py` 自动解析,优先级:`PAIR_ROLE` 环境变量 → `.pair/whoami` 文件
 → git 分支名 `pair/<角色>`。三者都没有时它会停下来让你去问人类。
+
+**两个 agent 共用一个目录时(`sync` 为假,默认如此),只能用 `PAIR_ROLE`**:每条协议命令都带前缀
+`PAIR_ROLE=<你的角色>`。`.pair/whoami` 只有一个文件、同一目录里只有一个分支,两边会读成同一个角色,
+谁都不会被拒绝。`status` 在这种情况下会警告。
 实际路径边界以 `.pair/config.json` 为准,上表是默认值。
 
 ## 开工前:verify-setup
