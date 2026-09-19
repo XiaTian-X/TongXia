@@ -61,6 +61,19 @@ class TestDemoProject(unittest.TestCase):
         self.assertFalse(
             missing, "样板项目的 .gitignore 缺了这几行:%s" % missing)
 
+    def _verify(self):
+        """造一个样板仓库、交一份结论、跑 verify-setup,返回输出。"""
+        proj = TestDemoProject._make(self)
+        (proj / "docs" / "reviews").mkdir(parents=True, exist_ok=True)
+        (proj / "docs" / "reviews" / "setup-verification.md").write_text(
+            REPORT, encoding="utf-8")
+        proc = subprocess.run(
+            [sys.executable, ".agents/skills/pair-protocol/scripts/pair.py",
+             "verify-setup", "--drafter", "other"],
+            cwd=str(proj), env={"PAIR_ROLE": "dev", "PATH": "/usr/bin:/bin"},
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        return proc.stdout.decode("utf-8", "replace")
+
     def test_开工前校验只卡在契约审查结论那一步(self):
         """出厂的样板项目必须能通过全部脚本检查。卡在别处 = 出厂物坏了。"""
         proj = self._make()
@@ -75,6 +88,26 @@ class TestDemoProject(unittest.TestCase):
         out = proc.stdout.decode("utf-8", "replace")
         self.assertNotIn("[失败]", out, out)
         self.assertIn("开工前校验全部通过", out, out)
+
+
+class TestDemoPlanIsReady(unittest.TestCase):
+    """W24:出厂样板项目要能不经人类定稿就开工。第七轮两个会话各自挑出样板 W4 缺保护测试 ——
+    `claim` 会硬拦,新用户照 `INSTALL.md` 接入后的第一次开工就要人类介入。"""
+
+    def test_样板_PLAN_里每个_refactor_项都声明了保护测试(self):
+        plan = (DEMO / "docs" / "PLAN.md").read_text(encoding="utf-8")
+        blocks = re.split(r"(?m)^(?=- \[[ x]\] \*\*)", plan)
+        refactors = [b for b in blocks if re.match(r"- \[[ x]\] \*\*\S+\*\* \[refactor\]", b)]
+        self.assertTrue(refactors, "样板 PLAN 里没有 refactor 项 —— 这条用例什么都没检查")
+        missing = [b.splitlines()[0] for b in refactors if not PAIR.PROTECT_REF_RE.search(b)]
+        self.assertFalse(missing, "这些 refactor 项没声明保护测试:%s" % missing)
+
+    def test_样板项目_verify_setup_不出现没声明保护测试的警告(self):
+        """只看这一句会是单向的 —— 拆掉警告它照样绿。正面在
+        `test_v1_brownfield` 的 `test_verify_setup_对没声明保护测试的_refactor_照旧警告`。"""
+        out = TestDemoProject._verify(self)
+        self.assertIn("开工前校验全部通过", out, out)
+        self.assertNotIn("没声明保护它的测试", out, out)
 
 
 class TestWhoseTurn(unittest.TestCase):

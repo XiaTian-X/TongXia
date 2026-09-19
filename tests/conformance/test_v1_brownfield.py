@@ -200,6 +200,22 @@ class TestRefactorNeedsSafetyNet(PairTestCase):
         self.repo.set_plan(self._plan("  - 保护测试: tests"))
         self.assertAccepted(self.repo.run("claim", "R1", role="tester"))
 
+    def test_verify_setup_对没声明保护测试的_refactor_照旧警告(self):
+        """W24 的正面(spec 回合带声明补):样板项目那条用例断言的是"**不**出现这条警告",
+        把警告从 `verify-setup` 里整个拆掉它照样绿。这一条让"拆掉警告"有用例红。"""
+        self.repo.set_plan(self._plan(""))
+        self.repo.write("docs/reviews/setup-verification.md", setup_report("W1", "W2"))
+        r = self.repo.run(*VERIFY_OK, role="dev")
+        self.assertIn("R1", r.text)
+        self.assertIn("没声明保护它的测试", r.text)
+
+    def test_verify_setup_声明了就不警告(self):
+        """上一条的对照组:同一份计划只差那一行。"""
+        self.repo.set_plan(self._plan("  - 保护测试: tests"))
+        self.repo.write("docs/reviews/setup-verification.md", setup_report("W1", "W2"))
+        r = self.repo.run(*VERIFY_OK, role="dev")
+        self.assertNotIn("没声明保护它的测试", r.text)
+
 
 class TestScope(PairTestCase):
     """存量项目最危险的不是结构不合适,是蔓延。"""

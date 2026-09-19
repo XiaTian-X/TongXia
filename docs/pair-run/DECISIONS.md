@@ -454,3 +454,8 @@
 - 理由: `.pair/scratch/` 不需要任何新判定,因为 `changed_entries` 的 `git status` 不带 `--ignored`,被忽略的文件不进写权限边界、删除测试防护、红绿不变量、提交,也不进 `verify-setup` 的"未提交的代码改动"。这是一把两面的刀:**有人把实现或测试路径误加进 `.gitignore`,协议对它同样完全看不见** —— 比 `ignore_paths`(第三轮起 verify-setup 会把它列成"不受边界保护"的警告)更隐蔽,因为 `.gitignore` 里的行没有任何地方提醒。今后给 `GITIGNORE_LINES` 加行,只加协议自己产生、或明确给验证用的路径。
 - 已否决: 给 `.pair/scratch/` 单独写一条写权限规则 —— 忽略就够,多一条规则多一处可拆的分支。现在就让 verify-setup 检查 `.gitignore` 是否覆盖了角色路径 —— 是新行为,不在 W23 范围,记在这里。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.gitignore`
+## W24 — 样板"不出现警告"是单向的,补 verify-setup 会警告的正面
+
+- 理由: 验收 ② 断言样板项目的 `verify-setup` 输出里没有"没声明保护它的测试",而全套没有任何用例断言这条警告**会**出现,`MUTATIONS` 也没有它的锚点 —— 把警告整个拆掉,② 照样绿,③"保护测试的检查放宽用例要红"找不到能红的用例。补 `test_v1_brownfield` 两条:没声明时警告(点名工作项)、只差那一行的对照组不警告;登记「verify-setup 不警告 refactor 缺保护测试」,在参考修复上只被正面那条抓住。tester 在第八轮认领前的审查里挑出(⑥)。
+- 已否决: 把 ③ 落在 `claim` 的硬拦上 —— 已有「拆掉 refactor 保护测试强制」守着,与本项无关;让样板那条用例同时断言"会警告"—— 样板修好之后它就不会警告了,两件事不能在同一份数据上同时成立。
+- 影响路径: `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_brownfield.py`, `tests/conformance/test_v1_shipped.py`

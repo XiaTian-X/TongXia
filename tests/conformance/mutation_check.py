@@ -842,6 +842,12 @@ MUTATIONS = [
     ('gitignore 不含 scratch',
      '                   "__pycache__/", "*.pyc", ".pair/scratch/"]',
      '                   "__pycache__/", "*.pyc"]'),
+
+    # W24 的 spec 回合(带声明补的正面):verify-setup 对没声明保护测试的 refactor 项要警告。
+    # 样板项目那条是"不出现",单向的;这条变异由 test_v1_brownfield 的正面用例抓。
+    ('verify-setup 不警告 refactor 缺保护测试',
+     "        if not refs:\n            warn(\"工作项 '%s' [refactor] 没声明保护它的测试",
+     "        if False:\n            warn(\"工作项 '%s' [refactor] 没声明保护它的测试"),
 ]
 
 # unittest 的失败行有两种形态:
