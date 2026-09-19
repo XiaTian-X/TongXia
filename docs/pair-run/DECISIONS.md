@@ -444,3 +444,8 @@
 - 理由: 第七轮独立运行暴露四处(开放条目 23–26)。W22:`sync` 为假即共用目录,角色来自 `whoami` 或分支名时两边会读成同一个角色,`status` 警告;不拒绝,因为 sync 为假也可能只有一个 agent 在这个目录。W23:`.pair/scratch/` 加进 `GITIGNORE_LINES`,被忽略的文件不出现在 git status 里,写权限边界与提交都看不见,不需要新判定。W24:样板 PLAN 的 refactor 项缺保护测试是能写成失败用例的缺陷,契约措辞随实现交。
 - 已否决: 条目 26 单独立项 —— 它是写法建议,没有能写成失败用例的行为,凑一条用例只会是恒绿的判据。W22 直接拒绝非 PAIR_ROLE 来源 —— 会误伤单 agent 目录。W23 给 scratch 单独的写权限规则 —— 忽略就够,多一条规则多一处可拆的分支。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/SKILL.md`, `.agents/skills/pair-protocol/references/rules.md`, `examples/demo-project`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W22 — status 里给"不轮到你"的一方看的提示,必须打在"不是你的回合"那一支之前
+
+- 理由: `cmd_status` 在表头之后分两支:轮到你就打本阶段任务,不轮到你就打"现在不是你的回合"并**提前 return**。W22 的共用目录警告恰恰最常被不轮到的一方看到(idle 时 dev 跑 status),放在那一支之后就永远打不出来。tester 在 W22 的 spec 回合提醒了这一点,`test_角色来自_whoami_时警告并给出_PAIR_ROLE_写法` 用 whoami=dev 在 idle 跑,正好守住位置。W13 的"校验不作数"提示也在那一支之前,是同一条规矩的既有实例。今后往 status 里加任何提示,先问它给谁看。
+- 已否决: 把警告只打在"轮到你"那一支里 —— 共用目录时写错角色的一方往往就是不轮到的那一方。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`
