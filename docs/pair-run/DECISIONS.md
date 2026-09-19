@@ -449,3 +449,8 @@
 - 理由: `cmd_status` 在表头之后分两支:轮到你就打本阶段任务,不轮到你就打"现在不是你的回合"并**提前 return**。W22 的共用目录警告恰恰最常被不轮到的一方看到(idle 时 dev 跑 status),放在那一支之后就永远打不出来。tester 在 W22 的 spec 回合提醒了这一点,`test_角色来自_whoami_时警告并给出_PAIR_ROLE_写法` 用 whoami=dev 在 idle 跑,正好守住位置。W13 的"校验不作数"提示也在那一支之前,是同一条规矩的既有实例。今后往 status 里加任何提示,先问它给谁看。
 - 已否决: 把警告只打在"轮到你"那一支里 —— 共用目录时写错角色的一方往往就是不轮到的那一方。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`
+## W23 — 被 git 忽略的文件对协议的所有检查都不可见:scratch 靠它,误加的忽略规则也会因此让实现隐身
+
+- 理由: `.pair/scratch/` 不需要任何新判定,因为 `changed_entries` 的 `git status` 不带 `--ignored`,被忽略的文件不进写权限边界、删除测试防护、红绿不变量、提交,也不进 `verify-setup` 的"未提交的代码改动"。这是一把两面的刀:**有人把实现或测试路径误加进 `.gitignore`,协议对它同样完全看不见** —— 比 `ignore_paths`(第三轮起 verify-setup 会把它列成"不受边界保护"的警告)更隐蔽,因为 `.gitignore` 里的行没有任何地方提醒。今后给 `GITIGNORE_LINES` 加行,只加协议自己产生、或明确给验证用的路径。
+- 已否决: 给 `.pair/scratch/` 单独写一条写权限规则 —— 忽略就够,多一条规则多一处可拆的分支。现在就让 verify-setup 检查 `.gitignore` 是否覆盖了角色路径 —— 是新行为,不在 W23 范围,记在这里。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.gitignore`

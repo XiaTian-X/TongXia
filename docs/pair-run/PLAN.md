@@ -400,7 +400,7 @@
     ⑥变异点:去掉 `sync` 判定、去掉来源判定,各有用例红
   - 对应契约:`docs/pair-run/CONTRACT.md` → 共用目录时角色要来自 PAIR_ROLE
 
-- [ ] **W23** [feature] — 给验证用的副本一个约定的位置:`.pair/scratch/`
+- [x] **W23** [feature] — 给验证用的副本一个约定的位置:`.pair/scratch/`
   - **来源**:开放条目 24、26。第七轮两个会话都自发做变异验证,为此四次在仓库外建副本;协议没给出口
   - 验收标准:①`init` 写的 `.gitignore` 含 `.pair/scratch/`(`GITIGNORE_LINES` 里加一行);②评审回合在
     `.pair/scratch/` 下写文件,`handoff` 不因此拒绝、这些文件也不进提交;③`verify-setup` 的"未提交的代码改动"警告不列它们;
