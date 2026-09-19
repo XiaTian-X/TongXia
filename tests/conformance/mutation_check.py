@@ -837,6 +837,11 @@ MUTATIONS = [
     ('共用目录警告写法角色写死',
      '        print("  PAIR_ROLE=%s python3 %s <命令>" % (me, PROG_HINT))',
      '        print("  PAIR_ROLE=%s python3 %s <命令>" % ("dev", PROG_HINT))'),
+
+    # W23 验证副本放 .pair/scratch/(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('gitignore 不含 scratch',
+     '                   "__pycache__/", "*.pyc", ".pair/scratch/"]',
+     '                   "__pycache__/", "*.pyc"]'),
 ]
 
 # unittest 的失败行有两种形态:

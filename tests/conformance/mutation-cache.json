@@ -1,5 +1,5 @@
 {
-  "baseline": "c03a3194099da1bd",
+  "baseline": "314c8c4fbd54e0bb",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
@@ -9,6 +9,9 @@
     ],
     "dev 在 idle 看到认领说明": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_的_status_归属那一行是_dev_且给出重跑指引"
+    ],
+    "gitignore 不含 scratch": [
+      "test_v1_scratch.TestInitIgnoresScratch.test_init_写的_gitignore_含_scratch"
     ],
     "idle 例外从不生效": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_的_status_归属那一行是_dev_且给出重跑指引"
