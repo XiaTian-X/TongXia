@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 .pair/turns/
 .pair/.last-brief.md
+.pair/scratch/

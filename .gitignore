@@ -6,3 +6,4 @@ __pycache__/
 .pair/.last-full-test.log
 .pair/.last-brief.md
 .pair/turns/
+.pair/scratch/

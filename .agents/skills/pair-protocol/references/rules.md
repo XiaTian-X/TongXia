@@ -138,6 +138,28 @@ pair.py handoff approve "摘要" \
 
 评审目录的命名规则和每种文档的模板见 [documents.md](documents.md)。
 
+### 在副本里做验证:放 `.pair/scratch/`
+
+评审时最有力的证据往往是**故意把实现改错,看测试红不红**(变异验证),或者另写一个参考实现做差分。
+这需要一个能随便改的地方:
+
+- **副本和临时脚本放 `.pair/scratch/`。** 它在 `.gitignore` 里,写权限边界、提交、开工前校验都看不见它 ——
+  不会被判越界,也不会被提交。**不要**建在仓库外面:那里协议管不到,也不是给你的地方。
+- **能不写文件就不写。** 很多变异一条命令就能验完 —— 在同一个进程里临时替换函数再跑测试:
+
+  ```
+  python3 -c "import src, unittest; src.slugify = lambda t: t.lower(); \
+  unittest.main(module=None, argv=['x', 'discover', '-s', 'tests', '-t', '.'])"
+  ```
+
+  工作区一个字节都不动。**替换的要是测试导入的那个名字**:测试写的是 `from src.strings import slugify`
+  的话,换 `src.slugify` 没用 —— 那就是一次"以为测过、其实没测"的变异。
+- **原地改写实现做变异时,关掉编译缓存**(`PYTHONDONTWRITEBYTECODE=1` 并删掉 `__pycache__`)。
+  两次改写的那一行长度相同、又在同一秒写入时,Python 会复用旧的 `.pyc`,跑的其实是上一个版本 ——
+  你以为测过的变异根本没被测。
+- **测试里的非 ASCII 字符用 `\uXXXX` 转义写,写完逐个核码点。** 工具可能在保存时悄悄改写字符
+  (全角逗号变成 ASCII 逗号),测试照绿、什么都没测到。
+
 ## 7. 状态文件不可篡改
 
 `.pair/state.json` 记录当前阶段、工作项和打回计数。它**只由 `pair.py` 写**,

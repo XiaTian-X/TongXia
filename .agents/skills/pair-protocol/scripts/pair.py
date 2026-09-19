@@ -2885,9 +2885,11 @@ DECISIONS_SKELETON = """# 决策记录（追加式 — 只能往后加，不能�
 # pair.py 本身是 Python,每次 status/handoff 跑测试都会生成字节码。
 # 不忽略的话,它会落在**对方**的路径下,让两个角色互相把对方卡在越界上。
 # 这与目标项目用什么语言无关。
+# `.pair/scratch/`(W23):验证用的副本与临时脚本放这里。被 git 忽略的文件不出现在 git status 里,
+# 写权限边界、提交、verify-setup 的"未提交的代码改动"都看不见它们 —— 不需要为它另写判定。
 GITIGNORE_LINES = [".pair/.last-test.log", ".pair/.last-full-test.log",
                    ".pair/whoami", ".pair/turns/", BRIEF_REL,
-                   "__pycache__/", "*.pyc"]
+                   "__pycache__/", "*.pyc", ".pair/scratch/"]
 
 
 def _detect_stack(root):
