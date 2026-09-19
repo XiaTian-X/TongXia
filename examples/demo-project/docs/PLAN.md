@@ -22,17 +22,19 @@
 `对应契约` 那一行是必须的,verify-setup 会检查它指向的小节真实存在。
 
 - [ ] **W1** [feature] — `slugify(text)` 把文本转成 URL slug
-  - 验收标准:小写化、空白转连字符、去掉首尾连字符、空串抛 ValueError
+  - 验收标准:小写化、空白与 `-`/`_` 都作分隔符、去掉首尾连字符、不出现连续连字符;
+    没有任何字母或数字(空串、纯空白、`"!!!"`)抛 ValueError
   - 对应契约:`docs/CONTRACT.md` → slugify
 
 - [ ] **W2** [feature] — `truncate(text, n)` 按字符数截断并加省略号
-  - 验收标准:短于 n 时原样返回;n < 1 抛 ValueError;省略号计入长度
+  - 验收标准:短于或等于 n 时原样返回;需要截断时正好前 n-1 个字符加 `…`;n < 1 抛 ValueError
   - 对应契约:`docs/CONTRACT.md` → truncate
 
 - [ ] **W3** [cover] — 为 slugify 的非 ASCII 行为补测试
-  - 验收标准:契约说"非 ASCII 原样保留并转小写",但 W1 没有断言它
+  - 验收标准:契约的非 ASCII 条款(原样保留并小写化、NFC、Unicode 空白与连字符)W1 没有断言,这里补上
   - 对应契约:`docs/CONTRACT.md` → slugify
 
-- [ ] **W4** [refactor] — 把 slugify 的正则提取成具名常量
-  - 验收标准:行为不变,测试全程保持绿
+- [ ] **W4** [refactor] — 把 slugify 的字符分类提成具名函数
+  - 验收标准:每个字符归为保留 / 分隔 / 丢弃的判定提成一个具名函数;行为不变,测试全程保持绿
+  - 保护测试: tests
   - 对应契约:`docs/CONTRACT.md` → slugify
