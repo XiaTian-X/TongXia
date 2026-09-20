@@ -459,3 +459,8 @@
 - 理由: 验收 ② 断言样板项目的 `verify-setup` 输出里没有"没声明保护它的测试",而全套没有任何用例断言这条警告**会**出现,`MUTATIONS` 也没有它的锚点 —— 把警告整个拆掉,② 照样绿,③"保护测试的检查放宽用例要红"找不到能红的用例。补 `test_v1_brownfield` 两条:没声明时警告(点名工作项)、只差那一行的对照组不警告;登记「verify-setup 不警告 refactor 缺保护测试」,在参考修复上只被正面那条抓住。tester 在第八轮认领前的审查里挑出(⑥)。
 - 已否决: 把 ③ 落在 `claim` 的硬拦上 —— 已有「拆掉 refactor 保护测试强制」守着,与本项无关;让样板那条用例同时断言"会警告"—— 样板修好之后它就不会警告了,两件事不能在同一份数据上同时成立。
 - 影响路径: `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_brownfield.py`, `tests/conformance/test_v1_shipped.py`
+## SETUP — 第十轮修第九轮暴露的四处,人类裁决"开始吧";条目 27、29 并进 W26 的文档
+
+- 理由: 第九轮独立运行(`docs/dogfood-run-9.md`)4/4 双向通过、1 次打回、0 越界,暴露四处。W25:`status` 的可写路径只按阶段算,非归属方看到的是对方的路径,与第八轮 W22 定的"给不轮到的一方看的东西按那一方来"方向相反,只改显示不动边界。W26:样板出厂自带 3 条警告(9 个孤儿、两个入口文件缺激活段落),出厂物自带警告会教新用户忽略警告;条目 29(样板契约没写清 `½` 算不算数字,两个会话独立收敛成绿色断言、错了不会变红)与条目 27(`rules.md` 的 `\uXXXX` 转义在实际工具下写不出来,写不出来时测试静默失去区分力)都没有能写成失败用例的行为,并进 W26 的文档。
+- 已否决: 条目 27 单独立项 —— 纯写法建议,凑一条用例只会是恒绿的判据,与第八轮条目 26 并进 W23 同一处理。W25 顺手把写权限边界一起改 —— 拦截一直是对的,合在一项里红了分不清哪一边。给"人类放进仓库的文件天然是孤儿"加新判定 —— 孤儿警告本来就该报它,处置是人类的事。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `examples/demo-project`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
