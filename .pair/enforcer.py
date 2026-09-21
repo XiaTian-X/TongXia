@@ -623,8 +623,19 @@ def review_append_paths(cfg, phase):
     return list((cfg.get("review_append_paths") or {}).get(PHASE_OWNER[phase], []))
 
 
-def writable_display(cfg, phase):
-    """`status` 与简报里"可写路径"那一行:只追加的路径标出来,免得被读成可写。"""
+def writable_display(cfg, phase, role=None):
+    """`status` 与简报里"可写路径"那一行:只追加的路径标出来,免得被读成可写。
+
+    `role` 是执行命令的角色(W25)。它不是这个阶段的执行者时,只给共享路径与记忆层 ——
+    归属方的角色路径、评审阶段执行者名下的只追加路径,它一个都写不了。第九轮 tester 在
+    impl 阶段看到的是 dev 的 `src …`,同一屏又写着"现在不是你的回合"。
+    不传 `role` 就按阶段执行者算:简报只写给执行者(`cmd_status` 里 `me == owner` 才落盘)。
+
+    **只改显示。** 写权限边界在 `handoff` 里另算,一直是对的;这里借 `writable_paths`
+    的 idle 分支取"任何阶段都能写的那部分",不另起一套,免得显示与判定漂开。
+    """
+    if role is not None and role != PHASE_OWNER[phase]:
+        return " ".join(writable_paths(cfg, "idle"))
     parts = list(writable_paths(cfg, phase))
     parts += ["%s(只追加)" % p for p in review_append_paths(cfg, phase)]
     return " ".join(parts)
@@ -1332,7 +1343,7 @@ def cmd_status(root, cfg, args):
     print(" 当前工作项: %s" % item_label)
     print(" 当前阶段 : %s   → 归属: %s" % (phase, owner))
     print(" 测试状态 : %s   (详见 %s)" % ("GREEN" if green else "RED", TESTLOG_REL))
-    print(" 可写路径 : %s" % writable_display(cfg, phase))
+    print(" 可写路径 : %s" % writable_display(cfg, phase, me))
     print(" 已完成项 : %d" % len(state["completed_items"]))
     if state["deadlock_hits"]:
         print(" 曾触发死锁闸: %s" % "、".join(state["deadlock_hits"]))
