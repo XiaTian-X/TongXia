@@ -110,6 +110,29 @@ class TestDemoPlanIsReady(unittest.TestCase):
         self.assertNotIn("没声明保护它的测试", out, out)
 
 
+class TestDemoStartsClean(unittest.TestCase):
+    """W26:出厂样板项目开工前不该有警告。出厂物自带的警告会教新用户忽略警告 ——
+    第九轮两个会话每一轮都把孤儿与激活段落那三条重复报上来。
+
+    **这几条是"不出现",单向的。** 正面在 `test_v1_paths.test_开工前把孤儿列出来` 与
+    `test_v1_setup.TestVerifySetup` 的激活段落两条(W26 的 spec 回合带声明补)。"""
+
+    def setUp(self):
+        self.out = TestDemoProject._verify(self)
+
+    def test_前提_校验跑通了(self):
+        self.assertIn("开工前校验全部通过", self.out, self.out)
+
+    def test_没有孤儿那条(self):
+        self.assertNotIn("孤儿", self.out, self.out)
+
+    def test_AGENTS_md_不缺激活段落(self):
+        self.assertNotIn("AGENTS.md 里没有协议激活段落", self.out, self.out)
+
+    def test_CLAUDE_md_不缺激活段落(self):
+        self.assertNotIn("CLAUDE.md 里没有协议激活段落", self.out, self.out)
+
+
 class TestWhoseTurn(unittest.TestCase):
     """驱动器只认这一行输出,所以它的形状是接口,不是随手打印。"""
 

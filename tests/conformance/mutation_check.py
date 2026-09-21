@@ -853,6 +853,12 @@ MUTATIONS = [
     ('status 可写路径退回按阶段归属',
      '    print(" 可写路径 : %s" % writable_display(cfg, phase, me))',
      '    print(" 可写路径 : %s" % writable_display(cfg, phase, owner))'),
+
+    # W26 的 spec 回合(带声明补的正面):入口文件缺激活段落时 verify-setup 要警告。
+    # 样板那条是"不出现",单向的;这条变异由 test_v1_setup 的正面用例抓。
+    ('verify-setup 不警告入口文件缺激活段落',
+     '        elif ENTRY_MARK_BEGIN not in fp.read_text(encoding="utf-8"):',
+     '        elif False:'),
 ]
 
 # unittest 的失败行有两种形态:

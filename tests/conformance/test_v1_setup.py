@@ -246,6 +246,25 @@ class TestVerifySetup(PairTestCase):
         r = self.repo.run(*VERIFY_OK, role="dev")
         self.assertRefused(r, "没有合法工作项")
 
+    def test_入口文件缺激活段落时警告(self):
+        """W26 的正面(spec 回合带声明补):样板那条断言的是"不出现",把这条警告整个拆掉它照样绿。
+        harness 铺的 `AGENTS.md` 是一句话、不带标记块。"""
+        self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
+        r = self.repo.run(*VERIFY_OK, role="dev")
+        self.assertAccepted(r)
+        self.assertIn("AGENTS.md 里没有协议激活段落", r.text)
+
+    def test_入口文件带激活段落就不警告(self):
+        """上一条的对照组:只差 `AGENTS.md` 带不带标记块。"""
+        self.repo.write("AGENTS.md", "<!-- pair-protocol:begin -->\n先读 SKILL.md\n"
+                                     "<!-- pair-protocol:end -->\n")
+        self.repo.git("add", "AGENTS.md")
+        self.repo.git("commit", "-q", "-m", "人类:入口文件带上激活段落")
+        self.repo.write("docs/reviews/setup-verification.md", self.REPORT)
+        r = self.repo.run(*VERIFY_OK, role="dev")
+        self.assertAccepted(r)
+        self.assertNotIn("AGENTS.md 里没有协议激活段落", r.text)
+
     def test_可以配置关闭门禁(self):
         from harness import PairRepo
         repo = PairRepo({"require_setup_verification": False})

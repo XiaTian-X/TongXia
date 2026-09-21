@@ -469,3 +469,8 @@
 - 理由: 契约没点名被取代的用例,而 `test_v1_review_append.test_非执行者看到的头部那一行也标出只追加` 恰好断言相反的事:dev 在 review-impl 的头部要标出 tester 名下的登记表。dev 追加不了它,按本节它不该出现。那条用例守的真正性质是"只追加标在头部那一行、不只靠简报"(W16 dev 实测过两处要分开守),改由执行者自己的头部那一行守,另加非执行者看不到它。status 那一行是既有锚点所在,照「三节共同」定死字面 `writable_display(cfg, phase, me)` 并重锚;W25 的变异点把 `me` 换成 `owner`。参考实现全套绿。
 - 已否决: 只按角色路径过滤、只追加路径照旧对所有人显示 —— 与本节"显示执行者现在能写什么"矛盾,非执行者会以为自己能追加。删掉那条旧用例 —— 它守的"头部要标只追加"仍然成立。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_review_append.py`, `tests/conformance/test_v1_status_paths.py`, `tests/conformance/mutation_check.py`
+## W26 — 激活段落警告没有正面,补 verify-setup 会警告的那一条
+
+- 理由: 验收 ③④ 断言样板项目的 `verify-setup` 不出现孤儿与两条"没有协议激活段落"。孤儿那条有既有正面与变异点;激活段落那条全套没有任何用例断言它会出现、`MUTATIONS` 里也没有它 —— 把警告整个删掉,样板那两条照样绿,④ 找不到能红的用例。补 `test_v1_setup` 两条:harness 的 `AGENTS.md` 不带标记块时警告、只差标记块的对照组不警告;登记「verify-setup 不警告入口文件缺激活段落」。样板数据改动不在 `mutation_check` 范围(它只改 `pair.py`),由样板用例直接守。与第八轮 W24 同一个形状 —— "出厂物不出现警告"的项,要先确认那条警告本身有人守。
+- 已否决: 把 ④ 解释成"删掉样板里的 frozen_paths/标记块,样板用例要红" —— 那是探针不是变异点,`mutation_check` 登记不了;它由样板那几条用例本身表达。
+- 影响路径: `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_setup.py`, `tests/conformance/test_v1_shipped.py`, `tests/conformance/mutation_check.py`
