@@ -1,8 +1,8 @@
 {
   "round": 23,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W26",
+  "item_type": "bug",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -32,7 +32,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "61ae94326ec767a3a3592e26d2cd9f06f81457cb",
   "setup_verified_contract": {
     "tester": "61ae94326ec767a3a3592e26d2cd9f06f81457cb",
     "dev": "61ae94326ec767a3a3592e26d2cd9f06f81457cb"
