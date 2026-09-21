@@ -17,7 +17,15 @@
     "AGENTS.md",
     ".agents",
     ".claude",
-    ".pair"
+    ".pair",
+    ".clinerules",
+    ".cursor",
+    ".github",
+    ".gitignore",
+    ".windsurfrules",
+    "CLAUDE.md",
+    "CONVENTIONS.md",
+    "GEMINI.md"
   ],
   "ignore_paths": [],
   "plan_file": "docs/PLAN.md",

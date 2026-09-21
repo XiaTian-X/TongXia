@@ -1,5 +1,5 @@
 {
-  "baseline": "9f9c87869d3d22b6",
+  "baseline": "e474f4894fad5017",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
@@ -84,6 +84,9 @@
     ],
     "verify-setup 不警告 refactor 缺保护测试": [
       "test_v1_brownfield.TestRefactorNeedsSafetyNet.test_verify_setup_对没声明保护测试的_refactor_照旧警告"
+    ],
+    "verify-setup 不警告入口文件缺激活段落": [
+      "test_v1_setup.TestVerifySetup.test_入口文件缺激活段落时警告"
     ],
     "whose-turn 不用 idle 例外": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_重跑之后又轮到_tester"
