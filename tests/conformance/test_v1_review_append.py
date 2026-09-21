@@ -175,16 +175,29 @@ class TestStatusMarksAppendOnly(AppendBase):
         self.assertIn(REG, r.text)
         self.assertIn("只追加", r.text)
 
-    def test_非执行者看到的头部那一行也标出只追加(self):
-        """"只追加"出现在两处:`status` 的头部与执行者的简报。上一条以执行者身份跑、
-        断言整段输出,两处都命中 —— dev 在 impl 回合实测,把任何一处改回旧写法都没有用例红。
-        非执行者没有简报,只有头部那一行。"""
+    def test_执行者头部那一行也标出只追加(self):
+        """"只追加"出现在两处:`status` 的头部与执行者的简报。上一条断言整段输出,两处都命中 ——
+        dev 在 W16 的 impl 回合实测,把任何一处改回旧写法都没有用例红,所以这里**只取头部那一行**。
+
+        原先以**非执行者**(dev)身份跑,断言它的头部也标出 tester 名下的只追加路径。W25 起头部那一行
+        按执行命令的角色显示,dev 在 review-impl 追加不了那份登记表,不该看到它 —— 按新行为改成
+        执行者自己的头部那一行(契约「status 的可写路径按本角色显示」点名了这一条)。"""
+        self.repo.advance_to("review-impl")
+        r = self.repo.run("status", role="tester")
+        self.assertAccepted(r)
+        line = [l for l in r.text.splitlines() if " 可写路径 :" in l]
+        self.assertTrue(line, r.text)
+        self.assertIn(REG, line[0])
+        self.assertIn("只追加", line[0])
+
+    def test_非执行者头部那一行没有执行者名下的只追加路径(self):
+        """W25:dev 在 review-impl 写不了 tester 名下的登记表。"""
         self.repo.advance_to("review-impl")
         r = self.repo.run("status", role="dev")
         self.assertAccepted(r)
-        line = [l for l in r.text.splitlines() if "可写路径" in l]
+        line = [l for l in r.text.splitlines() if " 可写路径 :" in l]
         self.assertTrue(line, r.text)
-        self.assertIn("只追加", line[0])
+        self.assertNotIn(REG, line[0])
 
     def test_执行者看到的只能写那一行也标出只追加(self):
         """另一处在执行者才看得到的回合说明里:`【本回合只读】只能写:…` 那一行。"""

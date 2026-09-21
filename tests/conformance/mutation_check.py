@@ -642,7 +642,7 @@ MUTATIONS = [
      '    pass'),
 
     ("status 头部不标只追加",
-     '    print(" 可写路径 : %s" % writable_display(cfg, phase))',
+     '    print(" 可写路径 : %s" % writable_display(cfg, phase, me))',
      '    print(" 可写路径 : %s" % " ".join(writable_paths(cfg, phase)))'),
 
     ("简报不标只追加",
@@ -848,6 +848,11 @@ MUTATIONS = [
     ('verify-setup 不警告 refactor 缺保护测试',
      "        if not refs:\n            warn(\"工作项 '%s' [refactor] 没声明保护它的测试",
      "        if False:\n            warn(\"工作项 '%s' [refactor] 没声明保护它的测试"),
+
+    # W25:status 头部按执行命令的角色显示。字面在 spec 回合定死(「三节共同」:它改写了上面那个锚点)。
+    ('status 可写路径退回按阶段归属',
+     '    print(" 可写路径 : %s" % writable_display(cfg, phase, me))',
+     '    print(" 可写路径 : %s" % writable_display(cfg, phase, owner))'),
 ]
 
 # unittest 的失败行有两种形态:

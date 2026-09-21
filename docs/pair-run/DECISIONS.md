@@ -464,3 +464,8 @@
 - 理由: 第九轮独立运行(`docs/dogfood-run-9.md`)4/4 双向通过、1 次打回、0 越界,暴露四处。W25:`status` 的可写路径只按阶段算,非归属方看到的是对方的路径,与第八轮 W22 定的"给不轮到的一方看的东西按那一方来"方向相反,只改显示不动边界。W26:样板出厂自带 3 条警告(9 个孤儿、两个入口文件缺激活段落),出厂物自带警告会教新用户忽略警告;条目 29(样板契约没写清 `½` 算不算数字,两个会话独立收敛成绿色断言、错了不会变红)与条目 27(`rules.md` 的 `\uXXXX` 转义在实际工具下写不出来,写不出来时测试静默失去区分力)都没有能写成失败用例的行为,并进 W26 的文档。
 - 已否决: 条目 27 单独立项 —— 纯写法建议,凑一条用例只会是恒绿的判据,与第八轮条目 26 并进 W23 同一处理。W25 顺手把写权限边界一起改 —— 拦截一直是对的,合在一项里红了分不清哪一边。给"人类放进仓库的文件天然是孤儿"加新判定 —— 孤儿警告本来就该报它,处置是人类的事。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `examples/demo-project`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W25 — 只追加路径也算归属方的;被取代的那条头部用例按新行为改
+
+- 理由: 契约没点名被取代的用例,而 `test_v1_review_append.test_非执行者看到的头部那一行也标出只追加` 恰好断言相反的事:dev 在 review-impl 的头部要标出 tester 名下的登记表。dev 追加不了它,按本节它不该出现。那条用例守的真正性质是"只追加标在头部那一行、不只靠简报"(W16 dev 实测过两处要分开守),改由执行者自己的头部那一行守,另加非执行者看不到它。status 那一行是既有锚点所在,照「三节共同」定死字面 `writable_display(cfg, phase, me)` 并重锚;W25 的变异点把 `me` 换成 `owner`。参考实现全套绿。
+- 已否决: 只按角色路径过滤、只追加路径照旧对所有人显示 —— 与本节"显示执行者现在能写什么"矛盾,非执行者会以为自己能追加。删掉那条旧用例 —— 它守的"头部要标只追加"仍然成立。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_review_append.py`, `tests/conformance/test_v1_status_paths.py`, `tests/conformance/mutation_check.py`
