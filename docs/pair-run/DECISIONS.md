@@ -489,3 +489,8 @@
 - 理由: W28 类型是 `bug`,spec 回合要 RED;契约只允许写"样板 `CLAUDE.md` 与 `init` 逐字节一致",而 W26 刚让它们一致,那条今天是绿的 —— 照原判据这一项开不了工。补:`init` 写的与本仓库的 `CLAUDE.md` 都不含"不要用 subagent""主会话"。这两处正是第十一轮让 dev 停下来的误读来源(按会话怎么被启动来禁),钉的是缺陷,新措辞怎么写照旧不写成用例,dev 措辞完全自由。参考修复全套 515 OK;改 `CLAUDE_MD` 而样板不动,只红一致性那条。
 - 已否决: 把类型改成 `feature` —— 同样要 RED。断言新措辞里有"转手" —— 那才是契约反对的变更探测器。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `CLAUDE.md`, `examples/demo-project/CLAUDE.md`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_shipped.py`
+## SETUP — 第十四轮修第十三轮暴露的三处,人类裁决"开始吧";条目 34 并进 W29 的文档
+
+- 理由: 第十三轮独立运行(`docs/dogfood-run-13.md`)4/4 双向通过、人类介入 0 次、打回 25%(两次都是测试分不出对错)。W29:`make-demo.py` 整目录复制样板,把空的 `tests/conformance/` 带进每个新项目 —— 修法要让今后任何未跟踪文件都不被带出去,不只是删这一个目录;条目 34(样板契约丢掉 NFC 拆出来的组合符,`क़` 变成 `क`)人类裁决"紧跟在保留字符后面的组合符一起保留",样板里没有实现、本仓库写不出失败用例,并进 W29 的文档。W30:`.pair/scratch/` 只写在 `rules.md` 里,会话每回合读的是简报,四轮一次都没用上;补进四个工作阶段的简报,路径取自 `GITIGNORE_LINES` 同一行(第十二轮 W27 的决策)。
+- 已否决: 只删掉空目录 —— 下一次是测试缓存或编辑器文件。把 `.pair/scratch/` 设成必须、或拦"写到工作目录之外" —— 脚本看不见仓库外面,也不影响协议的正确性。给样板契约的新措辞在本仓库写用例 —— 样板里没有实现,只能是子串探测器。
+- 影响路径: `examples/make-demo.py`, `examples/demo-project`, `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
