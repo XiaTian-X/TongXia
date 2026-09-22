@@ -1,9 +1,9 @@
 {
   "round": 24,
-  "phase": "review-impl",
+  "phase": "review-test",
   "item": "W27",
   "item_type": "bug",
-  "last_actor": "dev",
+  "last_actor": "tester",
   "changes_count": 0,
   "completed_items": [
     "W2",
@@ -40,5 +40,5 @@
   },
   "after_rebound": false,
   "rebound_from": null,
-  "reviewed_contract": "3a99c75afd9370a234cddd1c1c2e5505a04adaf3"
+  "reviewed_contract": "4f9fa6969d20098b6f8241a79afa18f4c731dd80"
 }

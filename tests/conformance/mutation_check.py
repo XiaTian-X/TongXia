@@ -859,6 +859,11 @@ MUTATIONS = [
     ('verify-setup 不警告入口文件缺激活段落',
      '        elif ENTRY_MARK_BEGIN not in fp.read_text(encoding="utf-8"):',
      '        elif False:'),
+
+    # W27 verify-setup 的结尾看另一方(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('verify-setup 结尾不看另一方',
+     '        if stale_verification(root, cfg, state, other):',
+     '        if False:'),
 ]
 
 # unittest 的失败行有两种形态:

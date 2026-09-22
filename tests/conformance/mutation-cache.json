@@ -1,5 +1,5 @@
 {
-  "baseline": "e474f4894fad5017",
+  "baseline": "d7363a1f321400bf",
   "catchers": {
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"
@@ -87,6 +87,9 @@
     ],
     "verify-setup 不警告入口文件缺激活段落": [
       "test_v1_setup.TestVerifySetup.test_入口文件缺激活段落时警告"
+    ],
+    "verify-setup 结尾不看另一方": [
+      "test_v1_verify_tail.TestOnlyOneSideVerified.test_另一方过期也算不作数"
     ],
     "whose-turn 不用 idle 例外": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_重跑之后又轮到_tester"
