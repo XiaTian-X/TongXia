@@ -459,5 +459,6 @@
   - 验收标准:①`init` 写的 `CLAUDE_MD` 那一句写明禁的是"把自己的回合转手给别的 agent 或会话",
     并说明"你本身就是这个角色唯一的会话"不在此列;②样板项目的 `CLAUDE.md` 与 `init` 写出的逐字节一致
     (`test_v1_shipped` 加一条,守住 W26 之后样板与模板不再漂开);③本仓库自己的 `CLAUDE.md` 同一句跟着改;
-    ④变异点:改了 `CLAUDE_MD` 而样板没跟上时,②那条用例要红
+    ④变异点:改了 `CLAUDE_MD` 而样板没跟上时,②那条用例要红;⑤(spec 回合带声明补)`init` 写的与本仓库的 `CLAUDE.md`
+    都不再含"不要用 subagent"与"主会话"—— 钉的是缺陷,不是新措辞;本项是 bug,它们是 spec 回合红的那两条
   - 对应契约:`docs/pair-run/CONTRACT.md` → CLAUDE.md 禁的是转手

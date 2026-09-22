@@ -484,3 +484,8 @@
 - 理由: `verify-setup` 结尾说"现在可以认领工作项了",而 `claim` 从 W19 起要两个角色的校验都作数 —— 提示只看了自己这一份,在一半的情况下说错。修法不是另写一套"另一方作不作数",而是直接调用 `claim` 用的 `stale_verification`。这是 W25 之后的第二次:W25 的「可写路径」借 `writable_paths` 的 idle 分支,不另算。两次的共同点是**提示替某个动作做了预告**(你能写什么、你能不能认领),而预告与那个动作的判定各算各的,迟早漂开。今后加任何"现在可以 X"或"你能 Y"的提示,先找到 X / Y 自己的判定函数,调用它。
 - 已否决: 在 `verify-setup` 里另写一份"读 `setup_verified_contract` 比 sha"的判断 —— 与 `claim` 同义但不同源,W13、W19 改过的那几处细节(工作区内容而非 HEAD、读不到契约时怎么说)要抄两遍。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`
+## W28 — bug 项必须有能红的用例:钉旧说法里出错的两处,不钉新措辞
+
+- 理由: W28 类型是 `bug`,spec 回合要 RED;契约只允许写"样板 `CLAUDE.md` 与 `init` 逐字节一致",而 W26 刚让它们一致,那条今天是绿的 —— 照原判据这一项开不了工。补:`init` 写的与本仓库的 `CLAUDE.md` 都不含"不要用 subagent""主会话"。这两处正是第十一轮让 dev 停下来的误读来源(按会话怎么被启动来禁),钉的是缺陷,新措辞怎么写照旧不写成用例,dev 措辞完全自由。参考修复全套 515 OK;改 `CLAUDE_MD` 而样板不动,只红一致性那条。
+- 已否决: 把类型改成 `feature` —— 同样要 RED。断言新措辞里有"转手" —— 那才是契约反对的变更探测器。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `CLAUDE.md`, `examples/demo-project/CLAUDE.md`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_shipped.py`

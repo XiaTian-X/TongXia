@@ -16,6 +16,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+
+from harness import BareRepo
+from test_v1_setup import PY_PROJECT
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -131,6 +134,42 @@ class TestDemoStartsClean(unittest.TestCase):
 
     def test_CLAUDE_md_不缺激活段落(self):
         self.assertNotIn("CLAUDE.md 里没有协议激活段落", self.out, self.out)
+
+
+class TestClaudeMdForbidsHandingOff(unittest.TestCase):
+    """W28:`CLAUDE.md` 禁的是"转手",不是"谁在跑"。
+
+    第十一轮 dev 的第一个回合停下来问人:`init` 写的那句"不要用 subagent 代跑结对回合……必须由主会话执行",
+    而它自己就是被派出来的、dev 唯一的会话。**措辞本身不写成用例**(契约);能写成失败用例的有两样:
+    一致性(样板与 `init` 逐字节相同),与**缺陷本身** —— 让会话误判的那两个说法不能再出现
+    (W28 的 spec 回合带声明补:本项是 bug,spec 必须红,而一致性那条今天是绿的)。
+    它们钉的是旧措辞里出错的那两处,不是新措辞怎么写。"""
+
+    AMBIGUOUS = ("不要用 subagent", "主会话")
+
+    def init_claude_md(self):
+        repo = BareRepo(PY_PROJECT)
+        self.addCleanup(repo.cleanup)
+        self.assertEqual(repo.run("init").code, 0)
+        return repo.read("CLAUDE.md")
+
+    def test_init_写的_CLAUDE_md_不再按谁在跑来禁(self):
+        text = self.init_claude_md()
+        for phrase in self.AMBIGUOUS:
+            self.assertNotIn(phrase, text)
+
+    def test_本仓库的_CLAUDE_md_同一句跟着改(self):
+        text = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
+        for phrase in self.AMBIGUOUS:
+            self.assertNotIn(phrase, text)
+
+    def test_样板_CLAUDE_md_与_init_写出的逐字节一致(self):
+        """W26 让它们一致了一次,没有东西守着;改 `CLAUDE_MD` 就是它漂开的第一个机会。"""
+        d = Path(tempfile.mkdtemp(prefix="entry-"))
+        self.addCleanup(shutil.rmtree, d, True)
+        PAIR.merge_entry(d, "CLAUDE.md", PAIR.ENTRY_FILES["CLAUDE.md"])
+        self.assertEqual((DEMO / "CLAUDE.md").read_text(encoding="utf-8"),
+                         (d / "CLAUDE.md").read_text(encoding="utf-8"))
 
 
 class TestWhoseTurn(unittest.TestCase):
