@@ -3628,10 +3628,26 @@ def cmd_verify_setup(root, cfg, args):
         print("  开工前就存在的实现会让 spec 阶段的 RED 要求失效。"
               "请交给人类确认这些是不是该在的。")
 
+    # W27:结尾那句要看另一方。认领要**两个**角色的校验都作数(W19),只看自己这一份
+    # 就会在一半的情况下说错 —— 第十一轮 tester 看到"现在可以认领",紧接着 claim 被拒。
+    # 判定与 claim 用同一个 stale_verification,不另算(与 W25 同一个理由)。
+    # 解析不出角色时记不了自己这一份,也就说不清谁是"另一方",照旧。
+    waiting = None
+    if cfg["require_setup_verification"] and who:
+        other = [r for r in ROLES if r != who][0]
+        if stale_verification(root, cfg, state, other):
+            waiting = other
+
     print()
     print("  契约审查结论已收到(%s,%d 字)。" % (report_rel, len(text)))
     print("  %s" % drafter_line)
-    print("  开工前校验全部通过,现在可以认领工作项了。")
+    if waiting:
+        print("  开工前校验全部通过 —— 这是 %s 这一份。%s 的校验还不作数,"
+              "认领要等它自己重跑:" % (who, waiting))
+        print("    PAIR_ROLE=%s python3 %s verify-setup --drafter self|other"
+              % (waiting, PROG_HINT))
+    else:
+        print("  开工前校验全部通过,现在可以认领工作项了。")
     print()
     return 0
 
