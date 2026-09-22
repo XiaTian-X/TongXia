@@ -864,6 +864,11 @@ MUTATIONS = [
     ('verify-setup 结尾不看另一方',
      '        if stale_verification(root, cfg, state, other):',
      '        if False:'),
+
+    # W28 改了 CLAUDE_MD 而样板没跟上(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('CLAUDE_MD 改了而样板没跟上',
+     '  不要转手给别的 agent 或会话去跑 —— 回合状态在 `.pair/state.json`,',
+     '  不要转手给别的 agent 或会话 —— 回合状态在 `.pair/state.json`,'),
 ]
 
 # unittest 的失败行有两种形态:
