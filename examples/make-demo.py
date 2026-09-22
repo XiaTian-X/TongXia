@@ -19,6 +19,48 @@ DEMO = REPO / "examples" / "demo-project"
 SKILL = REPO / ".agents" / "skills" / "pair-protocol"
 
 
+def tracked_demo_files():
+    """本仓库 git 跟踪的样板文件(相对 DEMO 的路径);不是本仓库的检出时返回 None。
+
+    **样板只发被跟踪的东西**(W29)。曾经这里是 `shutil.copytree(DEMO, …)` —— 样板目录里
+    任何没纳入 git 的东西都被原样发出去:第十三轮的 tester 在新项目里看到一个空的
+    `tests/conformance/`,那是本仓库样板目录里早就在、git 不跟踪、所以没人发现的空目录。
+    下一次可能是测试缓存或编辑器文件。
+
+    "本仓库的检出"要求 `--show-toplevel` 正好是 REPO:zip 解压进用户自己的某个 git 项目时,
+    上级那个仓库里 `ls-files` 一个都列不出来,照它复制就是一个空项目。
+    """
+    top = subprocess.run(("git", "rev-parse", "--show-toplevel"), cwd=REPO,
+                         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    if top.returncode != 0:
+        return None
+    if Path(top.stdout.decode("utf-8").strip()).resolve() != REPO:
+        return None
+    rel = DEMO.relative_to(REPO).as_posix()
+    out = subprocess.run(("git", "ls-files", "-z", "--", rel), cwd=REPO,
+                         stdout=subprocess.PIPE, check=True).stdout.decode("utf-8")
+    return [Path(p).relative_to(rel) for p in out.split("\0") if p]
+
+
+def copy_demo(target):
+    """把样板复制进 target。在本仓库的检出里只复制被跟踪的文件;否则(zip 下载)
+    退回整目录复制、只复制文件 —— 空目录因此自然被跳过。"""
+    files = tracked_demo_files()
+    if files is None:
+        print("(不在 TongXia 的 git 检出里,问不了哪些文件被跟踪:整目录复制样板、跳过空目录。)")
+        files = [p.relative_to(DEMO) for p in sorted(DEMO.rglob("*"))
+                 if p.is_file() or p.is_symlink()]
+    for rel in files:
+        src, dst = DEMO / rel, target / rel
+        if not (src.exists() or src.is_symlink()):
+            continue  # 被跟踪、但工作区里删掉了:按工作区为准,不去复活它
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if src.is_symlink():
+            dst.symlink_to(src.readlink())
+        else:
+            shutil.copy2(src, dst)
+
+
 def ensure_identity(target):
     """git 自己推不出提交者身份时,给这个仓库补一份仓库级的兜底身份。
 
@@ -69,7 +111,8 @@ def main():
         print("目标目录 %s 非空,拒绝覆盖。" % target)
         return 1
 
-    shutil.copytree(DEMO, target, dirs_exist_ok=True)
+    target.mkdir(parents=True, exist_ok=True)
+    copy_demo(target)
     shutil.copytree(SKILL, target / ".agents" / "skills" / "pair-protocol",
                     dirs_exist_ok=True)
     (target / ".claude" / "skills").mkdir(parents=True, exist_ok=True)
