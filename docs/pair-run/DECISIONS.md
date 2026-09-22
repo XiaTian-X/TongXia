@@ -474,3 +474,8 @@
 - 理由: 验收 ③④ 断言样板项目的 `verify-setup` 不出现孤儿与两条"没有协议激活段落"。孤儿那条有既有正面与变异点;激活段落那条全套没有任何用例断言它会出现、`MUTATIONS` 里也没有它 —— 把警告整个删掉,样板那两条照样绿,④ 找不到能红的用例。补 `test_v1_setup` 两条:harness 的 `AGENTS.md` 不带标记块时警告、只差标记块的对照组不警告;登记「verify-setup 不警告入口文件缺激活段落」。样板数据改动不在 `mutation_check` 范围(它只改 `pair.py`),由样板用例直接守。与第八轮 W24 同一个形状 —— "出厂物不出现警告"的项,要先确认那条警告本身有人守。
 - 已否决: 把 ④ 解释成"删掉样板里的 frozen_paths/标记块,样板用例要红" —— 那是探针不是变异点,`mutation_check` 登记不了;它由样板那几条用例本身表达。
 - 影响路径: `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_setup.py`, `tests/conformance/test_v1_shipped.py`, `tests/conformance/mutation_check.py`
+## SETUP — 第十二轮修第十一轮暴露的两处,人类裁决"开始吧"
+
+- 理由: 第十一轮独立运行(`docs/dogfood-run-11.md`)4/4 双向通过、0 打回、0 越界,第十轮四处修复全部兑现,暴露两处。W27:`verify-setup` 结尾那句只看自己这一份,只有一方通过时说"现在可以认领了"而紧接着的 `claim` 会被 W19 拒,只改提示不动判定。W28:`CLAUDE_MD` 那句"不要用 subagent 代跑结对回合"没区分"转手"与"本身就是那个角色唯一的会话",挡住了严格守规矩的 dev,是那一轮唯一的人类介入;措辞不写成用例,能写成失败用例的是样板 `CLAUDE.md` 与模板的逐字节一致。
+- 已否决: W28 给"谁在跑回合"加脚本判定 —— 脚本看不见会话是怎么启动的。W28 断言 `CLAUDE_MD` 含某个子串 —— 变更探测器。把第十一轮的两条观察(W4 在认领前就满足验收、评审记录笔误无法就地更正)也立项 —— 前者靠会话自己的判断处理得很好、协议无从判定,后者是 W18 按设计的代价。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `examples/demo-project`, `CLAUDE.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
