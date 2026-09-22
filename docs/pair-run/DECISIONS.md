@@ -479,3 +479,8 @@
 - 理由: 第十一轮独立运行(`docs/dogfood-run-11.md`)4/4 双向通过、0 打回、0 越界,第十轮四处修复全部兑现,暴露两处。W27:`verify-setup` 结尾那句只看自己这一份,只有一方通过时说"现在可以认领了"而紧接着的 `claim` 会被 W19 拒,只改提示不动判定。W28:`CLAUDE_MD` 那句"不要用 subagent 代跑结对回合"没区分"转手"与"本身就是那个角色唯一的会话",挡住了严格守规矩的 dev,是那一轮唯一的人类介入;措辞不写成用例,能写成失败用例的是样板 `CLAUDE.md` 与模板的逐字节一致。
 - 已否决: W28 给"谁在跑回合"加脚本判定 —— 脚本看不见会话是怎么启动的。W28 断言 `CLAUDE_MD` 含某个子串 —— 变更探测器。把第十一轮的两条观察(W4 在认领前就满足验收、评审记录笔误无法就地更正)也立项 —— 前者靠会话自己的判断处理得很好、协议无从判定,后者是 W18 按设计的代价。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `examples/demo-project`, `CLAUDE.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W27 — 许诺一个动作的提示,必须用那个动作自己的判定
+
+- 理由: `verify-setup` 结尾说"现在可以认领工作项了",而 `claim` 从 W19 起要两个角色的校验都作数 —— 提示只看了自己这一份,在一半的情况下说错。修法不是另写一套"另一方作不作数",而是直接调用 `claim` 用的 `stale_verification`。这是 W25 之后的第二次:W25 的「可写路径」借 `writable_paths` 的 idle 分支,不另算。两次的共同点是**提示替某个动作做了预告**(你能写什么、你能不能认领),而预告与那个动作的判定各算各的,迟早漂开。今后加任何"现在可以 X"或"你能 Y"的提示,先找到 X / Y 自己的判定函数,调用它。
+- 已否决: 在 `verify-setup` 里另写一份"读 `setup_verified_contract` 比 sha"的判断 —— 与 `claim` 同义但不同源,W13、W19 改过的那几处细节(工作区内容而非 HEAD、读不到契约时怎么说)要抄两遍。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`
