@@ -494,3 +494,8 @@
 - 理由: 第十三轮独立运行(`docs/dogfood-run-13.md`)4/4 双向通过、人类介入 0 次、打回 25%(两次都是测试分不出对错)。W29:`make-demo.py` 整目录复制样板,把空的 `tests/conformance/` 带进每个新项目 —— 修法要让今后任何未跟踪文件都不被带出去,不只是删这一个目录;条目 34(样板契约丢掉 NFC 拆出来的组合符,`क़` 变成 `क`)人类裁决"紧跟在保留字符后面的组合符一起保留",样板里没有实现、本仓库写不出失败用例,并进 W29 的文档。W30:`.pair/scratch/` 只写在 `rules.md` 里,会话每回合读的是简报,四轮一次都没用上;补进四个工作阶段的简报,路径取自 `GITIGNORE_LINES` 同一行(第十二轮 W27 的决策)。
 - 已否决: 只删掉空目录 —— 下一次是测试缓存或编辑器文件。把 `.pair/scratch/` 设成必须、或拦"写到工作目录之外" —— 脚本看不见仓库外面,也不影响协议的正确性。给样板契约的新措辞在本仓库写用例 —— 样板里没有实现,只能是子串探测器。
 - 影响路径: `examples/make-demo.py`, `examples/demo-project`, `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W29 — 不是 git 检出时退回整目录复制、跳过空目录
+
+- 理由: "只发被跟踪的文件"要问 git,但 `make-demo.py` 的用户可能拿的是 zip(没有 `.git`),照字面实现要么报错退出、要么生成空项目,两种读法都能说自己按契约。补:不是本仓库的检出(包括 `examples/` 上级是别的 git 仓库)时退回整目录复制、跳过空目录、打一行说明。参考实现用 `git rev-parse --show-toplevel` 与 `REPO` 比;全套 521 OK;只删那个空目录、照旧整目录复制的修法红 3 条,判据能区分两种修法。
+- 已否决: 非 git 检出时报错退出 —— 样板是新用户第一次上手的东西,zip 用户是真实人群;非 git 时照旧整目录复制不跳空目录 —— 那正是本项要消灭的残留。
+- 影响路径: `examples/make-demo.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_make_demo_tracked.py`
