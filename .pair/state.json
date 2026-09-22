@@ -38,7 +38,7 @@
   "contract_sha": null,
   "setup_verified_contract": {
     "tester": "12ea87aeccb0ea62f9d93a5f42b6e9319fab5d9e",
-    "dev": "076df79d4bab3bd8af39ffb35cf10f3201c85735"
+    "dev": "12ea87aeccb0ea62f9d93a5f42b6e9319fab5d9e"
   },
   "after_rebound": false,
   "rebound_from": null,
