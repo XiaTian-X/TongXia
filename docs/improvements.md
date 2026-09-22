@@ -1681,7 +1681,7 @@ dev 在自己写的药方里踩了同一个坑,两边最后都改用模块顶部
 方向:样板 `.pair/config.json` 把这批入口与配置文件加进 `frozen_paths`,样板的 `AGENTS.md`、`CLAUDE.md`
 带上激活段落;`test_v1_shipped` 断言新生成的样板不出现这三条警告。
 
-### 31. `CLAUDE.md` 的"不要用 subagent 代跑结对回合"挡住了严格守规矩的会话
+### 31. `CLAUDE.md` 的"不要用 subagent 代跑结对回合"挡住了严格守规矩的会话  ✅ 已解决(第十二轮 W28)
 
 第十一轮独立运行(`docs/dogfood-run-11.md`)。dev 的第一个回合只做了只读的事就停下来问人:
 `init` 写进 `CLAUDE.md` 的那句"不要用 subagent 代跑结对回合……必须由主会话执行 `status` 和 `handoff`",
@@ -1690,12 +1690,20 @@ dev 在自己写的药方里踩了同一个坑,两边最后都改用模块顶部
 第九轮两个会话都指出了冲突但照做了;第十一轮它第一次真的挡住实验,是那一轮唯一的人类介入。
 方向:改写 `CLAUDE_MD` 那一句,写明禁的是"转手"、不是"谁在跑";样板与本仓库的 `CLAUDE.md` 跟着改。
 
-### 32. `verify-setup` 在只有一方通过校验时就说"现在可以认领工作项了"
+### 32. `verify-setup` 在只有一方通过校验时就说"现在可以认领工作项了"  ✅ 已解决(第十二轮 W27)
 
 第十一轮。tester 通过开工前校验,脚本打印"开工前校验全部通过,现在可以认领工作项了";
 它紧接着 `claim W1`,被拒 —— 第六轮 W19 起 `claim` 要求两个角色的校验都作数,dev 那份还没有。
 这句提示在一半的情况下是错的,与第五轮那类"会说错话的仪器"同一类。
 方向:另一方的校验还不作数时,结尾那句点名另一方、说明认领要等它重跑;两方都作数时照旧。
+
+### 33. 样板的其余七个入口文件与 `init` 的模板没有东西守着一致
+
+第十二轮 W28。W26 用 `merge_entry` 把样板的八个入口文件重写成与 `init` 逐字节一致,W28 给 `CLAUDE.md`
+加了一条一致性用例 —— 改 `CLAUDE_MD` 而样板没跟上就红。其余七个(`AGENTS.md`、`GEMINI.md`、`CONVENTIONS.md`、
+`.clinerules`、`.windsurfrules`、`.github/copilot-instructions.md`、`.cursor/rules/pair.mdc`)同样会在
+`ACTIVATOR` 或 `CURSOR_MDC` 改动时漂开,没有任何用例会红。tester 与 dev 在 W28 各自提出。
+方向:把那条一致性用例扩到 `ENTRY_FILES` 全部。
 
 ---
 
