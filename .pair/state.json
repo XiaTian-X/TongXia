@@ -1,8 +1,8 @@
 {
   "round": 27,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W30",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -36,7 +36,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "7095083f7d6aa21cbdb9f860161932c745fc274d",
   "setup_verified_contract": {
     "tester": "7095083f7d6aa21cbdb9f860161932c745fc274d",
     "dev": "7095083f7d6aa21cbdb9f860161932c745fc274d"
