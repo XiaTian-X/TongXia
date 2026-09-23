@@ -1,5 +1,5 @@
 {
-  "baseline": "f8e686c78770a708",
+  "baseline": "56818e3b8143e445",
   "catchers": {
     "CLAUDE_MD 改了而样板没跟上": [
       "test_v1_shipped.TestClaudeMdForbidsHandingOff.test_样板_CLAUDE_md_与_init_写出的逐字节一致"
@@ -586,6 +586,9 @@
     ],
     "评审记录改写的拒绝晚于写状态": [
       "test_v1_review_immutable.TestVerifySetupSide.test_改写已提交的结论被拒_且拒绝早于写状态"
+    ],
+    "越界文案不认系统文件": [
+      "test_v1_os_files.TestRefusalNamesTheExit.test_Windows_的两种也认得出"
     ],
     "门禁没开也拦过期的校验": [
       "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝"

@@ -884,6 +884,11 @@ MUTATIONS = [
     ('gitignore 不含 .DS_Store',
      '                   ".DS_Store", "Thumbs.db", "desktop.ini"]',
      '                   "Thumbs.db", "desktop.ini"]'),
+
+    # W31 认出系统文件(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('越界文案不认系统文件',
+     '    if PurePosixPath(path).name in OS_FILES:',
+     '    if False:'),
 ]
 
 # unittest 的失败行有两种形态:
