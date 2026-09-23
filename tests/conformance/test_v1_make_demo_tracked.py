@@ -48,9 +48,20 @@ def all_paths(root):
 class MiniTongXia(unittest.TestCase):
     """一份只有样板、技能目录与 make-demo.py 的临时"本仓库"。"""
 
-    def source(self, git=True):
-        src = Path(tempfile.mkdtemp(prefix="tongxia-"))
-        self.addCleanup(shutil.rmtree, src, True)
+    def source(self, git=True, inside_other_repo=False):
+        """`inside_other_repo=True`:zip 解压进了用户自己的某个 git 项目 —— 外层是 git 仓库,
+        这一份没有自己的 `.git`,也没被外层提交。"""
+        base = Path(tempfile.mkdtemp(prefix="tongxia-"))
+        self.addCleanup(shutil.rmtree, base, True)
+        src = base
+        if inside_other_repo:
+            subprocess.run(("git",) + GIT_ID + ("init", "-q"), cwd=base, check=True)
+            (base / "README.md").write_text("用户自己的项目\n", encoding="utf-8")
+            subprocess.run(("git",) + GIT_ID + ("add", "README.md"), cwd=base, check=True)
+            subprocess.run(("git",) + GIT_ID + ("commit", "-q", "-m", "用户的项目"), cwd=base,
+                           check=True, stdout=subprocess.DEVNULL)
+            src = base / "vendor" / "tongxia"
+            src.mkdir(parents=True)
         for rel in tracked("examples") + tracked(".agents/skills/pair-protocol"):
             dst = src / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
@@ -124,6 +135,13 @@ class TestNotAGitCheckout(MiniTongXia):
         target = self.make(self.source(git=False))
         self.assertTrue((target / "docs" / "PLAN.md").exists())
         self.assertTrue((target / ".agents" / "skills" / "pair-protocol" / "SKILL.md").exists())
+
+    def test_解压进别的_git_仓库里照样有样板文件(self):
+        """契约点名的另一支:上级是别的 git 仓库,`ls-files` 在那里一个都列不出来。只看"不是 git"
+        的实现在这里会生成一个没有样板文件的项目、退出码 0 —— dev 在 W29 的 review-test 实跑过这个后果。"""
+        target = self.make(self.source(git=False, inside_other_repo=True))
+        self.assertTrue((target / "docs" / "PLAN.md").exists())
+        self.assertTrue((target / "src" / "__init__.py").exists())
 
     def test_不在_git_检出里也跳过空目录(self):
         src = self.source(git=False)
