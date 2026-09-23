@@ -1,8 +1,8 @@
 {
   "round": 29,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W32",
+  "item_type": "bug",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -38,7 +38,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "f25fadb09e5aeff6a68f5645ecc83704a2df9f4b",
   "setup_verified_contract": {
     "tester": "f25fadb09e5aeff6a68f5645ecc83704a2df9f4b",
     "dev": "f25fadb09e5aeff6a68f5645ecc83704a2df9f4b"
