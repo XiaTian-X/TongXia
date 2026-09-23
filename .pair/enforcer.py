@@ -1423,6 +1423,8 @@ def cmd_status(root, cfg, args):
         print(IDLE_REVERIFY_BRIEF % {"prog": PROG_HINT})
     else:
         print(PHASE_BRIEF[phase] % _brief_vars(cfg, state, phase))
+    if phase != "idle":
+        print(scratch_hint(phase))
     print()
 
     # 记忆层召回。status 是协议强制的第一条命令,也是唯一能跨 harness
@@ -2903,6 +2905,22 @@ DECISIONS_SKELETON = """# 决策记录（追加式 — 只能往后加，不能�
 GITIGNORE_LINES = [".pair/.last-test.log", ".pair/.last-full-test.log",
                    ".pair/whoami", ".pair/turns/", BRIEF_REL,
                    "__pycache__/", "*.pyc", ".pair/scratch/"]
+
+
+def scratch_hint(phase):
+    """工作阶段的简报末尾那一句:验证用的副本放哪(W30)。
+
+    W23 给了 `.pair/scratch/`,却只写在 `rules.md` 的一个小节里;四轮独立运行它一次都没被用上 ——
+    会话每回合必读的是这份简报,而工具的系统提示在会话一启动就说"临时文件放你自己的 scratchpad"。
+    路径**取自 `GITIGNORE_LINES` 里那一行**,不另写字面:提示替机制做预告,两者就得同源(W27 的决策)。
+    评审阶段同一屏写着"本回合只读",所以要顺带说清它被 git 忽略、写在里面不算写。
+    """
+    scratch = next(l for l in GITIGNORE_LINES if l.startswith(".pair/scratch"))
+    ro = ("它被 git 忽略,写在里面不算本回合的改动。"
+          if phase in REVIEW_PHASES else "它被 git 忽略,不进提交、不算越界。")
+    return ("  需要写临时副本或脚本做验证(故意改坏实现、另写参考实现)时,放 %s ——\n"
+            "  %s能不写文件就不写:很多验证在一条命令里换掉函数就能跑完。"
+            % (scratch, ro))
 
 
 def _detect_stack(root):
