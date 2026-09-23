@@ -504,3 +504,8 @@
 - 理由: W30 的 review-impl 登记两条变异,`mutation_check` 报它们都被 `test_不在_git_检出里也跳过空目录` 抓住。`isolated_copy` 排除 `.git`,而 W29 的用例用 `git ls-files check=True` 问本仓库,在副本里恒 ERROR;全量回退是 failfast,任何新变异都被它"抓到",缓存还把它记成抓手,快路径从此恒判抓到 —— 变异检查对新防护整体失效,而基线跑在真实仓库里看不出来。改成问不了 git(toplevel 不是本仓库)时 skip 并写明理由,加一条在无 git 副本里跑这个文件只许 skip 的防回归,删缓存里两条污染条目重跑,抓手变成 W30 自己的用例。
 - 已否决: 让 `isolated_copy` 带上 `.git` —— 变异副本不该碰真实 git 历史,那是 mutation_check 的既有设计;在 mutation_check 里对 ERROR 与 FAIL 区别对待 —— tester 在评审回合只能追加 MUTATIONS,且 ERROR 也可能是变异造成的真实崩溃。
 - 影响路径: `tests/conformance/test_v1_make_demo_tracked.py`, `tests/conformance/mutation-cache.json`
+## SETUP — 第十六轮修第十五轮暴露的三处,人类裁决"开始吧";W33 用 cover 类型
+
+- 理由: 第十五轮独立运行(`docs/dogfood-run-15.md`)4/4 双向通过、1 次打回、1 次人类介入。W31:`GITIGNORE_LINES` 不忽略 `.DS_Store` 这类操作系统写的文件,macOS 上第一次交接就可能被写权限边界卡住,而拒绝文案只让人找人类。W32:样板契约用来说明"结果不再 NFC"的例子是 NFC 不动点,照它写的用例没有区分力 —— 能写成失败用例的是"说明这条规则的例子,其期望值再 NFC 会变";W4 措辞的修正并进文档。两处都是第十四轮 W29 改契约时没同步检查留下的。W33:`mutation_check` 的基线跑在有 `.git` 的本仓库、变异跑在无 `.git` 的副本,环境造成的失败被记成抓手;要改的是 `mutation_check.py`(tester 路径),所以用 `cover`。
+- 已否决: W31 自动删除或忽略 `.DS_Store` —— 写权限边界照样该拒绝,只是文案给对出口。W31 顺带忽略编辑器临时文件 —— 那是用户自己的工具,归全局 gitignore。W33 判"抓手与变异是否相关" —— 要理解测试在测什么,环境一致之后那一类假抓手已经进不了缓存。W33 用 `bug` —— 实现与测试都在 tester 路径,dev 没有可写的实现。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `examples/demo-project`, `tests/conformance/mutation_check.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
