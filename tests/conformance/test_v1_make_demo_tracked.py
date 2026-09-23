@@ -24,6 +24,21 @@ REPO = Path(__file__).resolve().parents[2]
 GIT_ID = ("-c", "user.name=conformance", "-c", "user.email=conformance@test")
 
 
+def repo_is_git_checkout():
+    """本仓库是不是一份 git 检出、而且检出的根正好是它。
+
+    **判"问得了 git",不判有没有 `.git` 目录**(worktree 里 `.git` 是文件)。`mutation_check` 的隔离副本
+    排除 `.git`;副本若恰好落在别的 git 仓库里(比如 `.pair/scratch/`),`ls-files` 会去问那个外层仓库 ——
+    所以要求 toplevel 正好是 REPO,与 `make-demo.py` 自己的判定同一个口径。"""
+    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=REPO,
+                         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    return top.returncode == 0 and Path(top.stdout.decode("utf-8").strip()).resolve() == REPO
+
+
+NO_GIT_REASON = ("本仓库不是 git 检出(mutation_check 的隔离副本排除 .git):问不了哪些文件被跟踪,"
+                 "这条无从判定。make-demo.py 本来就不在 mutation_check 的范围里。")
+
+
 def tracked(prefix):
     out = subprocess.run(["git", "ls-files", "-z", "--", prefix], cwd=REPO,
                          stdout=subprocess.PIPE, check=True).stdout.decode("utf-8")
@@ -46,7 +61,15 @@ def all_paths(root):
 
 
 class MiniTongXia(unittest.TestCase):
-    """一份只有样板、技能目录与 make-demo.py 的临时"本仓库"。"""
+    """一份只有样板、技能目录与 make-demo.py 的临时"本仓库"。
+
+    造它要先问本仓库哪些文件被跟踪;问不了时整类 skip —— **不能让它 ERROR**:`mutation_check` 在不含 `.git`
+    的副本里判定变异,这 6 条恒 ERROR 的话,全量回退(failfast)会把**任何**新变异都记成被它抓到,
+    缓存还会把它记成抓手、快路径从此恒判抓到。W30 的 review-impl 里真实发生过。"""
+
+    def setUp(self):
+        if not repo_is_git_checkout():
+            self.skipTest(NO_GIT_REASON)
 
     def source(self, git=True, inside_other_repo=False):
         """`inside_other_repo=True`:zip 解压进了用户自己的某个 git 项目 —— 外层是 git 仓库,
@@ -148,6 +171,27 @@ class TestNotAGitCheckout(MiniTongXia):
         self.plant(src)
         target = self.make(src)
         self.assertEqual(empty_dirs(target), [])
+
+
+class TestRunsWithoutGit(unittest.TestCase):
+    """防回归:把这个文件与它要的东西复制进一个**不在任何 git 仓库里**的目录跑 —— 只允许 skip,不许失败或出错。
+    本仓库样板那一条(`TestRealDemoHasNoEmptyDirs`)不问 git,走 make-demo 的非 git 分支,照样要绿。"""
+
+    def test_没有_git_的副本里只有_skip(self):
+        if os.environ.get("PAIR_NO_GIT_GUARD"):
+            self.skipTest("已经在防回归的副本里了")
+        d = Path(tempfile.mkdtemp(prefix="nogit-"))
+        self.addCleanup(shutil.rmtree, d, True)
+        copy = d / "repo"
+        shutil.copytree(REPO, copy, symlinks=True,
+                        ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc", "scratch"))
+        env = dict(os.environ, PAIR_NO_GIT_GUARD="1")
+        proc = subprocess.run([sys.executable, "-m", "unittest", "-v", "test_v1_make_demo_tracked"],
+                              cwd=copy / "tests" / "conformance", env=env,
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        out = proc.stdout.decode("utf-8", "replace")
+        self.assertEqual(proc.returncode, 0, out)
+        self.assertIn("skipped", out, "前提:副本里那几条确实走了 skip\n" + out)
 
 
 if __name__ == "__main__":

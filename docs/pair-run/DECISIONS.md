@@ -499,3 +499,8 @@
 - 理由: "只发被跟踪的文件"要问 git,但 `make-demo.py` 的用户可能拿的是 zip(没有 `.git`),照字面实现要么报错退出、要么生成空项目,两种读法都能说自己按契约。补:不是本仓库的检出(包括 `examples/` 上级是别的 git 仓库)时退回整目录复制、跳过空目录、打一行说明。参考实现用 `git rev-parse --show-toplevel` 与 `REPO` 比;全套 521 OK;只删那个空目录、照旧整目录复制的修法红 3 条,判据能区分两种修法。
 - 已否决: 非 git 检出时报错退出 —— 样板是新用户第一次上手的东西,zip 用户是真实人群;非 git 时照旧整目录复制不跳空目录 —— 那正是本项要消灭的残留。
 - 影响路径: `examples/make-demo.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_make_demo_tracked.py`
+## W30 — 问本仓库 git 的用例在 mutation_check 的隔离副本里必须 skip,不能 ERROR
+
+- 理由: W30 的 review-impl 登记两条变异,`mutation_check` 报它们都被 `test_不在_git_检出里也跳过空目录` 抓住。`isolated_copy` 排除 `.git`,而 W29 的用例用 `git ls-files check=True` 问本仓库,在副本里恒 ERROR;全量回退是 failfast,任何新变异都被它"抓到",缓存还把它记成抓手,快路径从此恒判抓到 —— 变异检查对新防护整体失效,而基线跑在真实仓库里看不出来。改成问不了 git(toplevel 不是本仓库)时 skip 并写明理由,加一条在无 git 副本里跑这个文件只许 skip 的防回归,删缓存里两条污染条目重跑,抓手变成 W30 自己的用例。
+- 已否决: 让 `isolated_copy` 带上 `.git` —— 变异副本不该碰真实 git 历史,那是 mutation_check 的既有设计;在 mutation_check 里对 ERROR 与 FAIL 区别对待 —— tester 在评审回合只能追加 MUTATIONS,且 ERROR 也可能是变异造成的真实崩溃。
+- 影响路径: `tests/conformance/test_v1_make_demo_tracked.py`, `tests/conformance/mutation-cache.json`

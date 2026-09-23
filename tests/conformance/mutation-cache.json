@@ -1,5 +1,5 @@
 {
-  "baseline": "15de29a2f386681f",
+  "baseline": "0c13a16e57108acc",
   "catchers": {
     "CLAUDE_MD 改了而样板没跟上": [
       "test_v1_shipped.TestClaudeMdForbidsHandingOff.test_样板_CLAUDE_md_与_init_写出的逐字节一致"
@@ -17,7 +17,7 @@
       "test_v1_scratch.TestInitIgnoresScratch.test_init_写的_gitignore_含_scratch"
     ],
     "idle 也提 scratch": [
-      "test_v1_make_demo_tracked.TestNotAGitCheckout.test_不在_git_检出里也跳过空目录"
+      "test_v1_scratch_brief.TestIdleDoesNot.test_idle_整段输出都不含"
     ],
     "idle 例外从不生效": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_的_status_归属那一行是_dev_且给出重跑指引"
@@ -537,7 +537,7 @@
       "test_v1_validity.TestSameTurnGatesUnchanged.test_第二次打回_更早回合的决策不算"
     ],
     "简报不提 scratch": [
-      "test_v1_make_demo_tracked.TestNotAGitCheckout.test_不在_git_检出里也跳过空目录"
+      "test_v1_scratch_brief.TestWorkingPhasesMentionScratch.test_impl"
     ],
     "简报不标只追加": [
       "test_v1_review_append.TestStatusMarksAppendOnly.test_执行者看到的只能写那一行也标出只追加"
