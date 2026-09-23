@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import unicodedata
 import unittest
 
 from harness import BareRepo
@@ -170,6 +171,43 @@ class TestClaudeMdForbidsHandingOff(unittest.TestCase):
         PAIR.merge_entry(d, "CLAUDE.md", PAIR.ENTRY_FILES["CLAUDE.md"])
         self.assertEqual((DEMO / "CLAUDE.md").read_text(encoding="utf-8"),
                          (d / "CLAUDE.md").read_text(encoding="utf-8"))
+
+
+class TestContractExampleDiscriminates(unittest.TestCase):
+    """W32:样板契约里说明"结果不再做一次 NFC"的例子,期望值再做一次 NFC 要会变。
+
+    第十五轮唯一的打回:那一条的例子是 U+0958,结果本身是 NFC 不动点,多不多做一次都一样,照它写的用例
+    对"算完再 NFC 一次"的错误实现 0 条红。**取法**:样板契约里写着"不再做一次 NFC"的那一条(列表项),
+    其中**每一个** `slugify("…")` 是 `"…"` 的例子都要能区分 —— 契约说 U+0958 保留、但不再拿它说明这一条,
+    所以它不该和这句话待在同一条里。例子必须写成转义(条目 27):裸字符在会规范化的编辑器里会被悄悄合成,
+    例子当场失去区分力。"""
+
+    RULE = "不再做一次 NFC"
+    EXAMPLE = re.compile(r'`slugify\("([^"`]*)"\)` 是 `"([^"`]*)"`')
+
+    def rule_item(self):
+        text = (DEMO / "docs" / "CONTRACT.md").read_text(encoding="utf-8")
+        items = re.split(r"(?m)^(?=- )", text)
+        hits = [it for it in items if self.RULE in it]
+        self.assertEqual(len(hits), 1, "样板契约里应当恰好有一条写着「%s」" % self.RULE)
+        return hits[0]
+
+    @staticmethod
+    def unescape(s):
+        return re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), s)
+
+    def test_那一条里的例子期望值再做一次_NFC_会变(self):
+        examples = self.EXAMPLE.findall(self.rule_item())
+        self.assertTrue(examples, "「%s」那一条里没有 slugify 的例子" % self.RULE)
+        for raw_in, raw_out in examples:
+            out = self.unescape(raw_out)
+            self.assertNotEqual(unicodedata.normalize("NFC", out), out,
+                                "例子 slugify(%r) 是 %r:再做一次 NFC 不变,分不出这一条" % (raw_in, raw_out))
+
+    def test_那一条里的例子写成转义(self):
+        for raw_in, raw_out in self.EXAMPLE.findall(self.rule_item()):
+            for raw in (raw_in, raw_out):
+                self.assertTrue(raw.isascii(), "例子 %r 里有裸的非 ASCII 字符,要写成 \\uXXXX" % raw)
 
 
 class TestWhoseTurn(unittest.TestCase):
