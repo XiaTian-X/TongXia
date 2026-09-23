@@ -869,6 +869,15 @@ MUTATIONS = [
     ('CLAUDE_MD 改了而样板没跟上',
      '  不要转手给别的 agent 或会话去跑 —— 回合状态在 `.pair/state.json`,',
      '  不要转手给别的 agent 或会话 —— 回合状态在 `.pair/state.json`,'),
+
+    # W30 验证副本的去处写进简报(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('简报不提 scratch',
+     '    if phase != "idle":\n        print(scratch_hint(phase))',
+     '    if False:\n        print(scratch_hint(phase))'),
+
+    ('idle 也提 scratch',
+     '    if phase != "idle":\n        print(scratch_hint(phase))',
+     '    if True:\n        print(scratch_hint(phase))'),
 ]
 
 # unittest 的失败行有两种形态:
