@@ -596,6 +596,22 @@ def render_path_listing(head, paths, limit=PATH_LISTING_LIMIT):
     return "\n".join(lines)
 
 
+def _orphan_note(path, cfg):
+    """越界文案里一个文件那一段的补充说明。
+
+    操作系统写的文件(W31)单独说:它不是任何人改的,出口是人类把它加进 `.gitignore`,
+    不是"划归到某个角色"。已接入、`.gitignore` 还没跟上 `GITIGNORE_LINES` 的项目会撞上 ——
+    第十五轮 tester 的第一次交接就是这么被拦的,文案只让它去找人类,而新用户不知道这个文件是什么。
+    **拒绝本身不变**;认的是文件名,`docs/.DS_Store` 也算。
+    """
+    if PurePosixPath(path).name in OS_FILES:
+        return ("\n      这是操作系统写的文件(有人用文件管理器看过这个目录),不是谁改的。"
+                "\n      请人类把它加进 .gitignore —— init 写的 .gitignore 已含这一行。")
+    if is_orphan(path, cfg):
+        return "\n      这个文件不属于任何角色,需要人类划归。"
+    return ""
+
+
 def writable_paths(cfg, phase):
     """按角色 + 阶段计算可写路径。评审阶段只读:仅允许写评审记录与记忆层。
 
@@ -2080,9 +2096,7 @@ def cmd_handoff(root, cfg, args):
     if violations:
         lines = "".join(
             "\n  %s\n      %s%s"
-            % (p, why,
-               "\n      这个文件不属于任何角色,需要人类划归。" if is_orphan(p, cfg)
-               else "")
+            % (p, why, _orphan_note(p, cfg))
             for p, why in violations)
         orphaned = [p for p, _ in violations if is_orphan(p, cfg)]
         if orphaned:
@@ -2902,9 +2916,16 @@ DECISIONS_SKELETON = """# 决策记录（追加式 — 只能往后加，不能�
 # 这与目标项目用什么语言无关。
 # `.pair/scratch/`(W23):验证用的副本与临时脚本放这里。被 git 忽略的文件不出现在 git status 里,
 # 写权限边界、提交、verify-setup 的"未提交的代码改动"都看不见它们 —— 不需要为它另写判定。
+# 最后一行(W31):操作系统写的文件。有人用 Finder / 资源管理器看过项目目录,它们就会出现;不属于任何角色,
+# 第十五轮 macOS 的 `.DS_Store` 因此挡住了第一次交接,而那时这里没有它。
 GITIGNORE_LINES = [".pair/.last-test.log", ".pair/.last-full-test.log",
                    ".pair/whoami", ".pair/turns/", BRIEF_REL,
-                   "__pycache__/", "*.pyc", ".pair/scratch/"]
+                   "__pycache__/", "*.pyc", ".pair/scratch/",
+                   ".DS_Store", "Thumbs.db", "desktop.ini"]
+
+# 写权限边界认"操作系统写的文件"用的名字,取自上面那一行,不另抄一份(第十二轮 W27:提示与机制同源)。
+# GITIGNORE_LINES 里只有这几项既不是路径(不含 /)也不是通配(不含 *)。
+OS_FILES = tuple(l for l in GITIGNORE_LINES if "/" not in l and "*" not in l)
 
 
 def scratch_hint(phase):

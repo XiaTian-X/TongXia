@@ -7,3 +7,5 @@ __pycache__/
 .pair/.last-brief.md
 .pair/turns/
 .pair/scratch/
+Thumbs.db
+desktop.ini

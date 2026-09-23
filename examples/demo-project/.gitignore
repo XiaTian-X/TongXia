@@ -6,3 +6,6 @@ __pycache__/
 .pair/turns/
 .pair/.last-brief.md
 .pair/scratch/
+.DS_Store
+Thumbs.db
+desktop.ini
