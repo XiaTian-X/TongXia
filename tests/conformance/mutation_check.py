@@ -839,9 +839,10 @@ MUTATIONS = [
      '        print("  PAIR_ROLE=%s python3 %s <命令>" % ("dev", PROG_HINT))'),
 
     # W23 验证副本放 .pair/scratch/(dev 在 impl 回合给的锚点,review-impl 登记)。
+    # W31 的 spec 回合重锚(「三节共同」):GITIGNORE_LINES 那一行后面接着系统文件那一行,字面定死。
     ('gitignore 不含 scratch',
-     '                   "__pycache__/", "*.pyc", ".pair/scratch/"]',
-     '                   "__pycache__/", "*.pyc"]'),
+     '                   "__pycache__/", "*.pyc", ".pair/scratch/",\n',
+     '                   "__pycache__/", "*.pyc",\n'),
 
     # W24 的 spec 回合(带声明补的正面):verify-setup 对没声明保护测试的 refactor 项要警告。
     # 样板项目那条是"不出现",单向的;这条变异由 test_v1_brownfield 的正面用例抓。
@@ -878,6 +879,11 @@ MUTATIONS = [
     ('idle 也提 scratch',
      '    if phase != "idle":\n        print(scratch_hint(phase))',
      '    if True:\n        print(scratch_hint(phase))'),
+
+    # W31 操作系统写的文件(spec 回合定死字面并登记;认出系统文件那一句的锚点等 dev 定形状,review-impl 登记)。
+    ('gitignore 不含 .DS_Store',
+     '                   ".DS_Store", "Thumbs.db", "desktop.ini"]',
+     '                   "Thumbs.db", "desktop.ini"]'),
 ]
 
 # unittest 的失败行有两种形态:

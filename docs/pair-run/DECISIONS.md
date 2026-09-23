@@ -509,3 +509,8 @@
 - 理由: 第十五轮独立运行(`docs/dogfood-run-15.md`)4/4 双向通过、1 次打回、1 次人类介入。W31:`GITIGNORE_LINES` 不忽略 `.DS_Store` 这类操作系统写的文件,macOS 上第一次交接就可能被写权限边界卡住,而拒绝文案只让人找人类。W32:样板契约用来说明"结果不再 NFC"的例子是 NFC 不动点,照它写的用例没有区分力 —— 能写成失败用例的是"说明这条规则的例子,其期望值再 NFC 会变";W4 措辞的修正并进文档。两处都是第十四轮 W29 改契约时没同步检查留下的。W33:`mutation_check` 的基线跑在有 `.git` 的本仓库、变异跑在无 `.git` 的副本,环境造成的失败被记成抓手;要改的是 `mutation_check.py`(tester 路径),所以用 `cover`。
 - 已否决: W31 自动删除或忽略 `.DS_Store` —— 写权限边界照样该拒绝,只是文案给对出口。W31 顺带忽略编辑器临时文件 —— 那是用户自己的工具,归全局 gitignore。W33 判"抓手与变异是否相关" —— 要理解测试在测什么,环境一致之后那一类假抓手已经进不了缓存。W33 用 `bug` —— 实现与测试都在 tester 路径,dev 没有可写的实现。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `examples/demo-project`, `tests/conformance/mutation_check.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W31 — GITIGNORE_LINES 末两行字面定死;认系统文件按文件名
+
+- 理由: 往 `GITIGNORE_LINES` 加行必然改写既有锚点「gitignore 不含 scratch」所在的末行,dev 在 impl 回合改不了 `mutation_check.py`,照「三节共同」由 tester 在 spec 回合定死新字面(scratch 之后换行、三个系统文件另起一行)并重锚、登记「gitignore 不含 .DS_Store」。参考实现里去掉 `.DS_Store` 红 2 条(init 与端到端),拆掉认出系统文件那一句红 4 条。契约没说认路径还是认文件名,第十五轮一个在根目录一个在 `docs/`,按文件名。
+- 已否决: 把三个系统文件插在 `GITIGNORE_LINES` 中间以保住旧锚点 —— 顺序改了照样可能碰到别的锚点,不如明确定死。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_os_files.py`, `tests/conformance/mutation_check.py`

@@ -1439,6 +1439,17 @@ subagent。人类澄清"你本身就是 dev 这个角色唯一的会话,不适�
 `.DS_Store` 交接,被拒且文案含"加进 `.gitignore`",对照组(同样位置放一个普通的未跟踪孤儿文件)文案不含。
 变异点:`GITIGNORE_LINES` 去掉 `.DS_Store`、拆掉认出系统文件的那一句。
 
+**字面**(W31 的 spec 回合带声明补,「三节共同」) —— `GITIGNORE_LINES` 的末行是既有锚点「gitignore 不含 scratch」所在,
+往里加行必然改写它。定死为在 `".pair/scratch/"` 之后换行、另起一行写三个系统文件:
+
+```
+                   "__pycache__/", "*.pyc", ".pair/scratch/",
+                   ".DS_Store", "Thumbs.db", "desktop.ini"]
+```
+
+已重锚,并登记「gitignore 不含 .DS_Store」。认出系统文件那一句的形状由 dev 定。**认的是文件名**(`docs/.DS_Store` 也算),
+第十五轮两个 `.DS_Store` 一个在根目录、一个在 `docs/`。
+
 **不做** 不自动忽略或删除这类文件 —— 写权限边界照样拒绝,认出来只是让文案给对出口。不扩到编辑器临时文件(`*.swp`、`.idea/`):
 那些是用户自己的工具,不是操作系统,该由用户的全局 gitignore 管。
 

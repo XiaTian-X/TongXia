@@ -495,6 +495,7 @@
     ②样板 `.gitignore` 跟上(既有用例 `test_gitignore_跟得上_GITIGNORE_LINES` 会先红);③已接入、`.gitignore` 里还没有这几行的项目,
     写权限边界拒绝这类文件时,文案认出它是操作系统写的,点名"加进 `.gitignore`",不只是"找人类划归";其余孤儿文案不变;
     ④变异点:`GITIGNORE_LINES` 去掉 `.DS_Store`、拆掉那句认出系统文件的文案,各有用例红
+    ⑤(spec 回合带声明补)`GITIGNORE_LINES` 末两行字面定死(既有锚点所在);认的是文件名,子目录里的也算
   - 对应契约:`docs/pair-run/CONTRACT.md` → 操作系统写的文件不该挡住交接
 
 - [ ] **W32** [bug] — 样板契约的例子要能区分它要说明的那条规则
