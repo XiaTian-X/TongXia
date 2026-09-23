@@ -519,3 +519,8 @@
 - 理由: 样板契约写"结果不再做一次 NFC",给的例子是 U+0958 —— 它的结果本身就是 NFC 不动点,多不多做一次规范化都一样。第十五轮 tester 照着写的用例对"算完再 NFC 一次"的错误实现 0 条红,是那一轮唯一的打回。例子在契约里的作用就是消歧;一个换成错误实现也照样成立的例子,等于没给。能区分这一条的只有"大写字母 + 大写没有合成形式、小写有的变音"这一窄类(`T̈`、`Ϊ́`)。今后在契约里给例子,先问一句:把规则反过来实现,这个例子还成立吗?成立就换。另外例子一律写成转义(条目 27),否则会规范化的编辑器当场把它改掉。
 - 已否决: 保留 U+0958、再加一个能区分的例子放在同一条 —— tester 的判据要求那一条里每一个例子都能区分,混放会让读者照着那个没区分力的写用例。
 - 影响路径: `examples/demo-project/docs/CONTRACT.md`, `examples/demo-project/docs/PLAN.md`, `tests/conformance/test_v1_shipped.py`
+## W33 — 基线与变异同一个文件系统,环境变量照旧
+
+- 理由: 基线挪进 `isolated_copy` 之后,W30 那一类只在无 `.git` 时失败的用例在基线就现形、`mutation_check` 停下,进不了缓存。契约写"同一个环境",照字面可以连 `PAIR_MUTATION_RUN` 也带上 —— 那会让"变异点仍能匹配到源码"从基线里消失,陈旧锚点从此没有地方拦。定死:同一个的是文件系统,基线照旧不设这个变量。用例在迷你仓库(`mutation_check.py`、`run.py`、存根 `pair.py`、一个小测试,自己 `git init`)里跑,不在测试里跑全套:只在无 `.git` 时失败的用例让基线红(旧代码下绿)、对照组照绿、断言"没有这个变量"的用例照绿(带上变量则红)。
+- 已否决: 在测试里跑真实全套的基线 —— 一次一分多钟,而且要往本仓库里临时加用例;复用 `precheck_no_baseline` —— 它按设计带着 `PAIR_MUTATION_RUN`,与基线职责不同。
+- 影响路径: `tests/conformance/mutation_check.py`, `tests/conformance/test_mutation_baseline_env.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`

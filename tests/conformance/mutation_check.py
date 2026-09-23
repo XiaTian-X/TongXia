@@ -1137,10 +1137,19 @@ def run_baseline(jobs):
     # 设了它,一个挪了位的变异点会变成后面 57 次"没匹配到"的噪音。
     env = dict(os.environ)
     env.pop("PAIR_MUTATION_RUN", None)
-    base = subprocess.run(
-        [sys.executable, str(REPO / "tests/conformance/run.py"),
-         "-j", str(jobs)], cwd=str(REPO), env=env,
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    # W33:基线跑在**未变异的隔离副本**里,与变异同一个 `isolated_copy`(排除 `.git`)。
+    # 曾经跑在本仓库里:一个只在无 `.git` 时失败的用例让基线照绿,而在副本里它对每个变异都失败 ——
+    # failfast 回退把它记成任何新变异的抓手,缓存从此恒判抓到(第十四轮 W30 的 review-impl 真实发生过)。
+    # **同一个的是文件系统,不是环境变量**:上面照旧去掉 PAIR_MUTATION_RUN,锚点检查仍在这里一次性把守。
+    tmp = Path(tempfile.mkdtemp(prefix="mutate-baseline-"))
+    try:
+        dst = isolated_copy(tmp)
+        base = subprocess.run(
+            [sys.executable, str(dst / "tests/conformance/run.py"),
+             "-j", str(jobs)], cwd=str(dst), env=env,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
     if base.returncode != 0:
         print("基线就没全绿,先修好再做变异测试:\n%s"
               % base.stdout.decode("utf-8", "replace"))
