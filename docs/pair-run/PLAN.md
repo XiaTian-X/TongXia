@@ -489,7 +489,7 @@
 
 > 人类在第十五轮报告之后裁决"开始吧"(开放条目 37–39),授权 dev 代笔立项。
 
-- [ ] **W31** [bug] — 操作系统写的文件不该挡住交接
+- [x] **W31** [bug] — 操作系统写的文件不该挡住交接
   - **来源**:开放条目 38。第十五轮 macOS 的 `.DS_Store` 挡住了 tester 的第一次交接,是那一轮唯一的人类介入
   - 验收标准:①`init` 写的 `.gitignore` 含 `.DS_Store`、`Thumbs.db`、`desktop.ini`(`GITIGNORE_LINES` 加这三行);
     ②样板 `.gitignore` 跟上(既有用例 `test_gitignore_跟得上_GITIGNORE_LINES` 会先红);③已接入、`.gitignore` 里还没有这几行的项目,
