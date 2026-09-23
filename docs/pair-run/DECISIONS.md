@@ -514,3 +514,8 @@
 - 理由: 往 `GITIGNORE_LINES` 加行必然改写既有锚点「gitignore 不含 scratch」所在的末行,dev 在 impl 回合改不了 `mutation_check.py`,照「三节共同」由 tester 在 spec 回合定死新字面(scratch 之后换行、三个系统文件另起一行)并重锚、登记「gitignore 不含 .DS_Store」。参考实现里去掉 `.DS_Store` 红 2 条(init 与端到端),拆掉认出系统文件那一句红 4 条。契约没说认路径还是认文件名,第十五轮一个在根目录一个在 `docs/`,按文件名。
 - 已否决: 把三个系统文件插在 `GITIGNORE_LINES` 中间以保住旧锚点 —— 顺序改了照样可能碰到别的锚点,不如明确定死。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_os_files.py`, `tests/conformance/mutation_check.py`
+## W32 — 契约里用来说明一条规则的例子,必须能区分这条规则
+
+- 理由: 样板契约写"结果不再做一次 NFC",给的例子是 U+0958 —— 它的结果本身就是 NFC 不动点,多不多做一次规范化都一样。第十五轮 tester 照着写的用例对"算完再 NFC 一次"的错误实现 0 条红,是那一轮唯一的打回。例子在契约里的作用就是消歧;一个换成错误实现也照样成立的例子,等于没给。能区分这一条的只有"大写字母 + 大写没有合成形式、小写有的变音"这一窄类(`T̈`、`Ϊ́`)。今后在契约里给例子,先问一句:把规则反过来实现,这个例子还成立吗?成立就换。另外例子一律写成转义(条目 27),否则会规范化的编辑器当场把它改掉。
+- 已否决: 保留 U+0958、再加一个能区分的例子放在同一条 —— tester 的判据要求那一条里每一个例子都能区分,混放会让读者照着那个没区分力的写用例。
+- 影响路径: `examples/demo-project/docs/CONTRACT.md`, `examples/demo-project/docs/PLAN.md`, `tests/conformance/test_v1_shipped.py`
