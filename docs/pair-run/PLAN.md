@@ -523,6 +523,7 @@
   - 验收标准:①往 `GITIGNORE_LINES` 里加一个不是操作系统文件的裸文件名(用例在内存里改源码模拟这次编辑),它不进 `OS_FILES`
     (今天红);②`GITIGNORE_LINES` 仍含那三个系统文件,`init` 写的 `.gitignore` 不变;③`OS_FILES` 与 `GITIGNORE_LINES`
     里那三行仍然同源(一处写、另一处引用),不各抄一份;④变异点:`OS_FILES` 退回按形状筛,用例要红
+    ⑤(spec 回合定死)`OS_FILES` 与 `GITIGNORE_LINES` 的字面见契约,锚点已重锚
   - 对应契约:`docs/pair-run/CONTRACT.md` → 操作系统文件的名单显式写出
 
 - [ ] **W35** [bug] — 操作系统写的文件不随执行者的改动被提交

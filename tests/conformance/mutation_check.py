@@ -881,14 +881,20 @@ MUTATIONS = [
      '    if True:\n        print(scratch_hint(phase))'),
 
     # W31 操作系统写的文件(spec 回合定死字面并登记;认出系统文件那一句的锚点等 dev 定形状,review-impl 登记)。
+    # W34 的 spec 回合重锚:三个系统文件名写在 OS_FILES 一处,GITIGNORE_LINES 用 *OS_FILES 引用。
     ('gitignore 不含 .DS_Store',
-     '                   ".DS_Store", "Thumbs.db", "desktop.ini"]',
-     '                   "Thumbs.db", "desktop.ini"]'),
+     '                   *OS_FILES]',
+     '                   *(f for f in OS_FILES if f != ".DS_Store")]'),
 
     # W31 认出系统文件(dev 在 impl 回合给的锚点,review-impl 登记)。
     ('越界文案不认系统文件',
      '    if PurePosixPath(path).name in OS_FILES:',
      '    if False:'),
+
+    # W34 名单显式写出(spec 回合定死字面并登记)。
+    ('OS_FILES 退回按形状筛',
+     '                   *OS_FILES]\n',
+     '                   *OS_FILES]\nOS_FILES = tuple(l for l in GITIGNORE_LINES if "/" not in l and "*" not in l)\n'),
 ]
 
 # unittest 的失败行有两种形态:

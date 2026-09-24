@@ -1511,6 +1511,19 @@ W30 只治了那一个文件;基线与变异的环境不一致,同一类还会�
 `GITIGNORE_LINES` 的字面会变,W31 定死的两行与挂在上面的锚点(「gitignore 不含 scratch」「gitignore 不含 .DS_Store」)
 由 tester 在 spec 回合重新定死并重锚。
 
+**字面**(W34 的 spec 回合定死) —— `OS_FILES` 紧挨在 `GITIGNORE_LINES` 之前,后者末行用 `*OS_FILES` 引用它:
+
+```
+OS_FILES = (".DS_Store", "Thumbs.db", "desktop.ini")
+GITIGNORE_LINES = [".pair/.last-test.log", ".pair/.last-full-test.log",
+                   ".pair/whoami", ".pair/turns/", BRIEF_REL,
+                   "__pycache__/", "*.pyc", ".pair/scratch/",
+                   *OS_FILES]
+```
+
+原先按形状筛的那一行删掉。「gitignore 不含 scratch」锚点不受影响;「gitignore 不含 .DS_Store」重锚到 `*OS_FILES]` 那一行;
+登记「OS_FILES 退回按形状筛」。用例在内存里改写源码的两个插入点(`".pair/scratch/",` 与 `"desktop.ini")`)都来自这份字面。
+
 **不做** 不改名单本身(仍是这三个)。
 
 ## 操作系统写的文件不随执行者的改动被提交

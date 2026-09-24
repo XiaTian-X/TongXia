@@ -529,3 +529,8 @@
 - 理由: W34(条目 41):`OS_FILES` 按"不含 / 与 *"从 `GITIGNORE_LINES` 里猜,把"被忽略的裸文件名"当成"操作系统写的文件",今后加一个 `.env` 就会说错;改成显式名单、`GITIGNORE_LINES` 引用它,仍同源(第十二轮 W27)。今天的行为是对的,缺陷是潜在的 —— 能写成失败用例的是"模拟一次往 `GITIGNORE_LINES` 加裸文件名的编辑"。W35(条目 40):系统文件落在执行者自己路径下会被 `git add -A` 静默提交;选"不提交、留在工作区、点名出口",不选拒绝。
 - 已否决: W35 拒绝交接 —— 没跟上 `.gitignore` 的项目会再停下来等人类,正是第十五轮那次介入;系统文件本来就不是产出,不提交即正确。W35 替人删掉它 —— 不是 agent 写的。W34 用断言 `OS_FILES` 是某个具名元组的方式判 —— 变更探测器;判的是行为(加裸文件名后不被误认)。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/mutation_check.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W34 — OS_FILES 写在 GITIGNORE_LINES 之前、后者用 *OS_FILES 引用,字面定死
+
+- 理由: 契约要求"一处写、另一处引用",且 `GITIGNORE_LINES` 的字面会变、挂在上面的锚点由 tester 重锚。定死 `OS_FILES` 元组写在前面、`GITIGNORE_LINES` 末行 `*OS_FILES`;用例在内存里改写源码的两个插入点都来自这份字面。重锚「gitignore 不含 .DS_Store」到 `*OS_FILES]`,登记「OS_FILES 退回按形状筛」(在引用之后重新按形状定义一次)。参考实现全套 544 OK,新变异被"加 .env"那条抓住。
+- 已否决: 反过来让 `OS_FILES` 从 `GITIGNORE_LINES` 里按名字取三项 —— 名单仍写在 `GITIGNORE_LINES` 里,"哪几项是系统文件"要另写一遍,还是两处。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_os_files_list.py`, `tests/conformance/mutation_check.py`
