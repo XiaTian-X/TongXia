@@ -524,3 +524,8 @@
 - 理由: 基线挪进 `isolated_copy` 之后,W30 那一类只在无 `.git` 时失败的用例在基线就现形、`mutation_check` 停下,进不了缓存。契约写"同一个环境",照字面可以连 `PAIR_MUTATION_RUN` 也带上 —— 那会让"变异点仍能匹配到源码"从基线里消失,陈旧锚点从此没有地方拦。定死:同一个的是文件系统,基线照旧不设这个变量。用例在迷你仓库(`mutation_check.py`、`run.py`、存根 `pair.py`、一个小测试,自己 `git init`)里跑,不在测试里跑全套:只在无 `.git` 时失败的用例让基线红(旧代码下绿)、对照组照绿、断言"没有这个变量"的用例照绿(带上变量则红)。
 - 已否决: 在测试里跑真实全套的基线 —— 一次一分多钟,而且要往本仓库里临时加用例;复用 `precheck_no_baseline` —— 它按设计带着 `PAIR_MUTATION_RUN`,与基线职责不同。
 - 影响路径: `tests/conformance/mutation_check.py`, `tests/conformance/test_mutation_baseline_env.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`
+## SETUP — 第十七轮修第十六轮登记的两处(条目 40、41),人类裁决"处理 40、41"
+
+- 理由: W34(条目 41):`OS_FILES` 按"不含 / 与 *"从 `GITIGNORE_LINES` 里猜,把"被忽略的裸文件名"当成"操作系统写的文件",今后加一个 `.env` 就会说错;改成显式名单、`GITIGNORE_LINES` 引用它,仍同源(第十二轮 W27)。今天的行为是对的,缺陷是潜在的 —— 能写成失败用例的是"模拟一次往 `GITIGNORE_LINES` 加裸文件名的编辑"。W35(条目 40):系统文件落在执行者自己路径下会被 `git add -A` 静默提交;选"不提交、留在工作区、点名出口",不选拒绝。
+- 已否决: W35 拒绝交接 —— 没跟上 `.gitignore` 的项目会再停下来等人类,正是第十五轮那次介入;系统文件本来就不是产出,不提交即正确。W35 替人删掉它 —— 不是 agent 写的。W34 用断言 `OS_FILES` 是某个具名元组的方式判 —— 变更探测器;判的是行为(加裸文件名后不被误认)。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/mutation_check.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
