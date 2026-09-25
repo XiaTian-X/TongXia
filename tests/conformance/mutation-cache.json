@@ -1,5 +1,5 @@
 {
-  "baseline": "2d44677692c635db",
+  "baseline": "c7f85aa920f93658",
   "catchers": {
     "CLAUDE_MD 改了而样板没跟上": [
       "test_v1_shipped.TestClaudeMdForbidsHandingOff.test_样板_CLAUDE_md_与_init_写出的逐字节一致"
@@ -177,6 +177,9 @@
     ],
     "契约读不到时放行": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_契约文件读不到时拒绝"
+    ],
+    "孤儿位置的系统文件也放过": [
+      "test_v1_os_files.TestRefusalNamesTheExit.test_Windows_的两种也认得出"
     ],
     "当场留决策改成按工作项算": [
       "test_v1_validity.TestSameTurnGatesUnchanged.test_带声明改契约_更早回合的决策不算当场"
@@ -547,6 +550,12 @@
     ],
     "简报不标只追加": [
       "test_v1_review_append.TestStatusMarksAppendOnly.test_执行者看到的只能写那一行也标出只追加"
+    ],
+    "系统文件照旧参与写权限边界": [
+      "test_v1_os_files_left.TestNextTurnNotBlocked.test_tester_留下的_DS_Store_不挡_dev_的交接"
+    ],
+    "系统文件照旧被提交": [
+      "test_v1_os_files_left.TestNextTurnNotBlocked.test_tester_留下的_DS_Store_不挡_dev_的交接"
     ],
     "索引判据恒真": [
       "test_v1_setup_report.TestNoIndexDiffDoesNotFail.test_原样重跑不再失败"

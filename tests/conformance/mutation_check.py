@@ -895,6 +895,19 @@ MUTATIONS = [
     ('OS_FILES 退回按形状筛',
      '                   *OS_FILES]\n',
      '                   *OS_FILES]\nOS_FILES = tuple(l for l in GITIGNORE_LINES if "/" not in l and "*" not in l)\n'),
+
+    # W35 系统文件不随执行者的改动被提交(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('系统文件照旧参与写权限边界',
+     '    entries = [(xy, p) for xy, p in entries if p not in left_os]',
+     '    pass'),
+
+    ('系统文件照旧被提交',
+     '        git("reset", "-q", "--", *left_os, cwd=root)',
+     '        pass'),
+
+    ('孤儿位置的系统文件也放过',
+     '            if xy == "??" and PurePosixPath(p).name in OS_FILES and not is_orphan(p, cfg)]',
+     '            if xy == "??" and PurePosixPath(p).name in OS_FILES]'),
 ]
 
 # unittest 的失败行有两种形态:
