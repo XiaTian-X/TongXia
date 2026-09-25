@@ -2916,16 +2916,15 @@ DECISIONS_SKELETON = """# 决策记录（追加式 — 只能往后加，不能�
 # 这与目标项目用什么语言无关。
 # `.pair/scratch/`(W23):验证用的副本与临时脚本放这里。被 git 忽略的文件不出现在 git status 里,
 # 写权限边界、提交、verify-setup 的"未提交的代码改动"都看不见它们 —— 不需要为它另写判定。
-# 最后一行(W31):操作系统写的文件。有人用 Finder / 资源管理器看过项目目录,它们就会出现;不属于任何角色,
-# 第十五轮 macOS 的 `.DS_Store` 因此挡住了第一次交接,而那时这里没有它。
+# 操作系统写的文件(W31):有人用 Finder / 资源管理器看过项目目录,它们就会出现;不属于任何角色,
+# 第十五轮 macOS 的 `.DS_Store` 因此挡住了第一次交接,而那时 GITIGNORE_LINES 里没有它。
+# **名单只写在这一处**(W34),GITIGNORE_LINES 末行引用它;写权限边界认系统文件、handoff 不提交它们,都读这一处。
+# 曾经是从 GITIGNORE_LINES 里按"不含 / 也不含 *"筛出来的 —— 按形状猜语义,今后加一个 `.env` 就会被说成"操作系统写的"。
+OS_FILES = (".DS_Store", "Thumbs.db", "desktop.ini")
 GITIGNORE_LINES = [".pair/.last-test.log", ".pair/.last-full-test.log",
                    ".pair/whoami", ".pair/turns/", BRIEF_REL,
                    "__pycache__/", "*.pyc", ".pair/scratch/",
-                   ".DS_Store", "Thumbs.db", "desktop.ini"]
-
-# 写权限边界认"操作系统写的文件"用的名字,取自上面那一行,不另抄一份(第十二轮 W27:提示与机制同源)。
-# GITIGNORE_LINES 里只有这几项既不是路径(不含 /)也不是通配(不含 *)。
-OS_FILES = tuple(l for l in GITIGNORE_LINES if "/" not in l and "*" not in l)
+                   *OS_FILES]
 
 
 def scratch_hint(phase):
