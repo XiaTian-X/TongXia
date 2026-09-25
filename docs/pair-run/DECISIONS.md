@@ -534,3 +534,8 @@
 - 理由: 契约要求"一处写、另一处引用",且 `GITIGNORE_LINES` 的字面会变、挂在上面的锚点由 tester 重锚。定死 `OS_FILES` 元组写在前面、`GITIGNORE_LINES` 末行 `*OS_FILES`;用例在内存里改写源码的两个插入点都来自这份字面。重锚「gitignore 不含 .DS_Store」到 `*OS_FILES]`,登记「OS_FILES 退回按形状筛」(在引用之后重新按形状定义一次)。参考实现全套 544 OK,新变异被"加 .env"那条抓住。
 - 已否决: 反过来让 `OS_FILES` 从 `GITIGNORE_LINES` 里按名字取三项 —— 名单仍写在 `GITIGNORE_LINES` 里,"哪几项是系统文件"要另写一遍,还是两处。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_os_files_list.py`, `tests/conformance/mutation_check.py`
+## W35 — 留在工作区的系统文件也不参与写权限边界,否则下一回合挡住对方
+
+- 理由: 照原文只"不提交",tester 回合留下的 `tests/.DS_Store` 到 dev 回合就在 dev 的改动里、不在 dev 路径下,dev 的交接被拒 —— 本节要消除的介入挪了一个回合。参考实现照原文写,"tester 留下的不挡 dev"与"评审回合也不挡"两条红。改成:不在孤儿位置的未跟踪系统文件既不提交也不参与边界判定,输出点名;孤儿位置照旧按 W31 拒绝(W31 的用例全在孤儿位置,不受影响;把孤儿也放过则 W31 那 4 条与本项一条红)。参考实现全套 552 OK。
+- 已否决: 所有未跟踪系统文件都放过(包括孤儿位置)—— 推翻 W31 刚定下的"拒绝本身不变";只在执行者自己路径放过 —— 下一回合对方那里不是"自己路径",同样挡住。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_os_files_left.py`
