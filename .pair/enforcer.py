@@ -596,6 +596,19 @@ def render_path_listing(head, paths, limit=PATH_LISTING_LIMIT):
     return "\n".join(lines)
 
 
+def os_files_left(entries, cfg):
+    """这一回合要当它不存在的系统文件:**未跟踪**、文件名在 `OS_FILES` 里、**不在孤儿位置**(W35)。
+
+    W31 只管被拒的那一种(孤儿位置,给出 `.gitignore` 出口)。落在某个角色路径下的,原先不会被拒,
+    而是随 `git add -A` 被提交进仓库 —— 仓库里多一个谁都没写过的文件。只是不提交还不够:它留在工作区,
+    下一回合就在对方的 `changed_entries` 里,不在对方的路径下,**对方的交接被写权限边界拒绝**
+    (W35 的开工前审查 ⑩)。所以这类文件既不进提交、也不参与写权限边界的判定,不论谁的回合。
+    已跟踪的不管:那是人类早先提交的。
+    """
+    return [p for xy, p in entries
+            if xy == "??" and PurePosixPath(p).name in OS_FILES and not is_orphan(p, cfg)]
+
+
 def _orphan_note(path, cfg):
     """越界文案里一个文件那一段的补充说明。
 
@@ -2034,6 +2047,10 @@ def cmd_handoff(root, cfg, args):
     target = flow["transitions"][(phase, verdict)]
 
     entries = changed_entries(root)
+    # W35:落在孤儿位置以外的未跟踪系统文件,这一回合当它不存在 —— 不进写权限边界、不进提交。
+    # 下面每一道判定看的都是 `entries`,所以在这里一次拿掉,不在每道判定里各写一遍。
+    left_os = os_files_left(entries, cfg)
+    entries = [(xy, p) for xy, p in entries if p not in left_os]
 
     # --- 写权限边界校验 ---------------------------------------------------
     allowed = writable_paths(cfg, phase)
@@ -2381,6 +2398,9 @@ def cmd_handoff(root, cfg, args):
             PROG_HINT, JUDGE_REL, repinned or "sha 取失败")
 
     git("add", "-A", cwd=root)
+    if left_os:
+        # 退回未暂存:它们留在工作区,不删 —— 不是 agent 写的,删不删是人类的事。
+        git("reset", "-q", "--", *left_os, cwd=root)
     git("commit", "-q", "-m", "%s: %s" % (prefix, message), "-m", body, cwd=root)
 
     # 工作项完成时跑一次全量套件。只报告不阻断 —— 范围外的代码这对结对
@@ -2398,6 +2418,12 @@ def cmd_handoff(root, cfg, args):
     print("  下一阶段: %s  → 归属: %s" % (next_phase, PHASE_OWNER[next_phase]))
     if finished_item:
         print("  工作项「%s」已完成并双向通过。" % finished_item)
+    if left_os:
+        print()
+        print("  以下是操作系统写的文件(有人用文件管理器看过这个目录),没有提交、留在工作区:")
+        for p_ in left_os:
+            print("      %s" % p_)
+        print("  请人类把它们加进 .gitignore —— init 写的 .gitignore 已含这几行。")
     print()
     if push_failed:
         # 提交已经落在本地,但对方拉不到 —— 通信只走 git,所以这等于没交接。
