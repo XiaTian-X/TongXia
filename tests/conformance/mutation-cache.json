@@ -1,8 +1,11 @@
 {
-  "baseline": "ef47ca809029e067",
+  "baseline": "a90297b7b52e9dbd",
   "catchers": {
     "CLAUDE_MD 改了而样板没跟上": [
       "test_v1_shipped.TestClaudeMdForbidsHandingOff.test_样板_CLAUDE_md_与_init_写出的逐字节一致"
+    ],
+    "OS_FILES 退回按形状筛": [
+      "test_v1_os_files_list.TestExplicitList.test_往_GITIGNORE_LINES_加一个裸文件名_它不算系统文件"
     ],
     "claim 不拦过期的校验": [
       "test_v1_validity.TestContractChangeInvalidatesVerification.test_dev_重跑不替_tester_解锁"

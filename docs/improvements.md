@@ -1756,7 +1756,7 @@ tester 照着写的 W3 用例因此没有区分力,是那一轮唯一的打回�
 (tester 在 spec 回合、有人用 Finder 打开过 `tests/`)时不会被拒,而是随那一回合的改动被提交进仓库 ——
 比挡住交接更难发现。`.gitignore` 跟上 `GITIGNORE_LINES` 之后不再发生;没跟上的项目,`handoff` 可以对这类文件单独提醒。
 
-### 41. `OS_FILES` 靠形状从 `GITIGNORE_LINES` 里猜
+### 41. `OS_FILES` 靠形状从 `GITIGNORE_LINES` 里猜  ✅ 已解决(第十七轮 W34)
 
 第十六轮 W31 的 review-impl 里 tester 挑出,dev 在 review-test 同意(那一回合只读,写不了本文件,本回合补登)。
 `OS_FILES` 取 `GITIGNORE_LINES` 里"不含 `/` 也不含 `*`"的项 —— 今天恰好是 `.DS_Store`、`Thumbs.db`、`desktop.ini`;
