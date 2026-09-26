@@ -539,3 +539,8 @@
 - 理由: 照原文只"不提交",tester 回合留下的 `tests/.DS_Store` 到 dev 回合就在 dev 的改动里、不在 dev 路径下,dev 的交接被拒 —— 本节要消除的介入挪了一个回合。参考实现照原文写,"tester 留下的不挡 dev"与"评审回合也不挡"两条红。改成:不在孤儿位置的未跟踪系统文件既不提交也不参与边界判定,输出点名;孤儿位置照旧按 W31 拒绝(W31 的用例全在孤儿位置,不受影响;把孤儿也放过则 W31 那 4 条与本项一条红)。参考实现全套 552 OK。
 - 已否决: 所有未跟踪系统文件都放过(包括孤儿位置)—— 推翻 W31 刚定下的"拒绝本身不变";只在执行者自己路径放过 —— 下一回合对方那里不是"自己路径",同样挡住。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_os_files_left.py`
+## SETUP — 第十九轮修第十八轮暴露的两处,人类裁决"开始修复";条目 43 并进 W36 的文档
+
+- 理由: 第十八轮独立运行(`docs/dogfood-run-18.md`)4/4 双向通过、人类介入 0 次、1 次打回。打回挖出的两个缺口都出在样板契约的例子没有区分力:组合符规则的例子全是 `Mn`,小写化规则的例子里没有 `lower` 与 `casefold` 不同的字母 —— 后者第十三轮已出现过一次,两个互不知情的项目撞上同一个缺口,说明是出厂样例在引导。这是第十六轮 W32 决策("说明一条规则的例子必须能区分这条规则")的又两处未覆盖。能写成失败用例的是"说明这条规则的例子按类别覆盖齐全 / 至少一个能区分 lower 与 casefold"。条目 43(文档里写码位被悄悄改写)没有能写成失败用例的行为,并进 W36 的文档。
+- 已否决: 给样板契约的每一条规则都加"例子要有区分力"的通用检查 —— 什么算"区分"因规则而异,写成通用判据只会是一句恒真的空话;逐条点名。条目 43 单独立项 —— 纯写法建议。
+- 影响路径: `examples/demo-project/docs/CONTRACT.md`, `.agents/skills/pair-protocol/references/rules.md`, `tests/conformance/test_v1_shipped.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
