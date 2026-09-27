@@ -189,6 +189,11 @@ PLAN 里的工作项全部完成后,协议停止轮转并报告项目结束。
 其中几条由 `handoff` 强制。人类写契约时抄
 [references/contract-templates.md](references/contract-templates.md)。
 
+**文档里提到码位,写成 `U+0301` 这样的文字** —— 不写反斜杠加 u 的转义(写文件工具会当场把它解成字符),
+也不嵌字符本身(一段说"U+0301 会被丢弃"的文字里真嵌着一个组合符,读的人看不出来)。
+`handoff` 会点名评审与笔记里本回合新写进去的组合符;测试文件另用具名常量,见
+[references/rules.md](references/rules.md) 第 6 节。
+
 ## 冻结文件
 
 `docs/PLAN.md` 和 `docs/CONTRACT.md` 由人类维护,agent 一律只读。
