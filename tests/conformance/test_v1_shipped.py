@@ -210,6 +210,42 @@ class TestContractExampleDiscriminates(unittest.TestCase):
                 self.assertTrue(raw.isascii(), "例子 %r 里有裸的非 ASCII 字符,要写成 \\uXXXX" % raw)
 
 
+class TestContractExamplesCoverCategories(unittest.TestCase):
+    """W36:样板契约的组合符与小写化规则要有能区分它们的例子。
+
+    第十八轮唯一的打回:只认 `Mn` 的实现与用 `casefold` 的实现对 W1、W3 的用例 0 条红 —— 契约的例子里组合符全是 `Mn`、
+    没有一个字母的 `lower()` 与 `casefold()` 不同。tester 照着例子写用例,例子没有区分力,用例也就没有。
+
+    **取法**:`## slugify` 一节里全部例子,两种写法都认 —— `` `slugify("…")` 是 `"…"` `` 与 `` `"…"` → `"…"` ``;
+    解开 `\\uXXXX` 转义。组合符看**期望输出**里出现的:例子里组合符被丢掉的话,只认 `Mn` 的实现照样对。
+    小写化按契约的**逐字符**读(整串 `lower()` 会把 `"ΟΔΟΣ"` 的词尾给成 `ς`,契约要的是 `σ`)。"""
+
+    PAIRS = (re.compile(r'`slugify\("([^"`]*)"\)` 是 `"([^"`]*)"`'),
+             re.compile(r'`"([^"`]*)"` → `"([^"`]*)"`'))
+
+    def examples(self):
+        text = (DEMO / "docs" / "CONTRACT.md").read_text(encoding="utf-8")
+        section = text.split("## slugify", 1)[1].split("\n## ", 1)[0]
+        un = TestContractExampleDiscriminates.unescape
+        found = [(un(a), un(b)) for rx in self.PAIRS for a, b in rx.findall(section)]
+        self.assertTrue(found, "slugify 一节里没有认得出的例子")
+        return found
+
+    def test_期望输出里的组合符覆盖_Mn_Mc_Me(self):
+        cats = {unicodedata.category(c) for _, out in self.examples() for c in out
+                if unicodedata.category(c).startswith("M")}
+        for cat in ("Mn", "Mc", "Me"):
+            self.assertIn(cat, cats, "没有一个例子的期望输出里留着 %s 类组合符" % cat)
+
+    def test_有例子分得开_lower_与_casefold(self):
+        hits = []
+        for inp, out in self.examples():
+            for c in inp:
+                if c.lower() != c.casefold() and c.lower() in out and out.casefold() != out:
+                    hits.append((inp, out, c))
+        self.assertTrue(hits, "没有一个例子的输入里有 lower() 与 casefold() 不同的字符、且期望输出按 lower() 给出")
+
+
 class TestWhoseTurn(unittest.TestCase):
     """驱动器只认这一行输出,所以它的形状是接口,不是随手打印。"""
 
