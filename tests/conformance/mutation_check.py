@@ -908,6 +908,19 @@ MUTATIONS = [
     ('孤儿位置的系统文件也放过',
      '            if xy == "??" and PurePosixPath(p).name in OS_FILES and not is_orphan(p, cfg)]',
      '            if xy == "??" and PurePosixPath(p).name in OS_FILES]'),
+
+    # W37 评审与笔记里新写的组合符(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('组合符不提示',
+     '    if combining:\n        print()',
+     '    if False:\n        print()'),
+
+    ('组合符提示也看旧行',
+     '        if xy == "??":\n            text = (root / path).read_text(encoding="utf-8", errors="replace")',
+     '        if True:\n            text = (root / path).read_text(encoding="utf-8", errors="replace")'),
+
+    ('组合符提示也看测试与实现',
+     '        if "D" in xy or not matches_any(path, docs) or not (root / path).is_file():',
+     '        if "D" in xy or not (root / path).is_file():'),
 ]
 
 # unittest 的失败行有两种形态:

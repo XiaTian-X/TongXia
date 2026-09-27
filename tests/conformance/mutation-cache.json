@@ -1,5 +1,5 @@
 {
-  "baseline": "640795e376184374",
+  "baseline": "176e1062a8fe6f4d",
   "catchers": {
     "CLAUDE_MD 改了而样板没跟上": [
       "test_v1_shipped.TestClaudeMdForbidsHandingOff.test_样板_CLAUDE_md_与_init_写出的逐字节一致"
@@ -565,6 +565,15 @@
     ],
     "索引判据看整个索引": [
       "test_v1_setup_report.TestNoIndexDiffDoesNotFail.test_索引里预先暂存了别的东西时照样不提交"
+    ],
+    "组合符不提示": [
+      "test_v1_combining_hint.TestNewLinesAreFlagged.test_Mc_也算组合符"
+    ],
+    "组合符提示也看旧行": [
+      "test_v1_combining_hint.TestOnlyNewLinesOnlyDocs.test_已提交的旧行不再提示"
+    ],
+    "组合符提示也看测试与实现": [
+      "test_v1_combining_hint.TestOnlyNewLinesOnlyDocs.test_测试文件里的组合符不提示"
     ],
     "结论不认角色文件": [
       "test_v1_setup_report.TestFallbackToSharedPath.test_角色文件缺失时回落到旧路径并说出来_且不搬迁旧文件"
