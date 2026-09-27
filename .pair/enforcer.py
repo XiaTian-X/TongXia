@@ -596,6 +596,41 @@ def render_path_listing(head, paths, limit=PATH_LISTING_LIMIT):
     return "\n".join(lines)
 
 
+def combining_in_new_lines(root, cfg, entries):
+    """评审目录与记忆层里**本回合新增的行**中的组合符(W37):[(路径, 行号, ["U+XXXX", ...])]。
+
+    第十九轮把"文档里写码位用 `U+XXXX` 文字,也不嵌字符本身"写进了 `rules.md`;第二十轮两个会话在五份文档里
+    嵌了 26 个裸组合符,谁都没发现 —— 写出来的就是它想写的,看不出问题。规则放在会话不去读的地方,而这件事脚本能判。
+    只看新增行:未跟踪的文件是全部行,已跟踪的取相对 HEAD 的新增行。旧行不是这一回合写的,提示了也不该由这一回合改。
+    测试与实现不管(测试另有 `chr(0x...)` 常量与 NFC 不动点护栏)。
+    """
+    docs = list(cfg["shared_paths"])
+    if memory_on(cfg):
+        docs += [cfg["notes_dir"], cfg["decisions_file"]]
+    hits = []
+    for xy, path in entries:
+        if "D" in xy or not matches_any(path, docs) or not (root / path).is_file():
+            continue
+        if xy == "??":
+            text = (root / path).read_text(encoding="utf-8", errors="replace")
+            added = list(enumerate(text.splitlines(), 1))
+        else:
+            added, n = [], 0
+            diff = git("diff", "-U0", "HEAD", "--", path, cwd=root, check=False) or ""
+            for line in diff.splitlines():
+                m = re.match(r"@@ -\S+ \+(\d+)", line)
+                if m:
+                    n = int(m.group(1))
+                elif line.startswith("+") and not line.startswith("+++"):
+                    added.append((n, line[1:]))
+                    n += 1
+        for lineno, line in added:
+            marks = ["U+%04X" % ord(c) for c in line if unicodedata.category(c).startswith("M")]
+            if marks:
+                hits.append((path, lineno, marks))
+    return hits
+
+
 def os_files_left(entries, cfg):
     """这一回合要当它不存在的系统文件:**未跟踪**、文件名在 `OS_FILES` 里、**不在孤儿位置**(W35)。
 
@@ -2051,6 +2086,8 @@ def cmd_handoff(root, cfg, args):
     # 下面每一道判定看的都是 `entries`,所以在这里一次拿掉,不在每道判定里各写一遍。
     left_os = os_files_left(entries, cfg)
     entries = [(xy, p) for xy, p in entries if p not in left_os]
+    # W37:提交前算好(提交之后就没有"相对 HEAD 的新增行"了),交接成功后再打印。
+    combining = combining_in_new_lines(root, cfg, entries)
 
     # --- 写权限边界校验 ---------------------------------------------------
     allowed = writable_paths(cfg, phase)
@@ -2424,6 +2461,13 @@ def cmd_handoff(root, cfg, args):
         for p_ in left_os:
             print("      %s" % p_)
         print("  请人类把它们加进 .gitignore —— init 写的 .gitignore 已含这几行。")
+    if combining:
+        print()
+        print("  评审或笔记里本回合新写的行嵌着组合符(字符本身,不是文字),读的人看不出来:")
+        for p_, n_, marks in combining:
+            print("      %s:%d  %s" % (p_, n_, " ".join(marks)))
+        print("  文档里提到码位请写成 U+XXXX 这样的文字(不写转义,也不嵌字符本身)。"
+              "这只是提示,交接已经完成。")
     print()
     if push_failed:
         # 提交已经落在本地,但对方拉不到 —— 通信只走 git,所以这等于没交接。
