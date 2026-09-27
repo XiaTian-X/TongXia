@@ -544,3 +544,8 @@
 - 理由: 第十八轮独立运行(`docs/dogfood-run-18.md`)4/4 双向通过、人类介入 0 次、1 次打回。打回挖出的两个缺口都出在样板契约的例子没有区分力:组合符规则的例子全是 `Mn`,小写化规则的例子里没有 `lower` 与 `casefold` 不同的字母 —— 后者第十三轮已出现过一次,两个互不知情的项目撞上同一个缺口,说明是出厂样例在引导。这是第十六轮 W32 决策("说明一条规则的例子必须能区分这条规则")的又两处未覆盖。能写成失败用例的是"说明这条规则的例子按类别覆盖齐全 / 至少一个能区分 lower 与 casefold"。条目 43(文档里写码位被悄悄改写)没有能写成失败用例的行为,并进 W36 的文档。
 - 已否决: 给样板契约的每一条规则都加"例子要有区分力"的通用检查 —— 什么算"区分"因规则而异,写成通用判据只会是一句恒真的空话;逐条点名。条目 43 单独立项 —— 纯写法建议。
 - 影响路径: `examples/demo-project/docs/CONTRACT.md`, `.agents/skills/pair-protocol/references/rules.md`, `tests/conformance/test_v1_shipped.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W36 — 按类别下定义的规则,例子要每一类都有;第十六轮 W32 那条决策的具体化
+
+- 理由: 样板契约把组合符定义为"category 以 M 开头",例子却全是 Mn;小写化写明 `str.lower()`,例子里没有一个字母的 lower 与 casefold 不同。两处都让"照例子写用例"的人写出没有区分力的用例 —— 后者在第十三、十八轮两个互不知情的项目里各撞一次。W32 的决策说"说明一条规则的例子必须能区分这条规则",这一项把它落到两种常见形状上:规则按**类别**下定义时,每一类至少一个例子;规则点名**某个函数**时,至少一个例子能把它和最像的那个替代函数分开。另:第十九轮 dev 做 review-test 时,自己的 shell 命令里写的反斜杠加 u 转义也被工具当场解掉,探针对错了字符串 —— 改成在 Python 里用 `chr(92)` 拼转义才对。条目 43 那一类不只发生在写文件时。
+- 已否决: 给样板契约每一条规则都加通用的"例子要有区分力"检查 —— 什么算区分因规则而异,见 SETUP 那条。
+- 影响路径: `examples/demo-project/docs/CONTRACT.md`, `.agents/skills/pair-protocol/references/rules.md`, `tests/conformance/test_v1_shipped.py`
