@@ -921,6 +921,11 @@ MUTATIONS = [
     ('组合符提示也看测试与实现',
      '        if "D" in xy or not matches_any(path, docs) or not (root / path).is_file():',
      '        if "D" in xy or not (root / path).is_file():'),
+
+    # W37 review-test 打回后补的一处:已跟踪文件新增行的行号。
+    ('组合符提示的行号从 1 编号',
+     '                    added.append((n, line[1:]))',
+     '                    added.append((len(added) + 1, line[1:]))'),
 ]
 
 # unittest 的失败行有两种形态:

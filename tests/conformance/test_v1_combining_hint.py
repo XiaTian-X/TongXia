@@ -17,6 +17,7 @@ VOWEL_I = chr(0x093F)        # Mc
 REVIEW = "docs/reviews/W1-notes.md"
 NOTE = "docs/notes/W1.md"
 LINE17 = re.compile(r"(?<![0-9A-Za-z])17(?![0-9A-Za-z])")
+LINE21 = re.compile(r"(?<![0-9A-Za-z])21(?![0-9A-Za-z])")
 
 
 def doc(line17, filler="普通的一行"):
@@ -74,6 +75,9 @@ class TestOnlyNewLinesOnlyDocs(HintBase):
         self.repo.git("commit", "-q", "-m", "人类早先提交的评审")
         out = self.spec_with({REVIEW: self.repo.read(REVIEW) + "追加的 " + ACUTE + "\n"})
         self.assertIn("U+0301", out)
+        # 已提交的文件有 20 行,追加的这一行是第 21 行。从 diff 取加号行时按 1 编号是最顺手的写法,
+        # 提示会报第 1 行、人找不到 —— dev 在 W37 的 review-test 实测过,当时 7 条全绿。
+        self.assertRegex(out.split(REVIEW, 1)[1], LINE21)
 
     def test_测试文件里的组合符不提示(self):
         self.assertAccepted(self.repo.run("claim", "W1", role="tester"))
