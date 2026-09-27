@@ -549,3 +549,8 @@
 - 理由: 样板契约把组合符定义为"category 以 M 开头",例子却全是 Mn;小写化写明 `str.lower()`,例子里没有一个字母的 lower 与 casefold 不同。两处都让"照例子写用例"的人写出没有区分力的用例 —— 后者在第十三、十八轮两个互不知情的项目里各撞一次。W32 的决策说"说明一条规则的例子必须能区分这条规则",这一项把它落到两种常见形状上:规则按**类别**下定义时,每一类至少一个例子;规则点名**某个函数**时,至少一个例子能把它和最像的那个替代函数分开。另:第十九轮 dev 做 review-test 时,自己的 shell 命令里写的反斜杠加 u 转义也被工具当场解掉,探针对错了字符串 —— 改成在 Python 里用 `chr(92)` 拼转义才对。条目 43 那一类不只发生在写文件时。
 - 已否决: 给样板契约每一条规则都加通用的"例子要有区分力"检查 —— 什么算区分因规则而异,见 SETUP 那条。
 - 影响路径: `examples/demo-project/docs/CONTRACT.md`, `.agents/skills/pair-protocol/references/rules.md`, `tests/conformance/test_v1_shipped.py`
+## SETUP — 第二十一轮修第二十轮暴露的两处,人类裁决"开始修复"
+
+- 理由: 第二十轮独立运行(`docs/dogfood-run-20.md`)4/4 双向通过、人类介入 0 次,W3 第一次一次通过。W37:第十九轮写进 `rules.md` 的"文档里写码位用 `U+XXXX`"没被读到,五份文档 26 个裸组合符,编排者也中了一次;这件事脚本能判,`handoff` 对评审目录与记忆层本回合新增的行给提示,比希望会话读到那一句硬。只提示不拒绝:组合符可能是正当内容。W38:`IDLE_REVERIFY_BRIEF` 与 `stale_verification` 的无记录分支只写了"契约变了/存量升级",项目刚开工时说错,与第十二轮 W27 同一类。
+- 已否决: W37 拒绝交接 —— 正当引用外文会被逼着绕开,这一类在 W31/W35 已经定过"系统能认出的,给对出口,不拦"。W37 扫全部历史文档 —— 旧行不是这一回合写的,提示了也不该由这个回合改。W37 扩到测试文件 —— 测试的对策是 `chr` 常量,另有 W26 的 NFC 不动点护栏。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/SKILL.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
