@@ -846,6 +846,36 @@ def worktree_sha(root, path):
     return out.strip() if out else None
 
 
+def verification_gap(root, state, role, now):
+    """这个角色的开工前校验为什么不作数:None(作数)/"unreadable"/"never"/"legacy"/"changed"(W38)。
+
+    判定照旧是 sha 比较(W13、W19),这里只把"不作数"再分成说法不同的几种。曾经只有两种说法:
+    状态里没有记录就说"存量项目升级上来",有记录但不等就说"变过、往末尾追加" —— 项目刚开工、这个角色
+    **从没校验过**时两句都不对:没有"变了的那几节",那份结论文件也还不存在(第二十轮 dev 撞上)。
+    "从没校验过"= 状态里没有记录,且它的角色结论文件与旧的共享结论文件都不在;没有记录但文件在,就是存量升级。
+    idle 的提示与 `claim` 的拒绝理由都读这一个函数,不各分一遍(第十二轮 W27)。
+    `now` 是现在工作区里契约的 sha,由调用方算(读不到时为 None)。
+    """
+    if now is None:
+        return "unreadable"
+    seen = (state.get("setup_verified_contract") or {}).get(role)
+    if seen == now:
+        return None
+    if seen is not None:
+        return "changed"
+    if (root / (SETUP_REPORT_ROLE_FMT % role)).exists() or (root / SETUP_REPORT_REL).exists():
+        return "legacy"
+    return "never"
+
+
+def reverify_how(role, gap):
+    """重跑之前该做的那一步,按 `verification_gap` 的结果说。"""
+    report = SETUP_REPORT_ROLE_FMT % role
+    if gap == "never":
+        return ("通读契约的每一节,写一份 %s(逐节点名,歧义写清楚),再重跑。" % report)
+    return ("通读契约里变了的那几节,往 %s **末尾追加**一段补记(评审记录只能追加),再重跑。" % report)
+
+
 def stale_verification(root, cfg, state, role):
     """这个角色上次通过开工前校验时读的契约,是不是现在工作区里这一份。
     返回拒绝理由;None 表示是同一份。**现场算,不写状态**:唯一能发现的时机是
@@ -857,20 +887,22 @@ def stale_verification(root, cfg, state, role):
         return ("读不到 %s(被删或改名?)。契约是两边对齐的唯一依据,读不到就说不清\n"
                 "你校验过的是哪一份。先让人类恢复它,再重跑:\n"
                 "  python3 %s verify-setup --drafter self|other" % (rel, PROG_HINT))
-    seen = (state.get("setup_verified_contract") or {}).get(role)
-    if seen == now:
+    gap = verification_gap(root, state, role, now)
+    if gap is None:
         return None
-    why = ("状态里没有 %s 上次校验时读的是哪一份契约 —— 存量项目升级上来就是这样,\n"
-           "\"不知道校验的是哪一份\"和\"校验的是另一份\"风险一样" % role
-           if seen is None else
-           "%s 在 %s 上次通过开工前校验之后变过(比的是工作区内容,\n"
-           "人类还没提交的改动也算)" % (rel, role))
+    why = {
+        "never": "%s 还从没通过开工前校验" % role,
+        "legacy": ("状态里没有 %s 上次校验时读的是哪一份契约 —— 存量项目升级上来就是这样,\n"
+                   "\"不知道校验的是哪一份\"和\"校验的是另一份\"风险一样" % role),
+        "changed": ("%s 在 %s 上次通过开工前校验之后变过(比的是工作区内容,\n"
+                    "人类还没提交的改动也算)" % (rel, role)),
+    }[gap]
     return ("%s。\n\n"
             "每个角色各记一份,**只有 %s 自己重跑才能解锁** —— 照契约写断言的是 tester、\n"
             "写实现的是 dev,任何一方读的若是旧契约,两边就会各自\"对\"、合起来是废的。\n"
-            "%s 重跑:\n"
+            "%s %s\n"
             "  PAIR_ROLE=%s python3 %s verify-setup --drafter self|other"
-            % (why, role, role, role, PROG_HINT))
+            % (why, role, role, reverify_how(role, gap), role, PROG_HINT))
 
 
 def rebound_shortcut(root, cfg, state, green, changed_named_frozen):
@@ -917,13 +949,20 @@ def phase_owner(root, cfg, state):
     return PHASE_OWNER[phase]
 
 
-IDLE_REVERIFY_BRIEF = """  当前没有进行中的工作项,但**你那一份开工前校验不作数了** —— 契约在你上次校验之后变过,
-  或者你从没校验过。tester 认领会被拒,而只有你自己重跑才能解锁:
+IDLE_REVERIFY_BRIEF = """  当前没有进行中的工作项,但**你那一份开工前校验不作数了** —— %(why)s。
+  tester 认领会被拒,而只有你自己重跑才能解锁:
 
     PAIR_ROLE=dev python3 %(prog)s verify-setup --drafter self|other
 
-  先通读契约里变了的那几节,往 docs/reviews/setup-verification-dev.md **末尾追加**
-  一段补记(评审记录只能追加),再跑上面这条。"""
+  先%(how)s"""
+# W38:`why` 与 `how` 都按 verification_gap 说 —— 曾经只有一句"契约变过、往末尾追加",
+# 项目刚开工、dev 从没校验过时也打这一句,而那时文件还不存在。
+IDLE_REVERIFY_WHY = {
+    "never": "你还从没通过开工前校验",
+    "legacy": "状态里没有你上次校验时读的是哪一份契约(存量项目升级上来)",
+    "changed": "契约在你上次校验之后变过",
+    "unreadable": "读不到契约文件",
+}
 
 
 def blob_sha(root, path):
@@ -1484,7 +1523,10 @@ def cmd_status(root, cfg, args):
     print(">>> 轮到你了。本阶段任务:")
     print()
     if phase == "idle" and owner == "dev":
-        print(IDLE_REVERIFY_BRIEF % {"prog": PROG_HINT})
+        gap = verification_gap(root, state, "dev",
+                               worktree_sha(root, cfg["contract_file"])) or "changed"
+        print(IDLE_REVERIFY_BRIEF % {"prog": PROG_HINT, "why": IDLE_REVERIFY_WHY[gap],
+                                     "how": reverify_how("dev", gap)})
     else:
         print(PHASE_BRIEF[phase] % _brief_vars(cfg, state, phase))
     if phase != "idle":
