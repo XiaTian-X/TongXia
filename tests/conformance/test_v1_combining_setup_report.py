@@ -69,3 +69,20 @@ class TestAppendedNote(SetupHintBase):
         out = self.verify()
         self.assertIn("U+0301", out)
         self.assertRegex(out.split(REPORT_REL, 1)[1], number(n))
+
+
+class TestReportOutsideSharedPaths(SetupHintBase):
+    """结论固定落在 `docs/reviews/`,但某个项目的 `shared_paths` 不含它 —— 按评审目录与记忆层过滤的话,提示静默消失。
+    契约要复用的是"新增行里的 `M` 类字符"这个判定,不是那道路径过滤。W39 的 review-test 里 dev 实测:去掉 `only`、
+    走 `shared_paths` 过滤,默认配置下的 4 条全绿。"""
+
+    config = {"require_setup_verification": True, "shared_paths": ["docs/other"]}
+
+    def test_shared_paths_不含评审目录时照样点名(self):
+        text = BASE + "\n补一句:e" + ACUTE + " 会被丢弃\n"
+        n = len(text.splitlines())
+        self.repo.write(REPORT_REL, text)
+        out = self.verify()
+        self.assertIn("U+0301", out)
+        self.assertRegex(out.split(REPORT_REL, 1)[1], number(n))
+

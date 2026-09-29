@@ -945,6 +945,11 @@ MUTATIONS = [
     ('审查结论的组合符不提示',
      '    if combining:\n        print("  结论里新写的行',
      '    if False:\n        print("  结论里新写的行'),
+
+    # W39 review-test 打回后补的一处。
+    ('审查结论的组合符走 shared_paths 过滤',
+     ', only=report_rel)',
+     ')'),
 ]
 
 # unittest 的失败行有两种形态:
