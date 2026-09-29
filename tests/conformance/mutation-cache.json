@@ -1,5 +1,5 @@
 {
-  "baseline": "d4fd6d4c4f0e0a24",
+  "baseline": "09b9a4c92b14dc23",
   "catchers": {
     "CLAUDE_MD 改了而样板没跟上": [
       "test_v1_shipped.TestClaudeMdForbidsHandingOff.test_样板_CLAUDE_md_与_init_写出的逐字节一致"
@@ -36,6 +36,9 @@
     ],
     "idle 归属例外不限 idle": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_工作项进行中_dev_过期也不改归属"
+    ],
+    "idle 提示的做法固定按契约变了": [
+      "test_v1_reverify_wording.TestNeverVerified.test_dev_的_status_说新建_不说末尾追加"
     ],
     "report impl 回到子串": [
       "test_v1_report_anchored.TestImplLine.test_评审散文里的_phase_impl_不算未判定"
@@ -109,8 +112,14 @@
     "不单独判只追加路径": [
       "test_v1_review_append.TestAnythingElseIsRefused.test_改了已有行被拒_文案说只能追加"
     ],
+    "从没校验过当成存量升级": [
+      "test_v1_reverify_wording.TestNeverVerified.test_claim_被拒的理由说新建_不说存量升级"
+    ],
     "依据从不写": [
       "test_v1_effective.TestBasisOnlyWhenRewrite.test_有改写时_basis_照样留痕"
+    ],
+    "做法只说末尾追加": [
+      "test_v1_reverify_wording.TestNeverVerified.test_claim_被拒的理由说新建_不说存量升级"
     ],
     "共用目录警告不看 sync": [
       "test_v1_shared_dir_role.TestNoWarningWhenSynced.test_sync_为真时不警告"

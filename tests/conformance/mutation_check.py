@@ -926,6 +926,19 @@ MUTATIONS = [
     ('组合符提示的行号从 1 编号',
      '                    added.append((n, line[1:]))',
      '                    added.append((len(added) + 1, line[1:]))'),
+
+    # W38 从没校验过与契约变了分开说(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('从没校验过当成存量升级',
+     '    return "never"',
+     '    return "legacy"'),
+
+    ('做法只说末尾追加',
+     '    if gap == "never":',
+     '    if False:'),
+
+    ('idle 提示的做法固定按契约变了',
+     '"how": reverify_how("dev", gap)})',
+     '"how": reverify_how("dev", "changed")})'),
 ]
 
 # unittest 的失败行有两种形态:
