@@ -488,3 +488,9 @@ spec 回合 tester 写用例(红),impl 回合 dev 只能改 `contributing.md`,`r
 - 「有远端之后的推送约定」(W41):`AGENTS.md` 在 dev 路径(`*.md`)下,用例读它与 `.pair/config.json`,分工对得上;`sync` 现在是 `false`(核过)。
   `pull --rebase` 会改写本地未推送交接提交的 sha 属实(`cmd_status` 在 `sync` 为真时先 `pull --rebase`)。
 - W40 的判据"PATH 上放一个报不同版本的 `python3`":CI 那边 `tests.yml` 已经在 job 里自查解释器版本,本地门禁没有 —— 需求真实。
+
+## 补记(W40 完成后、认领 W41 之前重跑)
+
+上次校验之后契约只变了一处:「一致性测试起跑前自检运行环境」里我在 W40 的 spec 回合带声明补的分工(W40 已完成)。
+**「有远端之后的推送约定」一节一个字没变**,第二十三轮补记里对它的核对原样成立:`AGENTS.md` 在 dev 路径下,用例读它与 `.pair/config.json`,
+`sync` 现在是 `false`。
