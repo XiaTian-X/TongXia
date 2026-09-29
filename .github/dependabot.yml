@@ -1,0 +1,9 @@
+# 只升级 workflow 里引用的 GitHub Actions 版本。
+# 合并约定:只在协议 idle、且本地已推送时合并;合并后本地立刻 git pull --ff-only,不变基本地的协议提交。
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2

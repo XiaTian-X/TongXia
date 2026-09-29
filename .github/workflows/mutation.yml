@@ -1,0 +1,23 @@
+# 变异检查:逐个拆掉 pair.py 的防护,确认有用例会红(与 .pair/config.json 的 full_test_cmd 相同)。
+# 本地每个工作项 DONE 时已经跑过;这里每周在干净环境里复核一次。改写的 mutation-cache.json 只留在 runner 上。
+name: mutation
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: python3 -m pip install pytest
+      - run: python3 tests/conformance/mutation_check.py

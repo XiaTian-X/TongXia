@@ -1,0 +1,39 @@
+# 一致性测试:多系统 × 多 Python 跑全套。
+# 只是旁观者 —— 协议的裁判仍是本地 .pair/enforcer.py,这里红了不挡任何提交或推送。
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  conformance:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.9", "3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      # harness 用 PATH 上的 python3 起 pair.py;init 的用例在 Python 项目里探测到 pytest 并跑基线,
+      # 所以 python3 必须就是这个版本、且装着 pytest。
+      - name: 检查解释器
+        run: |
+          python3 --version
+          python3 -c "import sys; assert sys.version.startswith('${{ matrix.python }}'), sys.version"
+      - run: python3 -m pip install pytest
+      - run: python3 tests/conformance/run.py
