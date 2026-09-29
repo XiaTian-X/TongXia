@@ -32,6 +32,17 @@ python3 tests/conformance/run.py
 python3 tests/conformance/mutation_check.py
 ```
 
+**跑之前有两项前提**,`run.py` 起跑前自检,不满足就点名说明、一个用例都不跑(退出码 3):
+
+- **PATH 上的 `python3` 就是你要测的那个解释器。** harness 用 PATH 上的 `python3` 起 `pair.py`,
+  不是用跑 `run.py` 的那个。用 `python3.12 tests/conformance/run.py` 而 PATH 上是 3.14 时,测的是 3.14 ——
+  换版本要连 PATH 一起换(例如 `uv run --python 3.12 --with pytest python3 tests/conformance/run.py`)。
+- **这个 `python3` 装着 pytest。** `pair.py` 本身零依赖,但 `init` 的用例会在临时 Python 项目里探测到 pytest
+  并跑基线;缺了它,十几条 `init` 用例全红,报错只有 `1 != 0`。
+
+CI(`.github/workflows/tests.yml`)在 ubuntu/macos × 3.9/3.12/3.14 上跑同一条命令,只是旁观者:
+协议的裁判仍是本地 `.pair/enforcer.py` 跑的 `test_cmd`,CI 红了不挡任何提交。
+
 **改动强制逻辑后两个都要跑。** 只跑第一个是不够的 ——
 一个恒真的测试集比没有测试更危险,它会让人以为强制力还在,
 而执行层可能已经什么都不拦了。
