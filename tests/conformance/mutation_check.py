@@ -939,6 +939,12 @@ MUTATIONS = [
     ('idle 提示的做法固定按契约变了',
      '"how": reverify_how("dev", gap)})',
      '"how": reverify_how("dev", "changed")})'),
+
+    # W39 审查结论里新写的组合符(dev 在 impl 回合给的锚点,review-impl 登记)。
+    # 「不传 only、走 shared_paths 过滤」今天存活(harness 的 shared_paths 含 docs/reviews),等 review-test 打回补用例后再登记。
+    ('审查结论的组合符不提示',
+     '    if combining:\n        print("  结论里新写的行',
+     '    if False:\n        print("  结论里新写的行'),
 ]
 
 # unittest 的失败行有两种形态:

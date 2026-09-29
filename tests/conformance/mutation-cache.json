@@ -1,5 +1,5 @@
 {
-  "baseline": "09b9a4c92b14dc23",
+  "baseline": "459caae132ffb275",
   "catchers": {
     "CLAUDE_MD 改了而样板没跟上": [
       "test_v1_shipped.TestClaudeMdForbidsHandingOff.test_样板_CLAUDE_md_与_init_写出的逐字节一致"
@@ -189,6 +189,9 @@
     ],
     "孤儿位置的系统文件也放过": [
       "test_v1_os_files.TestRefusalNamesTheExit.test_Windows_的两种也认得出"
+    ],
+    "审查结论的组合符不提示": [
+      "test_v1_combining_setup_report.TestAppendedNote.test_追加的补记里的组合符照样提示_行号是补记那一行"
     ],
     "当场留决策改成按工作项算": [
       "test_v1_validity.TestSameTurnGatesUnchanged.test_带声明改契约_更早回合的决策不算当场"
