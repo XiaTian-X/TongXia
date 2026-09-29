@@ -569,3 +569,8 @@
 - 理由: 第二十一轮 W37 只在 `handoff` 时提示评审与笔记里新写的组合符;开工前审查结论由 `verify-setup` 提交,够不着,而第二十轮 26 个裸组合符里 14 个在那里。W39 让 `verify-setup` 对它要提交的那份结论做同样的检查,复用 `combining_in_new_lines`,只提示不拒绝。
 - 已否决: 另写一个只看审查结论的判定 —— 与 W37 同义不同源,迟早漂开(第十二轮 W27)。拒绝校验 —— 与 W37 同一个理由,组合符可能是正当引用。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W39 — 复用一个判定时,只复用判定本身,不连带调用方的路径过滤;复用的前提要有一条用例站在前提之外
+
+- 理由: W39 复用 W37 的 `combining_in_new_lines`,它按 `shared_paths` 与记忆层过滤路径 —— 那是 `handoff` 的语境("评审与笔记里新写的")。审查结论固定落在 `docs/reviews/`,本仓库与 harness 的 `shared_paths` 恰好都含它,所以照搬过滤在测试里看不出差别;换一个 `shared_paths` 不含评审目录的项目,提示静默消失。实现加了 `only` 参数跳过过滤,但第一版用例全在默认配置下跑,去掉 `only` 4 条照绿 —— tester 在 spec 回合就预见了这一处、dev 在 impl 回合实测确认,却要到 review-test 打回才补上用例。补的那条把 `shared_paths` 设成 `docs/other`,去掉 `only` 只红它一条,而且红在"没点名",`verify-setup` 本身照常通过。今后:复用的函数带着调用方语境里的过滤或默认值时,至少一条用例的配置要让那道过滤生效(站在"碰巧满足"的前提之外);双方都已看出的缺口,当回合补,不留到打回。
+- 已否决: 把审查结论所在目录并进 `shared_paths` 的默认值 —— 改的是全体项目的写权限边界,为一条提示不值。在 `combining_in_new_lines` 里硬编码放行 `docs/reviews/` —— 路径过滤与判定又缠在一起,`handoff` 的语境随之变了。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_combining_setup_report.py`, `tests/conformance/mutation_check.py`

@@ -596,17 +596,24 @@ def render_path_listing(head, paths, limit=PATH_LISTING_LIMIT):
     return "\n".join(lines)
 
 
-def combining_in_new_lines(root, cfg, entries):
+def combining_in_new_lines(root, cfg, entries, only=None):
     """评审目录与记忆层里**本回合新增的行**中的组合符(W37):[(路径, 行号, ["U+XXXX", ...])]。
 
     第十九轮把"文档里写码位用 `U+XXXX` 文字,也不嵌字符本身"写进了 `rules.md`;第二十轮两个会话在五份文档里
     嵌了 26 个裸组合符,谁都没发现 —— 写出来的就是它想写的,看不出问题。规则放在会话不去读的地方,而这件事脚本能判。
     只看新增行:未跟踪的文件是全部行,已跟踪的取相对 HEAD 的新增行。旧行不是这一回合写的,提示了也不该由这一回合改。
     测试与实现不管(测试另有 `chr(0x...)` 常量与 NFC 不动点护栏)。
+
+    `only`(W39):只看这一个路径,不按 `shared_paths` 与记忆层过滤。`verify-setup` 用它查它要提交的那份审查结论 ——
+    结论固定落在 `docs/reviews/` 下,但某个项目的 `shared_paths` 不含它时,按路径过滤会把它滤掉、提示静默消失。
+    "同一个判定"指的是新增行里的 `M` 类字符,不是这道路径过滤(W39 的开工前审查里 tester 提醒)。
     """
-    docs = list(cfg["shared_paths"])
-    if memory_on(cfg):
-        docs += [cfg["notes_dir"], cfg["decisions_file"]]
+    if only is not None:
+        docs = [only]
+    else:
+        docs = list(cfg["shared_paths"])
+        if memory_on(cfg):
+            docs += [cfg["notes_dir"], cfg["decisions_file"]]
     hits = []
     for xy, path in entries:
         if "D" in xy or not matches_any(path, docs) or not (root / path).is_file():
@@ -3749,6 +3756,9 @@ def cmd_verify_setup(root, cfg, args):
         rec[who] = worktree_sha(root, cfg["contract_file"])
         state["setup_verified_contract"] = rec
     save_state(root, state)
+    # W39:要提交的这份结论里新写的组合符。`git add` 之前算 —— 算的是相对 HEAD 的新增行。
+    combining = combining_in_new_lines(
+        root, cfg, [(xy, p) for xy, p in changed_entries(root) if p == report_rel], only=report_rel)
     to_add = [STATE_REL, report_rel] + [
         p for _, p in changed_entries(root) if matches_any(p, cfg["shared_paths"])]
     git("add", "--", *sorted(set(to_add)), cwd=root)
@@ -3792,6 +3802,11 @@ def cmd_verify_setup(root, cfg, args):
 
     print()
     print("  契约审查结论已收到(%s,%d 字)。" % (report_rel, len(text)))
+    if combining:
+        print("  结论里新写的行嵌着组合符(字符本身,不是文字),读的人看不出来:")
+        for p_, n_, marks in combining:
+            print("      %s:%d  %s" % (p_, n_, " ".join(marks)))
+        print("  码位请写成 U+XXXX 这样的文字(不写转义,也不嵌字符本身)。这只是提示,不影响校验。")
     print("  %s" % drafter_line)
     if waiting:
         print("  开工前校验全部通过 —— 这是 %s 这一份。%s 的校验还不作数,"
