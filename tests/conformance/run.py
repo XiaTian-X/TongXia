@@ -19,6 +19,7 @@ pair.py 里的守卫互相之间有顺序依赖,靠路径猜覆盖面会漏。�
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -141,6 +142,36 @@ def run(ids, jobs):
     return 0 if not bad else 1
 
 
+def check_env(python="python3"):
+    """跑用例之前的两项前提(W40)。返回问题说明的列表;空列表表示都满足。
+
+    harness 用 **PATH 上的 `python3`** 起 `pair.py`,`init` 的用例还要它跑 pytest 基线。它与跑 `run.py` 的解释器不是同一个版本时,
+    测的就不是你以为的那个 Python(3.9 跑全绿、`pair.py` 其实是被 3.14 起的);它 import 不了 pytest 时,17 条 `init` 用例全红、
+    报错只有 `1 != 0`。两件事都在起子进程之前查,不满足就不跑。
+    """
+    exe = shutil.which(python)
+    if exe is None:
+        return ["PATH 上找不到 %s —— harness 用它起 pair.py。" % python]
+    problems = []
+    mine = "%d.%d" % sys.version_info[:2]
+    probe = subprocess.run([exe, "-c", "import sys; print('%d.%d' % sys.version_info[:2])"],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    theirs = probe.stdout.decode("utf-8", "replace").strip() or "(问不出版本)"
+    if theirs != mine:
+        problems.append(
+            "PATH 上的 %s(%s)是 Python %s,跑 run.py 的是 Python %s(%s)。\n"
+            "    harness 用 PATH 上的那个起 pair.py —— 测的会是 %s,不是 %s。\n"
+            "    修法:让两者一致,比如用 PATH 上的 python3 跑:python3 tests/conformance/run.py"
+            % (python, exe, theirs, mine, sys.executable, theirs, mine))
+    has_pytest = subprocess.run([exe, "-c", "import pytest"],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+    if not has_pytest:
+        problems.append(
+            "PATH 上的 %s(%s)import 不了 pytest —— init 的用例在 Python 项目里要它跑基线,缺了会红一片、只报 1 != 0。\n"
+            "    修法:%s -m pip install pytest" % (python, exe, exe))
+    return problems
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         prog="run.py", description="一致性测试的并行运行器")
@@ -189,6 +220,11 @@ def main(argv=None):
             print(i)
         print("\n共 %d 个" % len(ids))
         return 0
+    problems = check_env()
+    if problems:
+        sys.stderr.write("运行环境不满足,没有跑任何用例:\n\n  - %s\n\n见 docs/contributing.md「两条必跑的命令」。\n"
+                         % "\n  - ".join(problems))
+        return 3
     return run(ids, args.jobs)
 
 

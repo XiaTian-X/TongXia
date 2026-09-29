@@ -1651,6 +1651,12 @@ dev 校验过之后契约变了,两处照旧出现"末尾追加"。变异点:两
 **不做** 不改 `harness.py` 起 `pair.py` 的方式(被测的就是 PATH 上的 `python3`,本地门禁也是这样跑的);不把 pytest 装进任何地方;
 不改 `pair.py`,变异检查不涉及(自检在 `run.py`,不在 `pair.py`)。
 
+**分工**(W40 的 spec 回合带声明补) —— `tests/conformance/run.py` 在 **tester** 的路径下,dev 在 impl 回合写不了它;
+`docs/contributing.md` 在 dev 的路径下,tester 写不了。照 `feature` 流程原样走,`run.py` 的自检没有人能写,这一项走不完。
+所以:自检(`run.py` 里的 `check_env` 与起跑前那一段)与它的用例由 tester 在 spec 回合写好 —— 同第十六轮 W33 由 tester 实现、dev 评审;
+spec 回合结束时红的只有"`contributing.md` 写出两项前提"那一条,由 dev 在 impl 回合让它绿。dev 在 review-test 里评审 `run.py` 的改动。
+tester 在第二十三轮认领前的审查里挑出(⑪)。
+
 ## 有远端之后的推送约定
 
 - 依据: 人类定稿

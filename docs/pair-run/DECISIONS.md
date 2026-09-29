@@ -579,3 +579,8 @@
 - 理由: 仓库接了 GitHub 远端、Actions(ubuntu/macos × 3.9/3.12/3.14)与 Dependabot。接入前在本地换解释器预跑,暴露一致性测试对运行环境有两项没写出来的前提:PATH 上的 `python3` 就是被测的解释器、它装着 pytest。3.12 缺 pytest 时 17 条 `init` 用例红得看不出原因;3.9 那次绿,是因为 `pair.py` 其实被 PATH 上的 3.14 起。本地门禁跑的就是这套测试,Homebrew 升级默认 `python3` 之后会每回合红 17 条。能写成失败用例的是"`run.py` 在前提不满足时给出一条点名的说明、不跑用例"(W40)。另:`AGENTS.md` 说"没有远端"已过时,而 `sync` 打开后 `status` 的 `pull --rebase` 会改写交接提交的 sha(W41)。
 - 已否决: 让 `harness.py` 改用 `sys.executable` 起 `pair.py` —— 本地门禁用 PATH 上的 `python3`,改了之后测的与门禁跑的不再是同一个解释器;前提写明并自检,比悄悄换掉更直接。把 pytest 装进 CI 之外的地方或列为依赖 —— `pair.py` 本身零依赖,pytest 只是 `init` 用例里被探测的对象。
 - 影响路径: `tests/conformance/run.py`, `docs/contributing.md`, `AGENTS.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W40 — run.py 的自检由 tester 在 spec 回合写,dev 只写 contributing.md
+
+- 理由: `tests/conformance/run.py` 在 tester 路径下、`docs/contributing.md` 在 dev 路径下;照 `feature` 流程原样走,impl 回合的 dev 改不了 `run.py`,自检没人能写。照第十六轮 W33 的先例,测试基础设施由 tester 实现、dev 评审:spec 回合 tester 写 `check_env` 与起跑前那一段及 5 条用例,红的只剩 `contributing.md` 那一条。全套 576 条只红这一条;把 `run.py` 退回上一版,两条假 `python3` 用例与"正常环境自检通过"也红。
+- 已否决: 改成 `cover` —— `contributing.md` 仍要 dev 写,`cover` 没有 impl 阶段;拆成两项 —— 一项三行文档,一项全在 tester 路径下,徒增两轮交接。
+- 影响路径: `tests/conformance/run.py`, `tests/conformance/test_v1_run_env.py`, `docs/contributing.md`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`

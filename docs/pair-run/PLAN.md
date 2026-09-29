@@ -588,6 +588,7 @@
     这个 `python3` 能 `import pytest`。②任一不满足时不跑用例,退出码非 0,输出一段说明:点名两边的版本或缺的 pytest,并给出修法;
     ③都满足时照常跑,输出不变;`--list` 不跑用例,不必自检;④`docs/contributing.md` 在"两条必跑的命令"处写明这两项前提
     (用例从契约里取出这两个前提名断言,今天红)
+    ⑤(spec 回合带声明补)`run.py` 在 tester 路径下:自检由 tester 在 spec 回合写,dev 在 impl 回合只写 `contributing.md`、在 review-test 评审 `run.py`
   - 对应契约:`docs/pair-run/CONTRACT.md` → 一致性测试起跑前自检运行环境
 
 - [ ] **W41** [feature] — `AGENTS.md` 写明有远端之后的推送约定,`sync` 保持关闭
