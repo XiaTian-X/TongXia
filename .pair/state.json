@@ -1,8 +1,8 @@
 {
   "round": 36,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W39",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -45,7 +45,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "aa9fb19625f3f3ddd1364c28c47e48bd47d9bd3c",
   "setup_verified_contract": {
     "tester": "aa9fb19625f3f3ddd1364c28c47e48bd47d9bd3c",
     "dev": "aa9fb19625f3f3ddd1364c28c47e48bd47d9bd3c"
