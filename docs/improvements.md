@@ -1798,6 +1798,19 @@ tester 照着写的 W3 用例因此没有区分力,是那一轮唯一的打回�
 不走 `handoff`。第二十轮 26 个裸组合符里有 14 个正在两份审查结论里 —— 这一半 W37 够不着。
 方向:`verify-setup` 提交前对它自己要提交的那份结论做同样的检查,用同一个函数。
 
+### 47. 一致性测试对运行环境的两项前提没写出来,不满足时红得看不出原因
+
+接入 CI 之前在本地用 uv 换解释器预跑。`harness.py` 用 PATH 上的 `python3` 起 `pair.py`,`init` 的用例在临时 Python 项目里探测到 pytest 并跑基线。
+3.12 那次缺 pytest,17 条 `init` 用例全红,报错只有 `1 != 0`;3.9 那次全绿,可 `pair.py` 是被 PATH 上的 3.14 起的,等于没测。
+本机 pytest 是 pip 装进 Homebrew 3.14 的,默认 `python3` 升级后本地门禁会每回合红 17 条。`docs/contributing.md` 只写了"跑 `run.py`"。
+方向:`run.py` 起跑前自检这两项,不满足时点名说明、不跑用例;贡献指南写明前提。
+
+### 48. `AGENTS.md` 说"没有远端",而 `sync` 打开会变基交接提交
+
+仓库已接 GitHub 远端与 Dependabot。`AGENTS.md` 仍以"没有远端"解释为什么两个会话共用一个目录。`sync` 为真时 `status` 先 `git pull --rebase`,
+远端领先(网页上合并了 Dependabot 的 PR)时会改写本地未推送交接提交的 sha。方向:`AGENTS.md` 写明 `sync` 保持关闭、推送由人类在空闲时做、
+远端先合并时只 `--ff-only`。
+
 ---
 
 ## 已解决(留档)

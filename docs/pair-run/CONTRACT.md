@@ -1630,3 +1630,39 @@ dev 校验过之后契约变了,两处照旧出现"末尾追加"。变异点:两
 已提交的结论里有组合符、这次只追加一段没有组合符的补记,不提示。变异点:拆掉提示、提示也看旧行。
 
 **不做** 不拒绝。不扫别的文件(`verify-setup` 只提交状态位与这份结论,评审目录里别的文件走 `handoff`)。
+
+## 一致性测试起跑前自检运行环境
+
+- 依据: 人类定稿
+
+**背景** 一致性测试用 PATH 上的 `python3` 起 `pair.py`(`harness.py` 两处),在临时 Python 项目上跑 `init` 的用例还要 pytest 跑基线。
+接入 CI 前在本地换解释器预跑:3.12 那次 17 条 `init` 用例全红,报错只有 `1 != 0`,看不出是缺 pytest;3.9 那次全绿,可 `pair.py`
+实际是被 PATH 上的 3.14 起的,等于没测 3.9。本机的 pytest 是 pip 装进 Homebrew 3.14 的,Homebrew 把默认 `python3` 升级之后,
+本地门禁(`test_cmd` 就是这个 `run.py`)会每回合红 17 条,两个会话都看不出原因。
+
+**行为** `run.py` 在起子进程跑用例之前检查:①PATH 上的 `python3` 与运行 `run.py` 的解释器,主.次版本相同;②这个 `python3` 能 `import pytest`。
+任一不满足:不跑用例,退出码非 0,输出点名不满足的那一项(两边的版本 / 缺 pytest 的是哪个 `python3`)和修法。都满足:照常跑,输出不变。
+`--list` 只列不跑,不必自检。`docs/contributing.md` 在"两条必跑的命令"处写明这两项前提。
+
+**判据** 用例:PATH 上放一个报不同版本的 `python3`,`run.py` 退出码非 0、点名两个版本、不出现跑用例的汇总行;PATH 上的 `python3`
+版本相同但 import 不了 pytest(例如以 `-S` 起的同一个解释器),退出码非 0、点名 pytest;正常环境下自检通过(可把自检做成单独可调用的函数,
+避免用例里递归跑全套)。`docs/contributing.md` 写出 pytest 与"PATH 上的 `python3`",今天红。
+
+**不做** 不改 `harness.py` 起 `pair.py` 的方式(被测的就是 PATH 上的 `python3`,本地门禁也是这样跑的);不把 pytest 装进任何地方;
+不改 `pair.py`,变异检查不涉及(自检在 `run.py`,不在 `pair.py`)。
+
+## 有远端之后的推送约定
+
+- 依据: 人类定稿
+
+**背景** 仓库已接 GitHub 远端(`XiaTian-X/TongXia`)、CI 与 Dependabot。`AGENTS.md` 仍写"这个仓库没有远端",拿它当两个会话共用一个目录的理由。
+共用目录的理由没变(`sync` 模式要两份工作副本),但"没有远端"已不成立,容易被读成"有远端了,可以把 `sync` 打开"。
+`sync` 为真时 `status` 先 `git pull --rebase`(`pair.py` 的 `cmd_status`),远端领先(例如在网页上合并了 Dependabot 的 PR)时会变基本地未推送的
+交接提交,改掉它们的 sha,而交接正文、`考古观察@<sha>` 与评审里都引用提交 sha。
+
+**行为** `AGENTS.md`:①不再说仓库没有远端;②写明 `sync` 保持 `false` 以及理由(`pull --rebase` 改写交接提交的 sha);③写明推送由人类在协议空闲时手动做,
+远端先有了提交时本地只做 `git pull --ff-only`,不变基。本仓库 `.pair/config.json` 的 `sync` 保持 `false`。
+
+**判据** 用例读 `AGENTS.md`:不含"没有远端";含 `sync`、`false`、`--ff-only`;读 `.pair/config.json`:`sync` 为 `false`。今天前两项红。
+
+**不做** 不改 `pair.py` 的 `sync` 行为;不加 CI 相关的协议检查(CI 不是裁判)。

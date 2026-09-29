@@ -574,3 +574,8 @@
 - 理由: W39 复用 W37 的 `combining_in_new_lines`,它按 `shared_paths` 与记忆层过滤路径 —— 那是 `handoff` 的语境("评审与笔记里新写的")。审查结论固定落在 `docs/reviews/`,本仓库与 harness 的 `shared_paths` 恰好都含它,所以照搬过滤在测试里看不出差别;换一个 `shared_paths` 不含评审目录的项目,提示静默消失。实现加了 `only` 参数跳过过滤,但第一版用例全在默认配置下跑,去掉 `only` 4 条照绿 —— tester 在 spec 回合就预见了这一处、dev 在 impl 回合实测确认,却要到 review-test 打回才补上用例。补的那条把 `shared_paths` 设成 `docs/other`,去掉 `only` 只红它一条,而且红在"没点名",`verify-setup` 本身照常通过。今后:复用的函数带着调用方语境里的过滤或默认值时,至少一条用例的配置要让那道过滤生效(站在"碰巧满足"的前提之外);双方都已看出的缺口,当回合补,不留到打回。
 - 已否决: 把审查结论所在目录并进 `shared_paths` 的默认值 —— 改的是全体项目的写权限边界,为一条提示不值。在 `combining_in_new_lines` 里硬编码放行 `docs/reviews/` —— 路径过滤与判定又缠在一起,`handoff` 的语境随之变了。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_combining_setup_report.py`, `tests/conformance/mutation_check.py`
+## SETUP — 第二十三轮修接入远端与 CI 之后暴露的两处,人类裁决"开始吧"
+
+- 理由: 仓库接了 GitHub 远端、Actions(ubuntu/macos × 3.9/3.12/3.14)与 Dependabot。接入前在本地换解释器预跑,暴露一致性测试对运行环境有两项没写出来的前提:PATH 上的 `python3` 就是被测的解释器、它装着 pytest。3.12 缺 pytest 时 17 条 `init` 用例红得看不出原因;3.9 那次绿,是因为 `pair.py` 其实被 PATH 上的 3.14 起。本地门禁跑的就是这套测试,Homebrew 升级默认 `python3` 之后会每回合红 17 条。能写成失败用例的是"`run.py` 在前提不满足时给出一条点名的说明、不跑用例"(W40)。另:`AGENTS.md` 说"没有远端"已过时,而 `sync` 打开后 `status` 的 `pull --rebase` 会改写交接提交的 sha(W41)。
+- 已否决: 让 `harness.py` 改用 `sys.executable` 起 `pair.py` —— 本地门禁用 PATH 上的 `python3`,改了之后测的与门禁跑的不再是同一个解释器;前提写明并自检,比悄悄换掉更直接。把 pytest 装进 CI 之外的地方或列为依赖 —— `pair.py` 本身零依赖,pytest 只是 `init` 用例里被探测的对象。
+- 影响路径: `tests/conformance/run.py`, `docs/contributing.md`, `AGENTS.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
