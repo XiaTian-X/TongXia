@@ -56,6 +56,28 @@ class TestVersionMismatch(FakePython):
         self.assertNotIn("个测试 /", out, "不该跑用例:\n" + out)
 
 
+    def test_同主版本不同次版本也不跑(self):
+        """立项起因正是这一种:3.9 / 3.12 对 3.14。上一条差的是主版本,只比主版本的实现照绿 ——
+        dev 在 W40 的 review-test 实测过。次版本按本机现算,换机器也成立。"""
+        other = "%d.%d" % (sys.version_info[0], sys.version_info[1] + 1)
+        env = self.fake('echo %s' % other)
+        rc, out = self.run_runner(env, SMALL)
+        self.assertNotEqual(rc, 0, out)
+        self.assertIn(other, out)
+        self.assertIn("%d.%d" % sys.version_info[:2], out)
+        self.assertNotIn("个测试 /", out, "不该跑用例:\n" + out)
+
+    def test_PATH_上没有_python3_时不跑(self):
+        """run.py 自己用 sys.executable 的绝对路径起,PATH 空了不影响它;找不到那一支换成"没问题"的实现在这里照绿过。"""
+        d = tempfile.mkdtemp(prefix="emptypath-")
+        self.addCleanup(shutil.rmtree, d, True)
+        env = dict(os.environ, PATH=d)
+        rc, out = self.run_runner(env, SMALL)
+        self.assertNotEqual(rc, 0, out)
+        self.assertIn("找不到", out)
+        self.assertNotIn("个测试 /", out, "不该跑用例:\n" + out)
+
+
 class TestNoPytest(FakePython):
 
     def test_同版本但_import_不了_pytest_时不跑_点名_pytest(self):
