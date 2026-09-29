@@ -468,3 +468,23 @@ dev 的 `status` / 简报在这种情况下给出"重跑 `verify-setup`"而不�
 - 判据可断言:新写一份带 U+0301 的结论 → 通过、点名文件、行号、`U+0301`;对照组写 `U+0301` 文字;人类已提交的结论含组合符、这次只追加干净补记 → 不提示。
   另加"追加的补记里有组合符 → 提示且行号是补记所在行",免得只钉了新文件那条的行号(W37 打回过同一个缺口)。
 - 人类另提交了 `.gitignore` 补打包产物与凭据(`091b2dd`),与契约无关,也不碰 `GITIGNORE_LINES`。
+
+## 补记(第二十三轮 W40–W41 立项之后重跑)
+
+上次校验之后契约加了「第二十二轮」一节(W39 已完成,我在打回里补了 `shared_paths` 那条用例,契约未改)与「第二十三轮」两节(dev 代笔)。
+人类另接入了 GitHub 远端、CI 与 Dependabot(`bc261ce` 等),不在协议回合内。**一处缺陷。**
+
+### ⑪〔高〕「一致性测试起跑前自检运行环境」(W40):实现落在 tester 路径下,而类型是 `feature`
+
+自检要写进 `tests/conformance/run.py` —— 那是 **tester** 的路径(`tests/conformance/**`),dev 在 impl 回合**写不了它**,
+一写就被写权限边界拒绝;而 `docs/contributing.md` 在 dev 的路径(`docs/*.md`),tester 写不了。照 `feature` 流程走,
+spec 回合 tester 写用例(红),impl 回合 dev 只能改 `contributing.md`,`run.py` 的自检**没有人能写** —— 这一项走不完。
+**修法方向**:写明分工 —— `run.py` 的自检与它的用例都由 tester 在 spec 回合写(同第十六轮 W33:`mutation_check.py` 在 tester 路径下,
+由 tester 实现、dev 评审);spec 回合结束时自检那几条已绿,红的只有"`contributing.md` 写出两项前提"那一条,由 dev 在 impl 回合让它绿。
+自检的变异点不在 `pair.py`、`mutation_check` 够不着,由用例直接守(契约「不做」已写)。**在 W40 的 spec 回合带声明补。**
+
+### 核过、成立的
+
+- 「有远端之后的推送约定」(W41):`AGENTS.md` 在 dev 路径(`*.md`)下,用例读它与 `.pair/config.json`,分工对得上;`sync` 现在是 `false`(核过)。
+  `pull --rebase` 会改写本地未推送交接提交的 sha 属实(`cmd_status` 在 `sync` 为真时先 `pull --rebase`)。
+- W40 的判据"PATH 上放一个报不同版本的 `python3`":CI 那边 `tests.yml` 已经在 job 里自查解释器版本,本地门禁没有 —— 需求真实。
