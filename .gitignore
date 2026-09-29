@@ -9,3 +9,22 @@ __pycache__/
 .pair/scratch/
 Thumbs.db
 desktop.ini
+# Python 打包与测试的产物:pyproject.toml 用 hatchling 构建,`python -m build` / `pip install -e .` 会生成这些
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.venv/
+.coverage
+# 密钥与凭据:任何时候都不该进仓库
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+id_rsa*
+id_ed25519*
+id_ecdsa*
