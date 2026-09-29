@@ -564,3 +564,8 @@
 - 理由: `IDLE_REVERIFY_BRIEF` 与 `stale_verification` 各只写了一种情况(契约变了 / 存量升级),项目刚开工时两句都不对 —— 与第十二轮 W27 同一类。修法是一个函数把"不作数"分成从没校验过、存量升级、契约变了三种(另有读不到),两处提示都读它。tester 的用例三种情况各一组,正反两个方向都有:把"从没"当"存量"、把"存量"当"从没"、把"契约变了"当"从没",各有用例红。另:dev 第一版把算契约 sha 挪进新函数,撞掉了两个既有锚点;改成原字面留在 `stale_verification`、新函数接收算好的值。今后重构带锚点的代码,先让锚点那几行原地不动,再从旁边抽新函数。
 - 已否决: 顺手改 `mutation_check.py` 里那两个锚点的字面 —— 那是 tester 的路径,dev 改不了;而且让锚点跟着重构走,等于同时改了被测物与测量仪器。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_reverify_wording.py`
+## SETUP — 第二十二轮修条目 46,人类裁决"开始修复 46"
+
+- 理由: 第二十一轮 W37 只在 `handoff` 时提示评审与笔记里新写的组合符;开工前审查结论由 `verify-setup` 提交,够不着,而第二十轮 26 个裸组合符里 14 个在那里。W39 让 `verify-setup` 对它要提交的那份结论做同样的检查,复用 `combining_in_new_lines`,只提示不拒绝。
+- 已否决: 另写一个只看审查结论的判定 —— 与 W37 同义不同源,迟早漂开(第十二轮 W27)。拒绝校验 —— 与 W37 同一个理由,组合符可能是正当引用。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
