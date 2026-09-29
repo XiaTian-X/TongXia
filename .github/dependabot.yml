@@ -6,4 +6,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    # 所有 Actions 升级合成一个 PR:分开开时 checkout 与 setup-python 两行相邻,先合一个、另一个必冲突。
+    groups:
+      actions:
+        patterns: ["*"]
     open-pull-requests-limit: 2
