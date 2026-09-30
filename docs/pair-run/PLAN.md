@@ -598,3 +598,17 @@
     ③写明推送由人类在协议空闲时手动做,远端先合并了提交(如 Dependabot)时本地只做 `git pull --ff-only`、不变基;
     ④本仓库 `.pair/config.json` 的 `sync` 仍是 `false`(用例同时断言)
   - 对应契约:`docs/pair-run/CONTRACT.md` → 有远端之后的推送约定
+
+### 第二十四轮:修路线图 P1-7(多语言仓库只有一半有门禁)
+
+> 人类在路线图状态核对之后裁决"开一轮做 P1-7",授权 dev 代笔立项。
+
+- [ ] **W42** [feature] — `init` 探测到多个技术栈时拒绝自动配置,点名全部命中
+  - **来源**:路线图 P1-7。`_detect_stack` 第一个命中就返回:同时有 `package.json` 与 `pyproject.toml` 的仓库只配上 `npm test`,
+    基线绿、每回合绿,Python 那半从头到尾没有门禁,而且没有任何提示
+  - 验收标准:①仓库根上命中的探测文件对应**两种及以上不同的测试命令**,且没有已有 config 的 `test_cmd` 时,`init` 拒绝(非 0),
+    输出点名每个命中的探测文件和它对应的命令,给出手工写 `.pair/config.json` 的 `test_cmd` 的出路(覆盖全部,或收窄并写 `docs/reviews/baseline.md`);
+    ②拒绝时不写任何文件(不生成 `.pair/`、不改入口文件);③命中的探测文件对应**同一条**命令(如 `pyproject.toml` 与 `setup.py`)时照旧自动配置;
+    ④已有 config 的 `test_cmd` 时照旧用它,不因多个栈拒绝;⑤只有一个栈时行为不变;⑥`INSTALL.md` 的「多语言仓库」一段改成现在的行为;
+    ⑦变异点:拆掉拒绝、把同一条命令也当多个栈,各有用例红
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 探测到多个技术栈时 init 拒绝自动配置

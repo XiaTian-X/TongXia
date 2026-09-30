@@ -1672,3 +1672,29 @@ tester 在第二十三轮认领前的审查里挑出(⑪)。
 **判据** 用例读 `AGENTS.md`:不含"没有远端";含 `sync`、`false`、`--ff-only`;读 `.pair/config.json`:`sync` 为 `false`。今天前两项红。
 
 **不做** 不改 `pair.py` 的 `sync` 行为;不加 CI 相关的协议检查(CI 不是裁判)。
+
+## 探测到多个技术栈时 init 拒绝自动配置
+
+- 依据: 人类定稿
+
+**背景** `init` 的栈探测(`_detect_stack`)按 `STACK_PROBES` 的顺序查仓库根上的探测文件,**第一个命中就返回**。同时有 `package.json` 与
+`pyproject.toml` 的仓库会被配成只跑 `npm test`:基线绿、每回合绿、红绿不变量全程"有效",Python 那半从头到尾没有门禁。这比契约写得不好更危险 ——
+契约不好肉眼可见,这一条完全静默。`INSTALL.md` 目前只在「不适用」清单里提醒人类自己核对。
+
+**行为** 没有已有 config 的 `test_cmd` 时,`init` 看仓库根上**全部**命中的探测文件:
+- 它们对应**两种及以上不同的测试命令** → 拒绝自动配置,退出码非 0,**不写任何文件**(不建 `.pair/`、不动入口文件、不改 `.gitignore`)。
+  输出点名每个命中的探测文件与它对应的命令,并给出出路:手工创建 `.pair/config.json`,写一条覆盖全部的 `test_cmd`
+  (例如两条命令用 `&&` 连起来);或者只测其中一部分,把 `test_cmd` 收窄、全量放进 `full_test_cmd`,并在 `docs/reviews/baseline.md` 写明放弃了什么。然后重跑 `init`。
+- 命中的探测文件对应**同一条**命令(`pyproject.toml` 与 `setup.py` 都是 `python3 -m pytest`)→ 算一个栈,照旧自动配置。
+- 只有一个栈 → 行为不变。
+
+已有 config 的 `test_cmd` 时照旧直接用它 —— 人类已经做过选择,不因为仓库里有多个栈而拒绝。
+`INSTALL.md` 的「多语言仓库需要手工配 `test_cmd`」一段改成现在的行为(`init` 会拒绝并点名,不再是静默)。
+
+**判据** 用例:根上有 `package.json` 与 `pyproject.toml`、没有 config → `init` 非 0,输出含两个文件名与 `npm test`、`python3 -m pytest`,
+`.pair/config.json` 不存在;同一仓库先手工写好 config 的 `test_cmd` → `init` 成功、用的是那条命令;根上有 `pyproject.toml` 与 `setup.py` → `init` 成功。
+变异点:拆掉拒绝(照旧取第一个);把同一条命令也算作多个栈。
+
+**不做** 不探测子目录里的栈(`frontend/package.json` 这类 monorepo 布局照旧探测不到,`init` 会说"探测不到"或只看根上的);
+不自动拼接多条命令(`npm test` 前可能要先装依赖,拼出来的命令基线不一定能跑,由人类定);不给已经初始化过的项目加警告
+(已有 config 就是人类选过,每次校验都提示会教人忽略它)。
