@@ -8,7 +8,6 @@ version = "1.0.0"
 description = "让任意两个 AI coding agent 结对开发同一项目的协议:一个写测试、一个写实现、互相评审"
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "MIT" }
 dependencies = []
 
 [project.scripts]

@@ -1,7 +1,6 @@
 ---
 name: pair-protocol
 description: 双 AI agent 结对编程协议。一个 agent 写测试、一个写实现,严格轮流交接并互相评审。当本仓库存在 .pair/ 目录、或你被告知处于结对开发模式、或环境变量 PAIR_ROLE 已设置时,必须激活本技能。涵盖回合调度、写权限边界、红绿不变量、评审裁决、契约变更流程,以及跨回合的项目记忆(笔记与决策记录)。
-license: MIT
 compatibility: 需要 git 和 python3。适用于任何能执行 shell 命令的编码 agent。
 metadata:
   version: "3.1"
