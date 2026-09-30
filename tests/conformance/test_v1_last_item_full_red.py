@@ -37,6 +37,9 @@ class TestLastItemFullRed(FinishBase):
         self.assertIn("不要告诉人类", r.text)
         self.assertNotIn("请向人类报告完成", r.text)
         self.assertNotIn("项目结束", r.text)
+        # "不要继续轮转"与"轮到 X 了"同屏也是两条相反指令(dev 在 W43 的 review-test 实测:第一支末尾再打一行"轮到",
+        # 上面几句全绿)。对照组 TestNotLastItemFullRed 钉着不是最后一项时要有"轮到",两边合起来钉死这句的位置。
+        self.assertNotIn("轮到", r.text)
 
     def test_说明项目算不算结束由人类决定(self):
         """横幅里本来就有"由人类决定是扩大范围……"—— 只找"人类决定"恒真。按契约原文找"算不算结束"。"""
