@@ -494,3 +494,14 @@ spec 回合 tester 写用例(红),impl 回合 dev 只能改 `contributing.md`,`r
 上次校验之后契约只变了一处:「一致性测试起跑前自检运行环境」里我在 W40 的 spec 回合带声明补的分工(W40 已完成)。
 **「有远端之后的推送约定」一节一个字没变**,第二十三轮补记里对它的核对原样成立:`AGENTS.md` 在 dev 路径下,用例读它与 `.pair/config.json`,
 `sync` 现在是 `false`。
+
+## 补记(第二十四轮 W42 立项之后重跑)
+
+上次校验之后契约只加了「探测到多个技术栈时 init 拒绝自动配置」一节(dev 代笔);人类另删了 MIT 声明、核对了路线图状态(不在协议回合内)。
+**没有缺陷。**
+
+- 判据可断言,且不依赖 npm:拒绝发生在跑基线之前,`package.json` + `pyproject.toml` 那条用例根本不会去跑 `npm test`。
+- "同一条命令"按 `STACK_PROBES` 里命令字符串相同来算:`pyproject.toml` 与 `setup.py` 都是 `python3 -m pytest`,成立。
+- 已有 config 的 `test_cmd` 今天就优先于探测(`cmd_init` 里 `existing.get("test_cmd")` 那一支),④ 是"行为不变"的反面守。
+- `grep` 过:既有用例里没有一条同时放两种探测文件,不会有被取代的用例。
+- "不写任何文件"我按三样断言:`.pair/` 不存在、`AGENTS.md` 不存在、`.gitignore` 不存在(`PY_PROJECT` 本来就没有它)。
