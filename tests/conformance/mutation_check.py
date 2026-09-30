@@ -959,6 +959,11 @@ MUTATIONS = [
     ('init 同一条命令也算多个栈',
      '        if len({cmd for _, cmd in hits}) > 1:',
      '        if len(hits) > 1:'),
+
+    # W43 最后一项完成而全量红时不宣布项目结束(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('全量红时照样宣布项目结束',
+     '    if all_done and full_failed:',
+     '    if False:'),
 ]
 
 # unittest 的失败行有两种形态:

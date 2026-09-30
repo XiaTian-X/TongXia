@@ -1,5 +1,5 @@
 {
-  "baseline": "a9cb7094bcb6ade2",
+  "baseline": "3032de6baee70b3b",
   "catchers": {
     "CLAUDE_MD 改了而样板没跟上": [
       "test_v1_shipped.TestClaudeMdForbidsHandingOff.test_样板_CLAUDE_md_与_init_写出的逐字节一致"
@@ -126,6 +126,9 @@
     ],
     "做法只说末尾追加": [
       "test_v1_reverify_wording.TestNeverVerified.test_claim_被拒的理由说新建_不说存量升级"
+    ],
+    "全量红时照样宣布项目结束": [
+      "test_v1_last_item_full_red.TestLastItemFullRed.test_不宣布项目结束_照旧报全量红_退出码_2"
     ],
     "共用目录警告不看 sync": [
       "test_v1_shared_dir_role.TestNoWarningWhenSynced.test_sync_为真时不警告"
