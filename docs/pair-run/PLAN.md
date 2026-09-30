@@ -591,7 +591,7 @@
     ⑤(spec 回合带声明补)`run.py` 在 tester 路径下:自检由 tester 在 spec 回合写,dev 在 impl 回合只写 `contributing.md`、在 review-test 评审 `run.py`
   - 对应契约:`docs/pair-run/CONTRACT.md` → 一致性测试起跑前自检运行环境
 
-- [ ] **W41** [feature] — `AGENTS.md` 写明有远端之后的推送约定,`sync` 保持关闭
+- [x] **W41** [feature] — `AGENTS.md` 写明有远端之后的推送约定,`sync` 保持关闭
   - **来源**:开放条目 48。`AGENTS.md` 说"这个仓库没有远端",已经过时;而 `sync` 一旦打开,`status` 会 `git pull --rebase`,
     远端领先时改写本地交接提交的 sha
   - 验收标准:①`AGENTS.md` 不再说仓库没有远端;②写明 `sync` 保持 `false` 及理由(`pull --rebase` 改写交接提交的 sha);

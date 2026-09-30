@@ -584,3 +584,8 @@
 - 理由: `tests/conformance/run.py` 在 tester 路径下、`docs/contributing.md` 在 dev 路径下;照 `feature` 流程原样走,impl 回合的 dev 改不了 `run.py`,自检没人能写。照第十六轮 W33 的先例,测试基础设施由 tester 实现、dev 评审:spec 回合 tester 写 `check_env` 与起跑前那一段及 5 条用例,红的只剩 `contributing.md` 那一条。全套 576 条只红这一条;把 `run.py` 退回上一版,两条假 `python3` 用例与"正常环境自检通过"也红。
 - 已否决: 改成 `cover` —— `contributing.md` 仍要 dev 写,`cover` 没有 impl 阶段;拆成两项 —— 一项三行文档,一项全在 tester 路径下,徒增两轮交接。
 - 影响路径: `tests/conformance/run.py`, `tests/conformance/test_v1_run_env.py`, `docs/contributing.md`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`
+## W41 — 给规矩写理由时,写它防的后果,不写当时碰巧成立的事实
+
+- 理由: `AGENTS.md` 原本用"这个仓库没有远端"解释两个会话为什么共用一个目录。接了 GitHub 远端之后这句不成立了,而规矩本身(共用目录、`sync` 关闭)照旧该守 —— 理由过期,反倒像在暗示"条件变了,规矩可以松"。改成写后果:`sync` 为真时 `status` 先 `pull --rebase`,远端领先就变基未推送的交接提交,交接正文、评审与 `考古观察@<sha>` 引用的 sha 全失效。后果不随"有没有远端"变。另:推送约定写成"agent 不自行推送(人类当面交代的除外)",与这一轮的实际做法一致,免得规矩和做法打架。用例只能按字样判(`sync`、`false`、`pull --rebase`、`--ff-only` 各自出现),措辞正确性靠评审。
+- 已否决: 在 `pair.py` 里检测"有远端且 `sync` 为真"就警告 —— `sync` 模式本身是合法用法(两份工作副本),本仓库不用它是本仓库的约定,不是协议的规则。
+- 影响路径: `AGENTS.md`, `tests/conformance/test_v1_remote_push.py`
