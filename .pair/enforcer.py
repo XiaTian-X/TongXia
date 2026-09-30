@@ -3069,6 +3069,15 @@ def _detect_stack(root):
     return "", None
 
 
+def _stack_hits(root):
+    """根上全部命中的 (探测文件, 命令)。按命令去重后多于一条才算多个栈(W42),由 cmd_init 判。
+
+    `_detect_stack` 第一个命中就返回:同时有 `package.json` 与 `pyproject.toml` 的仓库只配上
+    `npm test`,另一半从头到尾没有门禁,而且全程绿。`pyproject.toml` 与 `setup.py` 是同一条命令,算一个栈。
+    返回全部命中;调用方看去重后的命令数。"""
+    return [(probe, cmd) for probe, cmd in STACK_PROBES if (root / probe).exists()]
+
+
 def _detect_roles(root):
     """返回 (roles, 说明)。优先目录切分,其次同目录 glob(用负模式避免重叠)。"""
     files = tracked_files(root)
@@ -3139,6 +3148,16 @@ def cmd_init(root, cfg, args):
     if existing and existing.get("test_cmd"):
         test_cmd, probe = existing["test_cmd"], "已有 config"
     else:
+        hits = _stack_hits(root)
+        if len({cmd for _, cmd in hits}) > 1:
+            die("仓库根上探测到多个技术栈,拒绝自动配置(什么都没写):\n\n%s\n\n"
+                "只配其中一条,另一半就从头到尾没有门禁 —— 而且全程是绿的,不会有任何提示。\n"
+                "请人类手工创建 %s,写一条 test_cmd,然后重跑 init:\n"
+                "  1. 覆盖全部:比如把上面几条命令用 && 连起来(先确认它们在本机都能跑绿);\n"
+                "  2. 只测其中一部分:test_cmd 收窄到那一部分,全量放进 full_test_cmd,\n"
+                "     并在 %s 写明放弃了哪些用例、为什么。"
+                % ("\n".join("  %-16s -> %s" % (probe, cmd) for probe, cmd in hits),
+                   CONFIG_REL, BASELINE_REL))
         test_cmd, probe = _detect_stack(root)
     roles, roles_why = (existing["roles"], "已有 config") if existing \
         else _detect_roles(root)
