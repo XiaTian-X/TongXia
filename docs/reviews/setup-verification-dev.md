@@ -299,3 +299,14 @@ tester 那一份 `other`。这里只记我重读时挑出的、改掉的,以及�
   由 tester 在 spec 回合写好自检、我在 review-test 评审,与第十六轮 W33 同一个处理。我在立项补记里的两处读法,tester 的实现都照着做了:
   找不到 `python3` 算不满足、点名"找不到";`--list` 不自检。我 impl 回合只写 `docs/contributing.md`「两条必跑的命令」一节的两项前提。
 - 契约其余部分没变。
+
+## 补记(第二十四轮 W42 立项之后重跑)
+
+**起草人自审:是** —— 这一节是我立项时代笔的,证明力打折,以 tester 那份为准。
+
+- **探测到多个技术栈时 init 拒绝自动配置**(W42):判据能写断言 —— 根上有 `package.json` 与 `pyproject.toml`、没有 config 时非 0、
+  点名两个文件与两条命令、`.pair/config.json` 不存在;先写好 config 的 `test_cmd` 时成功;`pyproject.toml` 与 `setup.py` 同在时成功。
+- 我按下面理解,tester 有不同读法请在审查里提:①"不同的命令"按 `STACK_PROBES` 里的命令字符串比,不按探测文件数;②"不写任何文件"指 `init`
+  这一次什么都不落盘 —— 拒绝要放在铺文件之前,与现在"探测不到测试命令"那条拒绝同一个位置;③已有 config 但没有 `test_cmd` 键时,
+  照"没有已有 config 的 `test_cmd`"处理,也会拒绝。
+- 现有用例里只有一个单栈的 `go.mod` 夹具,不会被这一项误伤。
