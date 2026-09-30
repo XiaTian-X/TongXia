@@ -604,3 +604,8 @@
 - 理由: `handoff` 在最后一项完成且全量红时同屏打印"不要告诉人类完成"与"请向人类报告完成"。`pair.py` 是随 wheel 与 `init` 分发的活代码,这个矛盾在每个配了 `full_test_cmd` 的消费项目里都会出现;挑错的方向正是本协议最怕的"宣布完成"。当时因为未授权改 `pair.py`,只在两份文档里加了"两者不冲突"的限定句 —— 用文档解释代码里的矛盾,读屏幕的 agent 看不到文档。能写成失败用例的是"全量红时收尾不出现项目结束的那两句"。
 - 已否决: 只改文案、保留两段各自打印 —— 仍是两条指令;把全量红改成阻断 —— 范围外的红这对结对无权修,阻断等于死锁(`full_test_cmd` 设计时的决定)。顺手改 `status`/`claim` 的完成提示 —— 它们不知道上一次全量红,要加状态字段,另立条目 49。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/design-philosophy.md`, `docs/command-reference.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W43 — 一屏只能有一条指令;代码里的矛盾不用文档解释
+
+- 理由: `handoff` 收尾的全量红横幅与"项目结束"两段互不排斥,最后一项完成且全量红时同屏两条相反指令。当时因为未授权改 `pair.py`,只在两份文档里加了"PLAN 维度、两者不冲突"的限定句 —— 可照屏幕办事的 agent 读不到那两份文档,解释写在了读者不在的地方(与第二十一轮 W37"规矩放在会话不读的地方"同一类)。改成三支互斥,限定句随之删掉。测试一侧:只断言"不含项目结束"不够,review-test 实测第一支末尾再打一行"轮到 X 了"照绿 —— "不要继续轮转"与"轮到 X"同样是两条相反指令;补上"不含轮到",与对照组"不是最后一项时要有轮到"合起来钉死这句的位置。今后凡是"同屏不得出现相反指令"一类的判据,要把那一屏上所有指令性句子(报告完成、轮到谁、继续/停止)各自钉住,不只钉最初发现的那一对。
+- 已否决: 保留两段、只改措辞 —— 仍是两条指令。把全量红改成阻断 —— 范围外的红这对结对无权修。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_last_item_full_red.py`, `tests/conformance/mutation_check.py`, `docs/design-philosophy.md`, `docs/command-reference.md`, `.agents/skills/pair-protocol/SKILL.md`, `docs/troubleshooting.md`
