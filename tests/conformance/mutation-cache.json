@@ -1,5 +1,5 @@
 {
-  "baseline": "b94507d256d602c4",
+  "baseline": "a9cb7094bcb6ade2",
   "catchers": {
     "CLAUDE_MD 改了而样板没跟上": [
       "test_v1_shipped.TestClaudeMdForbidsHandingOff.test_样板_CLAUDE_md_与_init_写出的逐字节一致"
@@ -39,6 +39,12 @@
     ],
     "idle 提示的做法固定按契约变了": [
       "test_v1_reverify_wording.TestNeverVerified.test_dev_的_status_说新建_不说末尾追加"
+    ],
+    "init 同一条命令也算多个栈": [
+      "test_v1_multi_stack.TestStillConfigures.test_同一条命令的两个探测文件算一个栈"
+    ],
+    "init 多栈不拒绝": [
+      "test_v1_multi_stack.TestRefusesOnTwoStacks.test_两种测试命令时拒绝_点名文件与命令"
     ],
     "report impl 回到子串": [
       "test_v1_report_anchored.TestImplLine.test_评审散文里的_phase_impl_不算未判定"

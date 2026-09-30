@@ -950,6 +950,15 @@ MUTATIONS = [
     ('审查结论的组合符走 shared_paths 过滤',
      ', only=report_rel)',
      ')'),
+
+    # W42 探测到多个技术栈时 init 拒绝自动配置(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('init 多栈不拒绝',
+     '        if len({cmd for _, cmd in hits}) > 1:',
+     '        if False:'),
+
+    ('init 同一条命令也算多个栈',
+     '        if len({cmd for _, cmd in hits}) > 1:',
+     '        if len(hits) > 1:'),
 ]
 
 # unittest 的失败行有两种形态:
