@@ -599,3 +599,8 @@
 - 理由: P1-7 在路线图里以"没有样本"为由挂了很多轮。这类缺口的特征正是不会自己产生样本:门禁一直绿,另一半没被测也不会有人发现 —— 等样本等于等一次事故。今后路线图里"会静默失效"的条目,不以"还没人撞上"作为暂缓理由。W42 的修法是 `init` 在根上探测到两种及以上不同测试命令时拒绝自动配置、点名全部命中、不写任何文件;同一条命令的探测文件算一个栈;已有 config 的 `test_cmd` 照旧用。拒绝不登记进 `ENFORCEMENTS`:那张表收的是约束 agent 回合行为的门禁,`init` 的拒绝(基线不绿、探测不到命令)一向不在里面。另:`INSTALL.md` 把多语言仓库从「不适用」清单挪出单成一节 —— 它不是协议本身不成立,只是 `init` 不替人选;放在「不适用」里会让人以为这类仓库不能用。
 - 已否决: 自动用 `&&` 拼接全部命令(见 SETUP)。为"已有 config 但没写 `test_cmd`"单独加用例 —— 与"没有 config"是同一个判定。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_multi_stack.py`, `tests/conformance/mutation_check.py`, `INSTALL.md`, `docs/command-reference.md`, `docs/troubleshooting.md`
+## SETUP — 第二十五轮修路线图开放条目第 6 条,人类裁决"开一轮修第 6 条"
+
+- 理由: `handoff` 在最后一项完成且全量红时同屏打印"不要告诉人类完成"与"请向人类报告完成"。`pair.py` 是随 wheel 与 `init` 分发的活代码,这个矛盾在每个配了 `full_test_cmd` 的消费项目里都会出现;挑错的方向正是本协议最怕的"宣布完成"。当时因为未授权改 `pair.py`,只在两份文档里加了"两者不冲突"的限定句 —— 用文档解释代码里的矛盾,读屏幕的 agent 看不到文档。能写成失败用例的是"全量红时收尾不出现项目结束的那两句"。
+- 已否决: 只改文案、保留两段各自打印 —— 仍是两条指令;把全量红改成阻断 —— 范围外的红这对结对无权修,阻断等于死锁(`full_test_cmd` 设计时的决定)。顺手改 `status`/`claim` 的完成提示 —— 它们不知道上一次全量红,要加状态字段,另立条目 49。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/design-philosophy.md`, `docs/command-reference.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
