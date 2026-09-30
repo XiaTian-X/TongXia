@@ -26,6 +26,14 @@
 **处理** 手工创建 `.pair/config.json` 填入 `test_cmd`,再重跑 `init`。
 格式见 [protocol-spec.md §7](protocol-spec.md#7-配置-schema)。
 
+### `init` 说"仓库根上探测到多个技术栈,拒绝自动配置"
+
+**原因** 根上的探测文件对应两种及以上不同的测试命令(比如 `pom.xml` 和 `package.json`)。
+`init` 不替你选:只配一条的话,另一半从头到尾没有门禁,而且全程绿。
+
+**处理** 手工创建 `.pair/config.json`,`test_cmd` 要么覆盖全部(几条命令用 `&&` 连起来),要么收窄到一部分、
+全量放进 `full_test_cmd` 并在 `docs/reviews/baseline.md` 写明放弃了什么,再重跑 `init`。
+
 ### `verify-setup` 报"以下文件同时属于两个角色"
 
 **原因** `roles` 的路径集合有交集。这是**最严重的配置错误** ——
