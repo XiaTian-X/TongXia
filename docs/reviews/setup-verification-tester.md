@@ -505,3 +505,13 @@ spec 回合 tester 写用例(红),impl 回合 dev 只能改 `contributing.md`,`r
 - 已有 config 的 `test_cmd` 今天就优先于探测(`cmd_init` 里 `existing.get("test_cmd")` 那一支),④ 是"行为不变"的反面守。
 - `grep` 过:既有用例里没有一条同时放两种探测文件,不会有被取代的用例。
 - "不写任何文件"我按三样断言:`.pair/` 不存在、`AGENTS.md` 不存在、`.gitignore` 不存在(`PY_PROJECT` 本来就没有它)。
+
+## 补记(第二十五轮 W43 立项之后重跑)
+
+上次校验之后契约只加了「最后一项完成而全量红时不宣布项目结束」一节(dev 代笔)。**没有缺陷。**
+
+- 判据可断言:harness 默认 PLAN 有 W1、W2,完成 W1 不是最后一项 —— "最后一项"的用例要把 PLAN 换成只有一个工作项。
+  既有 `TestFullSuiteReport`(`test_v1_brownfield`)在默认 PLAN 上完成 W1,正好就是契约的 ③"不是最后一项、全量红",它断言
+  "全量套件红""不要告诉人类",我加一条"含'轮到'"作为 ③ 的正面;`grep` 过,没有既有用例断言"项目结束",不会有被取代的用例。
+- 退出码照旧 2 由既有锚点 `    return 2 if full_failed else 0` 守着;本项的变异点(去掉互斥)由 dev 定形状、review-impl 登记。
+- 「不做」把之后的 `status`/`claim` 留给开放条目 49,理由(状态里没有全量红的记录)成立。
