@@ -1292,7 +1292,7 @@ GIT_AUTHOR_IDENT` 之外再探 `git config --get commit.gpgsign`,只在它为
 **已解决:** 那一次就是行号引用与 `--drafter` 提示这一轮 —— `pair.py`
 本来就要改、指纹本来就要重刷,边际成本归零,两处空格一并去掉。
 
-### 6. `cmd_handoff` 收尾处两个 `if` 无互斥,同屏打印相反指令
+### 6. `cmd_handoff` 收尾处两个 `if` 无互斥,同屏打印相反指令  ✅ 已解决(第二十五轮 W43)
 
 `handoff` 收尾处有两个**独立的、非 elif 的** `if`:
 

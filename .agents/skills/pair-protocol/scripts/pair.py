@@ -2540,7 +2540,12 @@ def cmd_handoff(root, cfg, args):
         print("!" * 60)
         print()
 
-    if plan_all_done(root, cfg):
+    all_done = plan_all_done(root, cfg)
+    if all_done and full_failed:
+        # W43:与上面的横幅互斥 —— 同屏不能既说"不要告诉人类完成"又说"请向人类报告完成"。
+        print(">>> %s 里的工作项都已勾选,但全量套件是红的。<<<" % cfg["plan_file"])
+        print("项目算不算结束由人类决定:把全量套件红这件事报告给人类,不要宣布完成,不要继续轮转。")
+    elif all_done:
         print(">>> %s 里的工作项已全部完成。项目结束。<<<" % cfg["plan_file"])
         print("请向人类报告完成,不要继续轮转。")
     else:
