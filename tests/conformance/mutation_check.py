@@ -964,6 +964,23 @@ MUTATIONS = [
     ('全量红时照样宣布项目结束',
      '    if all_done and full_failed:',
      '    if False:'),
+
+    # W44 PLAN 全部完成后记得上一次全量是红的(dev 在 impl 回合给的锚点,review-impl 登记)。
+    ('完成时不记录全量结果',
+     '        state["last_full_failed"] = full_failed',
+     '        pass'),
+
+    ('status 不读全量记录',
+     '    if all_done and state.get("last_full_failed"):',
+     '    if False:'),
+
+    ('whose-turn 不读全量记录',
+     '        if state.get("last_full_failed"):\n            print("stop',
+     '        if False:\n            print("stop'),
+
+    ('handoff 拒绝不读全量记录',
+     '             if state.get("last_full_failed") else',
+     '             if False else'),
 ]
 
 # unittest 的失败行有两种形态:

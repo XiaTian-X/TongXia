@@ -1,5 +1,5 @@
 {
-  "baseline": "d18b7a69ccf3e943",
+  "baseline": "5f12f67ff2c2c5a5",
   "catchers": {
     "CLAUDE_MD 改了而样板没跟上": [
       "test_v1_shipped.TestClaudeMdForbidsHandingOff.test_样板_CLAUDE_md_与_init_写出的逐字节一致"
@@ -21,6 +21,9 @@
     ],
     "gitignore 不含 scratch": [
       "test_v1_scratch.TestInitIgnoresScratch.test_init_写的_gitignore_含_scratch"
+    ],
+    "handoff 拒绝不读全量记录": [
+      "test_v1_full_red_remembered.TestRememberedRed.test_再一次_handoff_被拒_理由不说报告完成"
     ],
     "idle 也提 scratch": [
       "test_v1_scratch_brief.TestIdleDoesNot.test_idle_整段输出都不含"
@@ -97,6 +100,9 @@
     "status 不用 idle 例外": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_的_status_归属那一行是_dev_且给出重跑指引"
     ],
+    "status 不读全量记录": [
+      "test_v1_full_red_remembered.TestRememberedRed.test_status_不说报告完成_说算不算结束"
+    ],
     "status 可写路径退回按阶段归属": [
       "test_v1_review_append.TestStatusMarksAppendOnly.test_非执行者头部那一行没有执行者名下的只追加路径"
     ],
@@ -114,6 +120,9 @@
     ],
     "whose-turn 不用 idle 例外": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_重跑之后又轮到_tester"
+    ],
+    "whose-turn 不读全量记录": [
+      "test_v1_full_red_remembered.TestRememberedRed.test_whose_turn_仍是_stop_并点名全量"
     ],
     "不单独判只追加路径": [
       "test_v1_review_append.TestAnythingElseIsRefused.test_改了已有行被拒_文案说只能追加"
@@ -198,6 +207,9 @@
     ],
     "孤儿位置的系统文件也放过": [
       "test_v1_os_files.TestRefusalNamesTheExit.test_Windows_的两种也认得出"
+    ],
+    "完成时不记录全量结果": [
+      "test_v1_full_red_remembered.TestRememberedRed.test_status_不说报告完成_说算不算结束"
     ],
     "审查结论的组合符不提示": [
       "test_v1_combining_setup_report.TestAppendedNote.test_追加的补记里的组合符照样提示_行号是补记那一行"
