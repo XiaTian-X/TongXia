@@ -1,5 +1,5 @@
 {
-  "baseline": "06db8263ad94677e",
+  "baseline": "d18b7a69ccf3e943",
   "catchers": {
     "CLAUDE_MD 改了而样板没跟上": [
       "test_v1_shipped.TestClaudeMdForbidsHandingOff.test_样板_CLAUDE_md_与_init_写出的逐字节一致"
@@ -330,7 +330,7 @@
       "test_v1_memory.TestDecisionShape.test_过长被拒绝"
     ],
     "拆掉协议日志的边界豁免": [
-      "test_v1_brownfield.TestFullSuiteReport.test_全量套件日志不会卡死下一回合"
+      "test_v1_brief.TestBriefHeader.test_写过简报之后交接不被拒"
     ],
     "拆掉回合归属检查": [
       "test_turn_and_state.TestTurnOwnership.test_不是自己的回合不能交接"
