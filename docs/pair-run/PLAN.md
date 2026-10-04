@@ -625,3 +625,31 @@
     ③不是最后一项、全量红时:照旧横幅加"轮到 X 了";④`docs/design-philosophy.md`、`docs/command-reference.md` 里为这处矛盾加的
     "PLAN 维度、两者不冲突"限定句删掉或改成现行为;⑤变异点:去掉互斥(全量红时照样打印项目结束),用例红
   - 对应契约:`docs/pair-run/CONTRACT.md` → 最后一项完成而全量红时不宣布项目结束
+
+### 第二十六轮:按序修路线图开放条目 49、1、33
+
+> 人类裁决"按顺序完成"(条目 49、1、33),授权 dev 代笔立项。按 PLAN 顺序认领。
+
+- [ ] **W44** [feature] — PLAN 全部完成后,完成提示记得上一次全量套件是红的
+  - **来源**:路线图开放条目 49(第二十五轮 W43 留下)。W43 只管了完成那一次 `handoff` 的收尾;之后 `status`、`whose-turn`、再一次 `handoff`
+    在 PLAN 全部完成时仍说"请向人类报告项目完成"—— 状态里没有记录上一次全量的结果
+  - 验收标准:①工作项完成时,把这一次全量套件的结果记进状态(配了 `full_test_cmd` 且红 → 红;绿或没配 → 不红),每次完成都覆盖;
+    ②PLAN 全部完成且记录是红时:`status` 不说"请向人类报告项目已完成",改说工作项都已勾选、最后一次全量套件是红的、项目算不算结束由人类决定;
+    `whose-turn` 仍以 `stop ` 开头,说明同一件事;再一次 `handoff` 照旧拒绝,理由里不说"请向人类报告项目完成";③记录不红时三处照旧;
+    ④老状态里没有这个键 → 按不红处理;⑤先红后绿(两项 PLAN,W1 完成时全量红、W2 完成时全量绿)→ 照旧报告完成;⑥变异点:不记录、记录了但三处不读
+  - 对应契约:`docs/pair-run/CONTRACT.md` → PLAN 全部完成后记得上一次全量是红的
+
+- [ ] **W45** [cover] — `mutation_check` 的基线预检闸补上测试
+  - **来源**:路线图开放条目 1。`precheck_no_baseline` 与 `isolated_copy` 在 `test_mutation_tooling.py` 里零命中;它守的是"基线本来就红时
+    每条变异都被判成抓到、报出恒真的全部抓到"这一失败模式,而它自己没有测试,一次重构就能把它删掉、套件照绿
+  - 验收标准:按条目 1 推荐的三层:①判定抽成纯函数(放行要求退出码 0 **且**失败集为空),真值表用例里必须有"退出码 0 但抓到 FAIL 行 → 拒绝";
+    ②源码断言:预检的函数体里调用 `isolated_copy(`、设置 `PAIR_MUTATION_RUN`,`isolated_copy` 的忽略模式含 `.git`;
+    ③`isolated_copy` 的真实行为:副本里没有 `.git` 与 `__pycache__`,有 `pair.py` 与 `tests/conformance/run.py`;④全部在 tester 路径,不动 `pair.py`
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 变异检查的基线预检闸要有测试
+
+- [ ] **W46** [cover] — 样板的八个入口文件都与 `init` 写出的逐字节一致
+  - **来源**:路线图开放条目 33。第十二轮 W28 只给 `CLAUDE.md` 加了一致性用例;其余七个(`AGENTS.md`、`GEMINI.md`、`CONVENTIONS.md`、`.clinerules`、
+    `.windsurfrules`、`.github/copilot-instructions.md`、`.cursor/rules/pair.mdc`)在 `ACTIVATOR` 或 `CURSOR_MDC` 改动时会漂开,没有用例会红
+  - 验收标准:①`ENTRY_FILES` 里**每一个**入口文件,样板里那份都与 `merge_entry` 在空目录里写出的逐字节一致(今天八个都一致,用例应当绿);
+    ②用例按 `ENTRY_FILES` 遍历,不写死文件名清单(新增入口文件自动纳入);③变异点:改 `ACTIVATOR`、改 `CURSOR_MDC`,样板没跟上时各有用例红
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 样板的全部入口文件与 init 一致

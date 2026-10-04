@@ -609,3 +609,8 @@
 - 理由: `handoff` 收尾的全量红横幅与"项目结束"两段互不排斥,最后一项完成且全量红时同屏两条相反指令。当时因为未授权改 `pair.py`,只在两份文档里加了"PLAN 维度、两者不冲突"的限定句 —— 可照屏幕办事的 agent 读不到那两份文档,解释写在了读者不在的地方(与第二十一轮 W37"规矩放在会话不读的地方"同一类)。改成三支互斥,限定句随之删掉。测试一侧:只断言"不含项目结束"不够,review-test 实测第一支末尾再打一行"轮到 X 了"照绿 —— "不要继续轮转"与"轮到 X"同样是两条相反指令;补上"不含轮到",与对照组"不是最后一项时要有轮到"合起来钉死这句的位置。今后凡是"同屏不得出现相反指令"一类的判据,要把那一屏上所有指令性句子(报告完成、轮到谁、继续/停止)各自钉住,不只钉最初发现的那一对。
 - 已否决: 保留两段、只改措辞 —— 仍是两条指令。把全量红改成阻断 —— 范围外的红这对结对无权修。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_last_item_full_red.py`, `tests/conformance/mutation_check.py`, `docs/design-philosophy.md`, `docs/command-reference.md`, `.agents/skills/pair-protocol/SKILL.md`, `docs/troubleshooting.md`
+## SETUP — 第二十六轮按序修路线图开放条目 49、1、33,人类裁决"按顺序完成"
+
+- 理由: 三条都是第二十五轮收尾时列出的下一步,人类要求按序完成。条目 49 是 W43 的另一半:完成那一次之后的提示不知道全量是红的,要加一个状态字段(W44,feature)。条目 1 是变异检查里唯一一道没有测试守着的闸,守的正是"恒真的全部抓到"这一最怕的失败模式;改动全在 tester 路径,照第十六轮 W33 的先例走 cover(W45)。条目 33 今天八个入口文件都一致,只差用例守着,同样 cover(W46)。三项互不依赖,按人类给的顺序排。
+- 已否决: 条目 1 用端到端预检或给 `isolated_copy` 打桩 —— 条目 1 正文比较过,前者让套件耗时近乎翻倍,后者会静默失效。条目 33 顺手统一仓库根的入口文件 —— 那几份带本仓库特有约定,本来就不该等于模板。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/mutation_check.py`, `tests/conformance/test_mutation_tooling.py`, `tests/conformance/test_v1_shipped.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
