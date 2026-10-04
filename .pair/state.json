@@ -1,8 +1,8 @@
 {
   "round": 41,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W44",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -50,7 +50,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "b32a41e135942626678205a44b79cf44b63f5914",
   "setup_verified_contract": {
     "tester": "b32a41e135942626678205a44b79cf44b63f5914",
     "dev": "b32a41e135942626678205a44b79cf44b63f5914"
