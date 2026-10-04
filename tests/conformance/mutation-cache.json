@@ -1,5 +1,5 @@
 {
-  "baseline": "3032de6baee70b3b",
+  "baseline": "06db8263ad94677e",
   "catchers": {
     "CLAUDE_MD 改了而样板没跟上": [
       "test_v1_shipped.TestClaudeMdForbidsHandingOff.test_样板_CLAUDE_md_与_init_写出的逐字节一致"

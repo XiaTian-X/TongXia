@@ -614,3 +614,8 @@
 - 理由: 三条都是第二十五轮收尾时列出的下一步,人类要求按序完成。条目 49 是 W43 的另一半:完成那一次之后的提示不知道全量是红的,要加一个状态字段(W44,feature)。条目 1 是变异检查里唯一一道没有测试守着的闸,守的正是"恒真的全部抓到"这一最怕的失败模式;改动全在 tester 路径,照第十六轮 W33 的先例走 cover(W45)。条目 33 今天八个入口文件都一致,只差用例守着,同样 cover(W46)。三项互不依赖,按人类给的顺序排。
 - 已否决: 条目 1 用端到端预检或给 `isolated_copy` 打桩 —— 条目 1 正文比较过,前者让套件耗时近乎翻倍,后者会静默失效。条目 33 顺手统一仓库根的入口文件 —— 那几份带本仓库特有约定,本来就不该等于模板。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/mutation_check.py`, `tests/conformance/test_mutation_tooling.py`, `tests/conformance/test_v1_shipped.py`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W44 — 全量结果的记录要落进完成那一次的提交里
+
+- 理由: `cmd_handoff` 先提交、后跑全量;拿到结果再 `save_state`,状态文件留在工作区里是改过的,`state_is_tampered` 判它被篡改,下一次 `handoff` 拒绝并还原 —— 记录被还原掉、本节落空,还多一次假告警。参考实现里照"提交之后才写记录"写:"状态文件干净"与"先红后绿走完 W2"两条红;把全量挪到提交之前跑、记录随 `save_state` 进提交,全套 599 OK。不完成不记录、记录了不读各红三条。
+- 已否决: 让 `state_is_tampered` 放过这个键 —— 篡改检测按整份文件判,开一个口子就是给 agent 改状态开门。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_full_red_remembered.py`
