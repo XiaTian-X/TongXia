@@ -320,3 +320,15 @@ tester 那一份 `other`。这里只记我重读时挑出的、改掉的,以及�
 - 我按下面理解,tester 有不同读法请在审查里提:①"项目结束"四个字在全量红那一支里一次都不出现,换成"项目算不算结束由人类决定"这类说法时
   要避开这四个连在一起的字;②`test_v1_brownfield.py` 的 `TestFullSuiteReport` 用的 harness 默认 PLAN 有 W1、W2 两项,完成 W1 走的是"没完成"那一支,
   所以新用例需要一份只有一项的 PLAN(或把两项都做完)。
+
+## 补记(第二十六轮 W44–W46 立项之后重跑)
+
+**起草人自审:是** —— 三节都是我立项时代笔的,证明力打折,以 tester 那份为准。
+
+- **PLAN 全部完成后记得上一次全量是红的**(W44):判据能写断言 —— 单项 PLAN + 恒红全量,完成后 `status`、`whose-turn`、`handoff` 三处各自的字样;
+  对照恒绿;先红后绿;删掉状态键。我实现时打算加一个状态键(默认不红),在 `handoff` 完成那一刻写入,三处完成提示读它。
+  读法:"每次完成都覆盖"指只看最近一次完成,不累计;`whose-turn` 那行要保持 `stop ` 开头,驱动器 `drive.py` 只认 `turn`/`stop`。
+- **变异检查的基线预检闸要有测试**(W45,cover):全在 tester 路径,我只评审。契约里的三处源码事实我核过:`precheck_no_baseline` 的函数体在
+  `mutation_check.py` 里、`PAIR_MUTATION_RUN` 在预检的环境里设置、`isolated_copy` 用 `shutil.ignore_patterns`。
+- **样板的全部入口文件与 init 一致**(W46,cover):`ENTRY_FILES` 八个,六个用 `ACTIVATOR`、`CLAUDE.md` 用 `CLAUDE_MD`、`.cursor/rules/pair.mdc` 用 `CURSOR_MDC`;
+  立项前我用 `merge_entry` 在空目录里逐个比过,八个都一致,用例今天应当全绿。
