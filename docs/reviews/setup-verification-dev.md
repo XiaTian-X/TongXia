@@ -332,3 +332,13 @@ tester 那一份 `other`。这里只记我重读时挑出的、改掉的,以及�
   `mutation_check.py` 里、`PAIR_MUTATION_RUN` 在预检的环境里设置、`isolated_copy` 用 `shutil.ignore_patterns`。
 - **样板的全部入口文件与 init 一致**(W46,cover):`ENTRY_FILES` 八个,六个用 `ACTIVATOR`、`CLAUDE.md` 用 `CLAUDE_MD`、`.cursor/rules/pair.mdc` 用 `CURSOR_MDC`;
   立项前我用 `merge_entry` 在空目录里逐个比过,八个都一致,用例今天应当全绿。
+
+## 补记(W44 spec 回合带声明补「记录要落进完成那一次的提交里」之后重跑)
+
+**起草人自审:否(本段)** —— 这一段是 tester 补的,我没参与。
+
+- 同意,而且这是我立项时漏掉的:`cmd_handoff` 先提交、后跑全量,结果补写进状态就让 `.pair/state.json` 留在工作区里是改过的 ——
+  `state_is_tampered` 正是这么判的,下一次交接会还原掉记录。我实现时把全量挪到 `save_state` 与提交之前跑,记录随完成那一次提交落地,
+  不另加只含状态的提交(另加一个 `chore(pair)` 提交会进 `report` 的统计)。
+- 挪到提交前跑的一个副作用:全量套件写出的文件(本仓库是 `mutation-cache.json`,任何项目都有 `.pair/.last-full-test.log`)会被这次 `add -A` 看见。
+  日志在 `PROTOCOL_LOGS` 里、`init` 写的 `.gitignore` 也有它;`mutation-cache.json` 在本仓库的 `ignore_paths` 里。门禁那次 `.last-test.log` 一向就是提交前写的,同一种情形。
