@@ -670,7 +670,7 @@
     ③只动 tests,不改 `pair.py`
   - 对应契约:`docs/pair-run/CONTRACT.md` → 用例要守它声称守的性质
 
-- [ ] **W48** [cover] — 符号引用检查扫全部规范性文档
+- [x] **W48** [cover] — 符号引用检查扫全部规范性文档
   - **来源**:路线图开放条目第 16 条。`test_docs_consistency` 的符号引用检查只扫 `NORMATIVE`(33 份),而 `pair.py` 的 `normative_docs` 给「规范性文档」
     下的闭合定义是"所有 `.md` 减记忆层与评审目录"。差集里有 `docs/pair-run/PLAN.md`、`CONTRACT.md`、`references/` 三份、六个入口文件、样板项目的文档 —— 从没被检查过
   - 验收标准:①符号引用检查(`check_symbol_refs`)扫的范围按与 `normative_docs` 同一个闭合定义算(被跟踪的 `.md`,减本仓库配置里的记忆层与评审目录),
