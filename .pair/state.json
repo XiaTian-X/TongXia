@@ -1,9 +1,9 @@
 {
   "round": 44,
-  "phase": "spec",
+  "phase": "review-test",
   "item": "W47",
   "item_type": "cover",
-  "last_actor": "dev",
+  "last_actor": "tester",
   "changes_count": 0,
   "completed_items": [
     "W2",

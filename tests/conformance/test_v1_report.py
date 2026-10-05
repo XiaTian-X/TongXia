@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """健康度报告。
 
-这个命令唯一的存在理由:**"两个 agent 互相点头"在此之前不可观测。**
-脚本能强制评审带证据(结构),强制不了评审有内容 —— 打回率长期接近 0
-是那件事唯一的量化证据。
+它补的是一个观测缺口:脚本能强制评审带证据(结构),强制不了评审有内容 —— 打回率长期接近 0
+是"两个 agent 互相点头"唯一的量化证据。打回率只是它盯的几项之一(见 `cmd_report` 与 ADR-022)。
 
-所以这里最重要的一条用例是:全 approve 的历史必须被标出来。
+全 approve 的历史必须被标出来 —— **判据是比率行上的 `!!` 标记**,不是散文:口径重写会改措辞,不该以"功能回归"的样子变红(W47)。
 """
 
 from harness import EVIDENCE, PairTestCase, with_loc
@@ -98,10 +97,7 @@ class TestNoddingIsFlagged(ReportBase):
         for item in ("W1", "W2", "W3"):
             self._cycle(item)
         out = self.report()
-        self.assertIn("0% (0/6)", out)
-        self.assertIn("!! 偏低", out)
-        self.assertIn("打回率偏低", out)
-        self.assertIn("互相点头", out)
+        self.assertRegex(out, r"(?m)^\s*打回率\s+0% \(0/6\)\s+!! 偏低")
 
 
 class TestHealthyHistory(ReportBase):

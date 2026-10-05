@@ -102,11 +102,26 @@ class TestChangesNeedsLocation(PairTestCase):
 
 
 class TestBriefAsksForDisagreement(PairTestCase):
-    """评审简报是正向要求,不是负向禁止 —— 这是实证里真正起作用的那一半。"""
+    """(类名沿用:`docs/improvements.md` 用符号引用指着它。)评审简报要求**两个方向**都拿证据:通过要说查过哪里,打回要指到路径:行号,而为了显得没在点头
+    制造一次打回同样失真(ADR-023 把正向要求从"配额"改成"证据")。
 
-    def test_评审回合的简报要求先找问题(self):
-        self.repo.advance_to("review-impl")
-        out = self.repo.run("status", role="tester").text
+    W47:这条原先只断言"裁决必须带证据""先找问题""--checked" —— 那三个字符串在新简报里都还在,
+    把"同样失真"那一句删掉它照样绿。现在两个评审阶段都断言到那两句。简报原文在 `pair.py` 里折行,"同样失真"与
+    "指到路径:行号"各自落在同一行内,不受折行影响。"""
+
+    def brief(self, phase, role):
+        self.repo.advance_to(phase)
+        r = self.repo.run("status", role=role)
+        self.assertAccepted(r)
+        return r.text
+
+    def test_评审实现的简报要求两个方向都拿证据(self):
+        out = self.brief("review-impl", "tester")
         self.assertIn("裁决必须带证据", out)
-        self.assertIn("先找问题", out)
-        self.assertIn("--checked", out)
+        self.assertIn("指到路径:行号", out)
+        self.assertIn("同样失真", out)
+
+    def test_评审测试的简报要求两个方向都拿证据(self):
+        out = self.brief("review-test", "dev")
+        self.assertIn("指到路径:行号", out)
+        self.assertIn("同样失真", out)
