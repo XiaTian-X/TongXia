@@ -53,10 +53,11 @@
   "deadlock_hits": [],
   "contract_sha": null,
   "setup_verified_contract": {
-    "tester": "b32a41e135942626678205a44b79cf44b63f5914",
+    "tester": "3b8279e447a24a3db2dde7e096043baedb099681",
     "dev": "3b8279e447a24a3db2dde7e096043baedb099681"
   },
   "after_rebound": false,
   "rebound_from": null,
-  "reviewed_contract": "3b8279e447a24a3db2dde7e096043baedb099681"
+  "reviewed_contract": "3b8279e447a24a3db2dde7e096043baedb099681",
+  "last_full_failed": false
 }
