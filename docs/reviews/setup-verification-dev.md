@@ -342,3 +342,13 @@ tester 那一份 `other`。这里只记我重读时挑出的、改掉的,以及�
   不另加只含状态的提交(另加一个 `chore(pair)` 提交会进 `report` 的统计)。
 - 挪到提交前跑的一个副作用:全量套件写出的文件(本仓库是 `mutation-cache.json`,任何项目都有 `.pair/.last-full-test.log`)会被这次 `add -A` 看见。
   日志在 `PROTOCOL_LOGS` 里、`init` 写的 `.gitignore` 也有它;`mutation-cache.json` 在本仓库的 `ignore_paths` 里。门禁那次 `.last-test.log` 一向就是提交前写的,同一种情形。
+
+## 补记(第二十七轮 W47–W49 立项之后重跑)
+
+**起草人自审:是** —— 三节都是我立项时代笔的,证明力打折,以 tester 那份为准。
+
+- **用例要守它声称守的性质**(W47,cover):判据可探 —— 删掉简报里"同样失真"那一句要红;只改"互相点头"那段散文不红、去掉 `!!` 红。
+  我核过:"同样失真"在 `pair.py` 的两个评审简报里各出现一次,`!! 偏低` 已有断言。
+- **符号引用检查与规范性文档同一个范围**(W48,cover):立项时用 `check_symbol_refs` 扫过差集 19 份(不含评审目录与笔记),只有记忆层的 `DECISIONS.md` 有 11 处,
+  按定义排除;本轮新写进 `PLAN.md`、`CONTRACT.md` 的段落也重扫过,没有坏引用。
+- **样板决策记录与退出码表不漂移**(W49,bug):用 `difflib` 比过样板 `DECISIONS.md` 与 `DECISIONS_SKELETON`,只差文件头那一段;我 impl 回合改样板与 `protocol-spec.md` §9。
