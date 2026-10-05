@@ -1194,7 +1194,7 @@ def main(argv=None):
         # 副本里预检一遍;副本环境红着就拒绝 —— 否则每一条变异都会被误判成
         # "抓到",报出一个恒真的 70/70。
         rc, fails, text = precheck_no_baseline(args.jobs)
-        if rc != 0 or fails:
+        if not precheck_passes(rc, fails):
             print("拒绝做变异检查:在未变异的隔离副本里,测试就没有全绿。\n")
             if fails:
                 print("副本环境里的失败项(%d 个):" % len(fails))
@@ -1249,6 +1249,14 @@ def run_baseline(jobs):
     print("基线全绿 (%.1fs)\n" % (time.time() - t0))
     save_cache(fingerprint(), load_cache()[1])
     return 0
+
+
+def precheck_passes(rc, fails):
+    """`--no-baseline` 预检的放行判定(W45):退出码为 0 **且**一条失败都没抓到。
+
+    只看退出码不够:并行运行器某一片失败、汇总行照打时,退出码可能是 0 而 FAIL 行在。
+    只看失败集也不够:运行器自身崩溃时一条 FAIL 行都抓不到,退出码非 0。抽成纯函数是为了能逐格钉真值表。"""
+    return rc == 0 and not fails
 
 
 def precheck_no_baseline(jobs):
