@@ -648,7 +648,7 @@
     ③`isolated_copy` 的真实行为:副本里没有 `.git` 与 `__pycache__`,有 `pair.py` 与 `tests/conformance/run.py`;④全部在 tester 路径,不动 `pair.py`
   - 对应契约:`docs/pair-run/CONTRACT.md` → 变异检查的基线预检闸要有测试
 
-- [ ] **W46** [cover] — 样板的八个入口文件都与 `init` 写出的逐字节一致
+- [x] **W46** [cover] — 样板的八个入口文件都与 `init` 写出的逐字节一致
   - **来源**:路线图开放条目 33。第十二轮 W28 只给 `CLAUDE.md` 加了一致性用例;其余七个(`AGENTS.md`、`GEMINI.md`、`CONVENTIONS.md`、`.clinerules`、
     `.windsurfrules`、`.github/copilot-instructions.md`、`.cursor/rules/pair.mdc`)在 `ACTIVATOR` 或 `CURSOR_MDC` 改动时会漂开,没有用例会红
   - 验收标准:①`ENTRY_FILES` 里**每一个**入口文件,样板里那份都与 `merge_entry` 在空目录里写出的逐字节一致(今天八个都一致,用例应当绿);

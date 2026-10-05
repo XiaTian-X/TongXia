@@ -624,3 +624,8 @@
 - 理由: W45 给变异检查的基线预检补了三层测试:判定纯函数 `precheck_passes` 的真值表(含"退出码 0 但抓到 FAIL 行不放行")、读源码断言预检在 `isolated_copy` 里跑并带 `PAIR_MUTATION_RUN`、直接调 `isolated_copy` 看副本里有什么没什么。review 时在 `git archive` 出来的副本里探"忽略模式去掉 `.git`":只有源码断言红,行为断言"副本里没有 `.git`"照绿 —— 那个副本本来就没有 `.git`,"不在"恒成立。`mutation_check` 自己的隔离副本、任何从归档或 wheel 起的环境都是这样。行为断言在本仓库与 CI 的检出里有效,源码断言在两种环境里都有效,两层缺一不可;今后写"X 不在副本里/输出里"这类断言,先问测试环境里 X 是否本来就不存在,是的话要么先造出 X,要么配一条不依赖环境的断言。另:`mutation_check` 不变异它自己,这几道闸只能靠手工探针 + 读源码守,六个探针(挪到真实仓库、去掉变量、去掉 `.git` 忽略、只看退出码、只看失败集、`main` 不用判定)各只红对应一条。
 - 已否决: 端到端跑一次预检、给 `isolated_copy` 打桩(条目 1 正文比较过)。在行为断言里先往源仓库造一个 `.git` —— 测的是真仓库的拷贝,造了就是在改被测物。
 - 影响路径: `tests/conformance/mutation_check.py`, `tests/conformance/test_mutation_precheck.py`
+## W46 — 一致性用例遍历代码里的注册表,不另抄一份清单
+
+- 理由: 第十二轮 W28 只给 `CLAUDE.md` 加了样板与 `init` 一致的用例,其余七个入口文件没人守 —— 当时的用例写死了一个文件名。W46 按 `PAIR.ENTRY_FILES` 遍历:今天八个全绿,将来新增入口文件自动纳入,不会再出现"加了第九个、用例只认前八个"。不一致的文件在一条用例里一起列出,不用 `subTest` —— `mutation_check` 只认 FAIL 行里的测试 id,`subTest` 的失败行形态不同,会让变异的抓手记不进缓存。用例开头断言注册表非空,防止遍历空表恒绿。review 时在隔离副本里改 `ACTIVATOR`、改 `CURSOR_MDC`、直接给样板 `.clinerules` 多加一行,三种漂移都红。
+- 已否决: 每个入口文件写一条用例 —— 就是 W28 那种写法,新增文件时要记得加。顺手统一仓库根的入口文件 —— 那几份带本仓库特有约定(见 SETUP)。
+- 影响路径: `tests/conformance/test_v1_shipped.py`, `tests/conformance/mutation_check.py`
