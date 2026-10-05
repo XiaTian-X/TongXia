@@ -634,3 +634,8 @@
 - 理由: 人类授权 dev 排序。排在最前的是"用例声称守着一个性质、实际守不住"(W47)—— 这是本项目最怕的失效模式:测试集看着绿、以为强制力还在。其次是检查覆盖面的缺口(W48):符号引用检查只扫 33 份文档,而 `normative_docs` 的闭合定义要大得多,承重的 `PLAN`/`CONTRACT` 与随包分发的 `references/` 都在差集里;立项时实测扩到闭合定义不会多出坏引用,成本只是改一处文件集合。第三是分发物与规范文档的漂移(W49):样板的决策记录文件头发给每个新用户,`protocol-spec.md` 的退出码表缺一条。W47、W48 只动 tests,走 cover;W49 要 dev 改样板与规范文档,走 bug。
 - 已否决: 这一轮带上开放条目第 7 条 —— 退出码撞码只出现在手动的 `--no-baseline` 路径,CI 的周跑走默认路径;第 2 条 —— 缓存只影响快慢,不影响结论;第 14 条 —— 66 处裸坐标机械但量大,单独一轮;「定位重框」第 6 条 —— 要编辑既有 ADR,与追加式纪律冲突,得人类先裁。
 - 影响路径: `tests/conformance/test_v1_review_evidence.py`, `tests/conformance/test_v1_report.py`, `tests/conformance/test_docs_consistency.py`, `examples/demo-project/docs/DECISIONS.md`, `docs/protocol-spec.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W47 — 修"守错了对象"的用例时,只加不减;要减先证明别处有人守
+
+- 理由: W47 让评审简报的用例断言到"同样失真"与"指到路径:行号"、让报告用例只钉 `!!` 标记不钉散文。第一版改写简报用例时顺手拿掉了"先找问题"与"--checked"两条既有断言,tester 的笔记以为"先找问题有别的用例守"—— 实际没有,隔离副本里把两份简报的"先找问题"删掉,两个模块全绿。为修"用例守不住它声称的性质"又造了一处守不住,正是这个工作项要消除的形状。补回之后:删"先找问题"、删 `--checked` 示例、删"同样失真"各红两条(两个评审阶段各一条)。今后改写既有用例时,原有断言默认保留;要拿掉一条,先在副本里删掉它守的那句、看别处是否有用例红。另:报告用例把比率、计数与 `!!` 用行首锚定的正则钉在同一行,比三个分开的 `assertIn` 更紧;类名沿用,因为 `docs/improvements.md` 用符号引用指着它。
+- 已否决: 只断言新加的两句 —— 第一版就是这样,丢了"先找问题"。改类名 —— 符号引用检查会红,契约允许只改文档字符串。
+- 影响路径: `tests/conformance/test_v1_review_evidence.py`, `tests/conformance/test_v1_report.py`
