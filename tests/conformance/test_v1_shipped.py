@@ -246,6 +246,27 @@ class TestContractExamplesCoverCategories(unittest.TestCase):
         self.assertTrue(hits, "没有一个例子的输入里有 lower() 与 casefold() 不同的字符、且期望输出按 lower() 给出")
 
 
+class TestAllEntryFilesMatchInit(unittest.TestCase):
+    """W46:样板的全部入口文件与 `init` 一致。
+
+    W26 把八个入口文件重写成与 `init` 逐字节一致,W28 只给 `CLAUDE.md` 加了一致性用例;其余七个由 `ACTIVATOR`(六个)与
+    `CURSOR_MDC` 生成,改了模板而样板没跟上没有用例会红 —— 而 `make-demo.py` 发给新用户的就是这些。
+    **按 `ENTRY_FILES` 遍历,不另写清单**:将来新增入口文件自动纳入。不同的文件在一条用例里一起报,不靠 subTest
+    (`mutation_check` 只认 FAIL 行里的测试 id)。"""
+
+    def test_每个入口文件都与_merge_entry_写出的逐字节一致(self):
+        self.assertTrue(PAIR.ENTRY_FILES, "ENTRY_FILES 是空的 —— 这条用例什么都没检查")
+        d = Path(tempfile.mkdtemp(prefix="entries-"))
+        self.addCleanup(shutil.rmtree, d, True)
+        drifted = []
+        for rel, content in PAIR.ENTRY_FILES.items():
+            PAIR.merge_entry(d, rel, content)
+            demo = DEMO / rel
+            if not demo.exists() or demo.read_text(encoding="utf-8") != (d / rel).read_text(encoding="utf-8"):
+                drifted.append(rel)
+        self.assertEqual(drifted, [], "样板里这些入口文件与 init 写出的不一致:%s" % drifted)
+
+
 class TestWhoseTurn(unittest.TestCase):
     """驱动器只认这一行输出,所以它的形状是接口,不是随手打印。"""
 

@@ -981,6 +981,15 @@ MUTATIONS = [
     ('handoff 拒绝不读全量记录',
      '             if state.get("last_full_failed") else',
      '             if False else'),
+
+    # W46 样板的全部入口文件与 init 一致(cover,spec 回合登记)。改模板文字、样板不动。
+    ('ACTIVATOR 改了而样板没跟上',
+     'ACTIVATOR = """# 本仓库是双 AI agent 结对开发项目',
+     'ACTIVATOR = """# 本仓库是双 AI agent 结对开发项目(改过)'),
+
+    ('CURSOR_MDC 改了而样板没跟上',
+     'description: 双 agent 结对编程协议 —— 开工前必读',
+     'description: 双 agent 结对编程协议 —— 开工前必读(改过)'),
 ]
 
 # unittest 的失败行有两种形态:

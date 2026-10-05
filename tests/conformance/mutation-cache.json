@@ -1,8 +1,14 @@
 {
-  "baseline": "fcec3445cd505837",
+  "baseline": "902904fd89a8da26",
   "catchers": {
+    "ACTIVATOR 改了而样板没跟上": [
+      "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
+    ],
     "CLAUDE_MD 改了而样板没跟上": [
       "test_v1_shipped.TestClaudeMdForbidsHandingOff.test_样板_CLAUDE_md_与_init_写出的逐字节一致"
+    ],
+    "CURSOR_MDC 改了而样板没跟上": [
+      "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
     ],
     "OS_FILES 退回按形状筛": [
       "test_v1_os_files_list.TestExplicitList.test_往_GITIGNORE_LINES_加一个裸文件名_它不算系统文件"
