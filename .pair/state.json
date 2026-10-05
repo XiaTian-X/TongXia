@@ -1,8 +1,8 @@
 {
   "round": 43,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W46",
+  "item_type": "cover",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -52,7 +52,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "3b8279e447a24a3db2dde7e096043baedb099681",
   "setup_verified_contract": {
     "tester": "3b8279e447a24a3db2dde7e096043baedb099681",
     "dev": "3b8279e447a24a3db2dde7e096043baedb099681"
