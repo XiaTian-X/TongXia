@@ -619,3 +619,8 @@
 - 理由: `cmd_handoff` 先提交、后跑全量;拿到结果再 `save_state`,状态文件留在工作区里是改过的,`state_is_tampered` 判它被篡改,下一次 `handoff` 拒绝并还原 —— 记录被还原掉、本节落空,还多一次假告警。参考实现里照"提交之后才写记录"写:"状态文件干净"与"先红后绿走完 W2"两条红;把全量挪到提交之前跑、记录随 `save_state` 进提交,全套 599 OK。不完成不记录、记录了不读各红三条。
 - 已否决: 让 `state_is_tampered` 放过这个键 —— 篡改检测按整份文件判,开一个口子就是给 agent 改状态开门。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`, `tests/conformance/test_v1_full_red_remembered.py`
+## W45 — 断言"某样东西不在"时,先确认测试环境里它本来在;不在的环境靠源码断言兜底
+
+- 理由: W45 给变异检查的基线预检补了三层测试:判定纯函数 `precheck_passes` 的真值表(含"退出码 0 但抓到 FAIL 行不放行")、读源码断言预检在 `isolated_copy` 里跑并带 `PAIR_MUTATION_RUN`、直接调 `isolated_copy` 看副本里有什么没什么。review 时在 `git archive` 出来的副本里探"忽略模式去掉 `.git`":只有源码断言红,行为断言"副本里没有 `.git`"照绿 —— 那个副本本来就没有 `.git`,"不在"恒成立。`mutation_check` 自己的隔离副本、任何从归档或 wheel 起的环境都是这样。行为断言在本仓库与 CI 的检出里有效,源码断言在两种环境里都有效,两层缺一不可;今后写"X 不在副本里/输出里"这类断言,先问测试环境里 X 是否本来就不存在,是的话要么先造出 X,要么配一条不依赖环境的断言。另:`mutation_check` 不变异它自己,这几道闸只能靠手工探针 + 读源码守,六个探针(挪到真实仓库、去掉变量、去掉 `.git` 忽略、只看退出码、只看失败集、`main` 不用判定)各只红对应一条。
+- 已否决: 端到端跑一次预检、给 `isolated_copy` 打桩(条目 1 正文比较过)。在行为断言里先往源仓库造一个 `.git` —— 测的是真仓库的拷贝,造了就是在改被测物。
+- 影响路径: `tests/conformance/mutation_check.py`, `tests/conformance/test_mutation_precheck.py`
