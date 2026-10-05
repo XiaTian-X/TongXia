@@ -629,3 +629,8 @@
 - 理由: 第十二轮 W28 只给 `CLAUDE.md` 加了样板与 `init` 一致的用例,其余七个入口文件没人守 —— 当时的用例写死了一个文件名。W46 按 `PAIR.ENTRY_FILES` 遍历:今天八个全绿,将来新增入口文件自动纳入,不会再出现"加了第九个、用例只认前八个"。不一致的文件在一条用例里一起列出,不用 `subTest` —— `mutation_check` 只认 FAIL 行里的测试 id,`subTest` 的失败行形态不同,会让变异的抓手记不进缓存。用例开头断言注册表非空,防止遍历空表恒绿。review 时在隔离副本里改 `ACTIVATOR`、改 `CURSOR_MDC`、直接给样板 `.clinerules` 多加一行,三种漂移都红。
 - 已否决: 每个入口文件写一条用例 —— 就是 W28 那种写法,新增文件时要记得加。顺手统一仓库根的入口文件 —— 那几份带本仓库特有约定(见 SETUP)。
 - 影响路径: `tests/conformance/test_v1_shipped.py`, `tests/conformance/mutation_check.py`
+## SETUP — 第二十七轮按严重程度挑一批,人类裁决"按严重程度挑一批开始"
+
+- 理由: 人类授权 dev 排序。排在最前的是"用例声称守着一个性质、实际守不住"(W47)—— 这是本项目最怕的失效模式:测试集看着绿、以为强制力还在。其次是检查覆盖面的缺口(W48):符号引用检查只扫 33 份文档,而 `normative_docs` 的闭合定义要大得多,承重的 `PLAN`/`CONTRACT` 与随包分发的 `references/` 都在差集里;立项时实测扩到闭合定义不会多出坏引用,成本只是改一处文件集合。第三是分发物与规范文档的漂移(W49):样板的决策记录文件头发给每个新用户,`protocol-spec.md` 的退出码表缺一条。W47、W48 只动 tests,走 cover;W49 要 dev 改样板与规范文档,走 bug。
+- 已否决: 这一轮带上开放条目第 7 条 —— 退出码撞码只出现在手动的 `--no-baseline` 路径,CI 的周跑走默认路径;第 2 条 —— 缓存只影响快慢,不影响结论;第 14 条 —— 66 处裸坐标机械但量大,单独一轮;「定位重框」第 6 条 —— 要编辑既有 ADR,与追加式纪律冲突,得人类先裁。
+- 影响路径: `tests/conformance/test_v1_review_evidence.py`, `tests/conformance/test_v1_report.py`, `tests/conformance/test_docs_consistency.py`, `examples/demo-project/docs/DECISIONS.md`, `docs/protocol-spec.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
