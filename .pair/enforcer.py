@@ -247,6 +247,10 @@ DEFAULT_STATE = {
     # (W13 口径)—— 实现是在那一刻被审过的。老状态里没有这两个键 = 不走捷径。
     "rebound_from": None,
     "reviewed_contract": None,
+    # W44:最近一次工作项完成时全量套件红没红。PLAN 全部完成之后,status / whose-turn / handoff 的
+    # 完成提示读它 —— 否则 W43 只管住了完成那一次,之后照旧说"请向人类报告项目完成"。
+    # 老状态里没有这个键 = 不红,存量项目零成本升级。
+    "last_full_failed": False,
 }
 
 # `- [ ] **W1** [bug] — 标题`,类型可省略(缺省 feature)
@@ -1511,6 +1515,11 @@ def cmd_status(root, cfg, args):
             print("[简报] 写不出 %s:%s(不影响本回合)"
                   % (BRIEF_REL, str(exc).replace("\n", " ")))
 
+    if all_done and state.get("last_full_failed"):
+        print()
+        print(">>> %s 里的工作项都已勾选,但最后一次全量套件是红的。<<<" % cfg["plan_file"])
+        print("项目算不算结束由人类决定:把全量套件红这件事报告给人类,不要宣布完成,不要继续认领新工作项。")
+        return 0
     if all_done:
         print()
         print(">>> %s 里的工作项已全部完成。<<<" % cfg["plan_file"])
@@ -2079,8 +2088,11 @@ def cmd_handoff(root, cfg, args):
     if me != owner:
         die("现在是 %s 的 %s 回合,不是你(%s)的。不要提交。" % (owner, phase, me))
     if plan_all_done(root, cfg):
-        die("%s 里的工作项已全部完成,协议已停止轮转。\n"
-            "请向人类报告项目完成。" % cfg["plan_file"])
+        die(("%s 里的工作项都已勾选,协议已停止轮转。\n"
+             "但最后一次全量套件是红的 —— 项目算不算结束由人类决定,不要宣布完成。"
+             if state.get("last_full_failed") else
+             "%s 里的工作项已全部完成,协议已停止轮转。\n"
+             "请向人类报告项目完成。") % cfg["plan_file"])
     if phase == "idle":
         die("还没有认领工作项,没有可交接的回合。先跑:\n"
             "  python3 %s claim <ID>\n工作项列在 %s 里。"
@@ -2438,6 +2450,17 @@ def cmd_handoff(root, cfg, args):
     state["rebound_from"] = phase if verdict == "changes" else None
     if phase == "review-impl" and verdict == "approve":
         state["reviewed_contract"] = worktree_sha(root, cfg["contract_file"])
+
+    # 工作项完成时跑一次全量套件。只报告不阻断 —— 范围外的代码这对结对
+    # 本来就无权修,阻断等于把它们锁死在一个自己解不开的局面里。
+    # W44:在 save_state 与提交**之前**跑,结果写进状态、随这一次提交落地。提交之后再补写,
+    # 状态文件就留在工作区里是改过的 —— 那正是 state_is_tampered 的定义,下一次交接会把记录还原掉。
+    full_failed = False
+    if finished_item and cfg.get("full_test_cmd"):
+        full_failed = not run_tests(root, cfg, cmd=cfg["full_test_cmd"],
+                                    log_rel=FULL_TESTLOG_REL)
+    if finished_item:
+        state["last_full_failed"] = full_failed
     save_state(root, state)
 
     # --- 裁判副本重钉 -----------------------------------------------------
@@ -2488,13 +2511,6 @@ def cmd_handoff(root, cfg, args):
         # 退回未暂存:它们留在工作区,不删 —— 不是 agent 写的,删不删是人类的事。
         git("reset", "-q", "--", *left_os, cwd=root)
     git("commit", "-q", "-m", "%s: %s" % (prefix, message), "-m", body, cwd=root)
-
-    # 工作项完成时跑一次全量套件。只报告不阻断 —— 范围外的代码这对结对
-    # 本来就无权修,阻断等于把它们锁死在一个自己解不开的局面里。
-    full_failed = False
-    if finished_item and cfg.get("full_test_cmd"):
-        full_failed = not run_tests(root, cfg, cmd=cfg["full_test_cmd"],
-                                    log_rel=FULL_TESTLOG_REL)
 
     push_failed = cfg.get("sync") and git("push", cwd=root, check=False) is None
 
@@ -2637,6 +2653,9 @@ def cmd_whose_turn(root, cfg, args):
         print("stop 尚未通过开工前校验,需要结对的一方先跑 verify-setup")
         return 0
     if plan_all_done(root, cfg):
+        if state.get("last_full_failed"):
+            print("stop %s 里的工作项都已勾选,但最后一次全量套件是红的,项目算不算结束由人类决定" % cfg["plan_file"])
+            return 0
         print("stop %s 里的工作项已全部完成" % cfg["plan_file"])
         return 0
     if state["changes_count"] >= DEADLOCK_LIMIT:
