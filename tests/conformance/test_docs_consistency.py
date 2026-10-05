@@ -15,6 +15,7 @@ import importlib.util
 import json
 import os
 import re
+import subprocess
 import unittest
 from pathlib import Path, PurePosixPath
 
@@ -210,6 +211,36 @@ def _load_pair():
 
 
 pair = _load_pair()
+
+
+def _load_pair():
+    spec = importlib.util.spec_from_file_location("pair_for_symbol_scope", PAIR_PY)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def symbol_ref_scope(root=REPO):
+    """符号引用检查扫的文件(W48):与 `pair.py` 的 `normative_docs` 同一个闭合定义 ——
+    被 git 跟踪的 `.md`,减去 `.pair/config.json` 里的记忆层(`notes_dir`、`decisions_file`)、评审目录(`shared_paths`)
+    与 `ignore_paths`。不另写一份枚举:第一版 `NORMATIVE` 是 33 份枚举,差集里有承重文档、`references/`、入口文件与样板。
+
+    **问不了这个仓库的 git 时返回 None**(W48 的 spec 回合带声明补):`mutation_check` 的基线跑在排除 `.git` 的隔离副本里,
+    在那里报错会让基线红、整个变异检查停下;拿到空集又会让检查静默恒真。调用方按 None skip —— 文档在变异检查里不被改动,不损失防护。
+    """
+    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=str(root),
+                         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    if top.returncode != 0 or Path(top.stdout.decode("utf-8").strip()).resolve() != Path(root).resolve():
+        return None
+    out = subprocess.run(["git", "ls-files", "-z", "--", "*.md"], cwd=str(root),
+                         stdout=subprocess.PIPE, check=True).stdout.decode("utf-8")
+    pair = _load_pair()
+    cfg = json.loads((Path(root) / ".pair" / "config.json").read_text(encoding="utf-8"))
+    excluded = list(cfg.get("shared_paths", [])) + list(cfg.get("ignore_paths", []))
+    if cfg.get("memory", True):
+        excluded += [p for p in (cfg.get("notes_dir"), cfg.get("decisions_file")) if p]
+    return [Path(root) / p for p in out.split("\0")
+            if p and not pair.matches_any(p, excluded)]
 
 
 def _rel(p):
@@ -470,13 +501,52 @@ class TestSymbolReferences(unittest.TestCase):
 
     # --- 对真实仓库的检查 -------------------------------------------
     def test_规范文档里没有行号形式的引用(self):
-        """迁移的驱动用例。每一处都给出应改成的符号,不用人去反查。"""
+        """迁移的驱动用例。每一处都给出应改成的符号,不用人去反查。
+        范围按 `symbol_ref_scope`(W48),不再只看 `NORMATIVE` 那 33 份。"""
+        scope = symbol_ref_scope()
+        if scope is None:
+            self.skipTest("本仓库不是 git 检出(mutation_check 的隔离副本排除 .git):问不了哪些 .md 被跟踪")
         bad = []
-        for path in NORMATIVE:
+        for path in scope:
             bad += check_symbol_refs(path.read_text(encoding="utf-8"),
                                      _rel(path))
         self.assertFalse(bad, "还有行号形式的引用(或引用有问题):\n  "
                               + "\n  ".join(bad))
+
+    # --- W48:扫描范围与 normative_docs 同一个闭合定义 -----------------
+    def _scope_rels(self):
+        scope = symbol_ref_scope()
+        if scope is None:
+            self.skipTest("本仓库不是 git 检出:问不了哪些 .md 被跟踪")
+        return {_rel(p) for p in scope}
+
+    def test_范围含原先枚举之外的规范性文档(self):
+        """差集里的承重文档、随包分发的 references、入口文件、样板文档都要纳入。"""
+        rels = self._scope_rels()
+        for rel in (".agents/skills/pair-protocol/references/brownfield.md", "docs/pair-run/PLAN.md",
+                    "docs/pair-run/CONTRACT.md", "AGENTS.md", "examples/demo-project/docs/CONTRACT.md"):
+            self.assertIn(rel, rels)
+
+    def test_范围不含记忆层与评审目录(self):
+        rels = self._scope_rels()
+        self.assertNotIn("docs/pair-run/DECISIONS.md", rels)
+        self.assertFalse([r for r in rels if r.startswith("docs/pair-run/notes/")])
+        self.assertFalse([r for r in rels if r.startswith("docs/reviews/")])
+
+    def test_新纳入的文档里写了不存在的符号_会被检出(self):
+        """判据原样:往 `references/brownfield.md` 写一处不存在的符号 → 检出;同一句写进笔记 → 笔记不在范围里。"""
+        bad_ref = "\n见 `tests/conformance/harness.py#没有这个符号`\n"
+        rels = self._scope_rels()
+        self.assertIn(".agents/skills/pair-protocol/references/brownfield.md", rels)
+        self.assertEqual(len(check_symbol_refs(bad_ref, "references/brownfield.md")), 1)
+        self.assertNotIn("docs/pair-run/notes/W1.md", rels)
+
+    def test_问不了_git_时返回_None_而不是报错或空集(self):
+        """⑬:变异检查的隔离副本里没有 .git。"""
+        import tempfile, shutil
+        d = Path(tempfile.mkdtemp(prefix="nogit-scope-"))
+        self.addCleanup(shutil.rmtree, d, True)
+        self.assertIsNone(symbol_ref_scope(d))
 
     # --- 作弊场景:直接喂字符串,不依赖真实文档 -----------------------
     def _one(self, text):
