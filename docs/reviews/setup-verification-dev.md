@@ -352,3 +352,11 @@ tester 那一份 `other`。这里只记我重读时挑出的、改掉的,以及�
 - **符号引用检查与规范性文档同一个范围**(W48,cover):立项时用 `check_symbol_refs` 扫过差集 19 份(不含评审目录与笔记),只有记忆层的 `DECISIONS.md` 有 11 处,
   按定义排除;本轮新写进 `PLAN.md`、`CONTRACT.md` 的段落也重扫过,没有坏引用。
 - **样板决策记录与退出码表不漂移**(W49,bug):用 `difflib` 比过样板 `DECISIONS.md` 与 `DECISIONS_SKELETON`,只差文件头那一段;我 impl 回合改样板与 `protocol-spec.md` §9。
+
+## 补记(W48 spec 回合带声明补「问不了本仓库 git 时 skip」之后重跑)
+
+**起草人自审:否(本段)** —— 这一段是 tester 补的,我没参与。
+
+- 同意。W48 的 review-test 里我核过:变异缓存里没有任何变异以符号引用这组用例为抓手,隔离副本里 skip 不会让哪个变异变成存活;本地与 CI 都是 git 检出,这组照常跑。
+  这一段与第十四轮 W30 的处理同形(问不了 git 时 skip 并写明理由,不报错、不拿空集)。
+- 本轮剩下的 W49 一节没变:样板 `DECISIONS.md` 与 `DECISIONS_SKELETON` 逐字节一致、`protocol-spec.md` §9 补全量红那一行,我 impl 回合改这两份文件。
