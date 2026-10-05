@@ -1,9 +1,9 @@
 {
   "round": 44,
-  "phase": "spec",
+  "phase": "review-test",
   "item": "W47",
   "item_type": "cover",
-  "last_actor": "dev",
+  "last_actor": "tester",
   "changes_count": 1,
   "completed_items": [
     "W2",
@@ -58,8 +58,8 @@
     "tester": "5244ab8b7f07b280c07cfbf7e573b062a5a1d57f",
     "dev": "5244ab8b7f07b280c07cfbf7e573b062a5a1d57f"
   },
-  "after_rebound": true,
-  "rebound_from": "review-test",
+  "after_rebound": false,
+  "rebound_from": null,
   "reviewed_contract": "3b8279e447a24a3db2dde7e096043baedb099681",
   "last_full_failed": false
 }

@@ -117,11 +117,18 @@ class TestBriefAsksForDisagreement(PairTestCase):
 
     def test_评审实现的简报要求两个方向都拿证据(self):
         out = self.brief("review-impl", "tester")
+        # 原有的三句保留(W47 review-test 打回):"先找问题"正是要求分歧的那一半,没有别的用例守它。
         self.assertIn("裁决必须带证据", out)
+        self.assertIn("先找问题", out)
+        self.assertIn("--checked", out)
         self.assertIn("指到路径:行号", out)
         self.assertIn("同样失真", out)
 
     def test_评审测试的简报要求两个方向都拿证据(self):
         out = self.brief("review-test", "dev")
+        # 原有的三句保留(W47 review-test 打回):"先找问题"正是要求分歧的那一半,没有别的用例守它。
+        self.assertIn("裁决必须带证据", out)
+        self.assertIn("先找问题", out)
+        self.assertIn("--checked", out)
         self.assertIn("指到路径:行号", out)
         self.assertIn("同样失真", out)
