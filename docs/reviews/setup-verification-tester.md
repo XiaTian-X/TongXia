@@ -558,3 +558,7 @@ spec 回合 tester 写用例(红),impl 回合 dev 只能改 `contributing.md`,`r
 - 「用例要守它声称守的性质」(W47):`cover`,只动 tests;判据要的三个探针(删"同样失真"那句、改"互相点头"散文、去掉 `!!`)我在 spec 回合手工做。
 - 「样板决策记录与退出码表不漂移」(W49):`bug`,dev 改样板 `DECISIONS.md` 与 `protocol-spec.md`,用例两条今天红;变异点在 `DECISIONS_SKELETON` 字面上,
   我在 spec 回合直接登记。`make-demo.py` 先复制样板再跑 `init`、`init` 跳过已存在文件 —— 样板不自愈属实。
+
+## 补记(W47 完成后、认领 W48 之前重跑)
+
+上次校验之后契约没有变化(W47 只动了 tests,契约未改)。第二十七轮补记里的 ⑬(W48 在隔离副本里问不到 git)原样成立,在 W48 的 spec 回合带声明补。
