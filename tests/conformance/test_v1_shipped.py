@@ -267,6 +267,23 @@ class TestAllEntryFilesMatchInit(unittest.TestCase):
         self.assertEqual(drifted, [], "样板里这些入口文件与 init 写出的不一致:%s" % drifted)
 
 
+class TestDemoDecisionsAndExitCodes(unittest.TestCase):
+    """W49:样板决策记录与退出码表不漂移。
+
+    样板 `docs/DECISIONS.md` 的文件头仍是旧口径;`make-demo.py` 先复制样板、再跑 `init`,而 `init` 对已存在的文件一律跳过,
+    重跑不会自愈 —— 新用户拿到的就是旧头。`protocol-spec.md` §9 退出码表只有推送失败那一条码 2,缺全量套件红。"""
+
+    def test_样板决策记录与骨架逐字节一致(self):
+        self.assertEqual((DEMO / "docs" / "DECISIONS.md").read_text(encoding="utf-8"), PAIR.DECISIONS_SKELETON)
+
+    def test_协议规格的退出码表里码_2_有全量套件那一行(self):
+        spec = (REPO / "docs" / "protocol-spec.md").read_text(encoding="utf-8")
+        section = spec.split("## 9. 退出码", 1)[1].split("\n## ", 1)[0]
+        rows = [l for l in section.splitlines() if re.match(r"\|\s*2\s*\|", l)]
+        self.assertTrue(rows, "§9 表里没有码 2 的行")
+        self.assertTrue([r for r in rows if "全量" in r], "§9 表里码 2 的行没有一行说全量套件:%s" % rows)
+
+
 class TestWhoseTurn(unittest.TestCase):
     """驱动器只认这一行输出,所以它的形状是接口,不是随手打印。"""
 
