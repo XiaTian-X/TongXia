@@ -968,7 +968,7 @@ dev 只能改块外。这需要一个 Rust 感知的 diff 分析器 —— 成�
 这一轮只改了文档与脚本文案的**定位叙述**,门禁一条没动。下面几处是复审时
 发现、但本轮没有处理的东西,记在这里免得下次重新发现。
 
-### 1. `test_v1_review_evidence.py` 的类名与断言已经跟不上 ADR-023
+### 1. `test_v1_review_evidence.py` 的类名与断言已经跟不上 ADR-023  ✅ 已解决(第二十七轮 W47)
 
 `tests/conformance/test_v1_review_evidence.py#TestBriefAsksForDisagreement`
 的 docstring 写的是"评审简报是正向要求,
@@ -981,7 +981,7 @@ dev 只能改块外。这需要一个 Rust 感知的 diff 分析器 —— 成�
 路径:行号`);或者把类名改成 `TestBriefAsksForEvidenceInBothDirections`
 并同步 docstring。两者都要动 `tests/`,本轮禁改。
 
-### 2. `test_v1_report.py` 钉住的是散文,不是机制
+### 2. `test_v1_report.py` 钉住的是散文,不是机制  ✅ 已解决(第二十七轮 W47)
 
 `tests/conformance/test_v1_report.py` 的模块 docstring 仍是旧口径
 ("这个命令**唯一的存在理由**"),与 `pair.py` 里 `cmd_report` 的新
@@ -1025,7 +1025,7 @@ ADR-006、ADR-015 里的同类表述按追加式纪律不改写,由 ADR-022 在�
 本身也在 `packages` 里。这三处会把旧定位持续扩散到每一个新接入的项目。
 第四处在测试的 docstring 里,不随包分发,优先级最低。
 
-### 4. `examples/demo-project/docs/DECISIONS.md` 的文件头已经漂移
+### 4. `examples/demo-project/docs/DECISIONS.md` 的文件头已经漂移  ✅ 已解决(第二十七轮 W49)
 
 `:6-7` 仍是旧骨架的说法("共享推理会让两边想到一块去,而互相点头正是
 这套机制要防的事"),与 `pair.py` 里新的 `DECISIONS_SKELETON`("共享推理
@@ -1037,7 +1037,7 @@ ADR-006、ADR-015 里的同类表述按追加式纪律不改写,由 ADR-022 在�
 连重跑的机会都没有。**必须直接改样板文件。** 触达面已收敛:`examples/`
 不进 wheel(`packages` 里只有 `cli/pair_bootstrap`),消费项目拿不到它。
 
-### 5. `docs/protocol-spec.md` 的退出码表缺"全量套件红"那一条码 2
+### 5. `docs/protocol-spec.md` 的退出码表缺"全量套件红"那一条码 2  ✅ 已解决(第二十七轮 W49)
 
 §9 的退出码表(`:380` 起)只列了 push 失败那一条码 2(`:386`)。
 `docs/command-reference.md` 本轮已经补上"工作项完成那一回合全量套件红"
@@ -1524,7 +1524,7 @@ W6 把带文件名的引用全部迁到了 `` `<路径>#<符号>` ``,但检查�
 (那条说的是**跑**,这条说的是**写**)。
 
 
-### 16. 符号引用检查的扫描范围比「规范性文档」小 18 份
+### 16. 符号引用检查的扫描范围比「规范性文档」小 18 份  ✅ 已解决(第二十七轮 W48)
 
 W6 的符号引用检查扫 `test_docs_consistency.py` 的 `NORMATIVE`(**17 份**)。
 第四轮给「规范性文档」定了一个闭合定义(所有 `.md` 减记忆层与评审目录,
