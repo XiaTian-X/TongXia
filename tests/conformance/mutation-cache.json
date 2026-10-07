@@ -1,5 +1,5 @@
 {
-  "baseline": "1369f0be3755c458",
+  "baseline": "a29089ace9b71228",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -9,6 +9,9 @@
     ],
     "CURSOR_MDC 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
+    ],
+    "DECISIONS_SKELETON 改了而样板没跟上": [
+      "test_v1_shipped.TestDemoDecisionsAndExitCodes.test_样板决策记录与骨架逐字节一致"
     ],
     "OS_FILES 退回按形状筛": [
       "test_v1_os_files_list.TestExplicitList.test_往_GITIGNORE_LINES_加一个裸文件名_它不算系统文件"
