@@ -659,3 +659,8 @@
 - 理由: dev 的开工前校验失效,真正卡住的是下一次 `claim`(W19)—— 那时 dev 已经交接完、离场了,解开它要人类把 dev 单独叫回来。dev 在完成交接那一刻其实看得到"校验已不作数(不阻断)"的提示,但只提示不阻断的东西会被略过(第二十七轮实测)。所以拦在 dev 的完成交接上:那时基线是绿的,`verify-setup` 当场能过,拒绝的代价是一条命令,不是一次人类往返。tester 完成的工作项拦不得 —— 那是 dev 的校验,tester 解不开,拒绝只会把它卡死;只提示。拒绝放在抓改动与提交之前(先提交再拒等于没拦),判在 W17 捷径之前也安全(捷径不产生 DONE)。登记为 `done-dev-verified`,与 `contract-change-now` 同类放在 `ENFORCEMENTS` 的扩展里,不进带散文计数的 `HANDOFF_INVARIANTS`。review 时另探:去掉门禁开关条件 → 既有 105 条红(验证关着的项目全被误拦);不看执行者 → tester 完成那条红。
 - 已否决: 放宽 `claim` 的两角色要求 —— 推翻 W19。替 dev 自动重跑 `verify-setup` —— 审查结论只能本人写。只把提示加粗 —— 第二十七轮证明提示会被略过。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_done_dev_stale.py`, `tests/conformance/mutation_check.py`, `docs/architecture.md`, `docs/troubleshooting.md`
+## W51 — 给用户的几条出路要各自走得通,写进提示的命令要真跑一遍
+
+- 理由: `make-demo.py` 的 git 三步原先 `check=True`,失败只给堆栈。W51 改成点名哪一步、给 git 原话(两路都给,钩子可能把原因打在标准输出)、说目录留着。第一版 commit 失败时的提示把两条出路混在一句里:"只在这个目录里关掉签名"紧跟"修好之后删掉目录再重跑"—— 照做,配置随目录一起删掉,commit 再失败一次。tester 在 review-impl 读出来打回;改成两条分开说:修好原因(全局配置或环境变量)删目录重跑,或就在这个目录里做完最后一步(`init`、`add` 已成功、文件已暂存)。dev 与 tester 都照"就地做完"那条手工走了一遍,提交成功。今后提示里给出的命令序列,交接前在一个真实失败的场景里照着走一遍;几条出路并列时,检查每条是否依赖另一条会撤销的状态。`init`、`add` 不猜原因 —— 多半是目录或磁盘问题,给原话比猜强。
+- 已否决: 出错就删掉目标目录 —— 用户看不到现场;替用户关掉签名 —— 想签名的人会静默失去签名(此前已定)。
+- 影响路径: `examples/make-demo.py`, `tests/conformance/test_v1_make_demo_git_fail.py`

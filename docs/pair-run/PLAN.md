@@ -701,7 +701,7 @@
     `require_setup_verification` 为假时不检查;④不推进到 DONE 的交接不受影响;⑤变异点:拆掉拒绝、tester 完成时不提示,各有用例红
   - 对应契约:`docs/pair-run/CONTRACT.md` → 完成工作项时 dev 的校验已失效要当场处理
 
-- [ ] **W51** [bug] — `make-demo.py` 里 git 失败时给出说明,不甩原始堆栈
+- [x] **W51** [bug] — `make-demo.py` 里 git 失败时给出说明,不甩原始堆栈
   - **来源**:路线图开放条目第 4 条。`make-demo.py` 的 `git init`/`add`/`commit` 用 `check=True`,失败时用户看到一整段 `CalledProcessError` 堆栈,
     看不到是哪一步、git 说了什么、多半是什么原因;同一个文件在目标目录非空时却有友好提示
   - 验收标准:①`init`、`add`、`commit` 任一步失败:退出码非 0,输出点名是哪一步、git 的原始输出,给出最常见原因(git 身份没配、签名配置)与下一步;
