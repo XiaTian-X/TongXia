@@ -1235,7 +1235,9 @@ def main(argv=None):
                 # 运行器自身出问题时(导入失败、崩溃),一条 FAIL 行都抓不到。
                 # 这时候只报"失败清单为空"反而像绿的,把原始输出兜底打出来。
                 print("\n预检运行器输出:\n%s" % text.rstrip())
-            return 2
+            # W52:3,不是 2 —— 2 是 argparse 的用法错误(`ap.error` 走 SystemExit(2)),
+            # 只读退出码的调用方要分得清"副本环境不绿、拒绝归因"与"命令行写错了"。
+            return 3
     else:
         if run_baseline(args.jobs) != 0:
             return 1
