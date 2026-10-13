@@ -995,6 +995,15 @@ MUTATIONS = [
     ('DECISIONS_SKELETON 改了而样板没跟上',
      '> 不是让两边想到一块去 —— 共享推理会让两份产出趋同，合起来少一道验收。',
      '> 不是让两边想到一块去 —— 共享推理会让两份产出趋同，合起来少一道验收(改过)。'),
+
+    # W50 dev 完成工作项时自己的校验必须作数(review-impl 登记)。
+    ('dev 完成时不拒失效校验',
+     '    if target == "DONE" and me == "dev" and cfg["require_setup_verification"]:\n',
+     '    if False:\n'),
+
+    ('tester 完成时不提示 dev 重跑',
+     '        if me != "dev" and cfg["require_setup_verification"] \\\n',
+     '        if False and cfg["require_setup_verification"] \\\n'),
 ]
 
 # unittest 的失败行有两种形态:

@@ -1,5 +1,5 @@
 {
-  "baseline": "a29089ace9b71228",
+  "baseline": "86efe65fb0732dd5",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -24,6 +24,9 @@
     ],
     "dev 在 idle 看到认领说明": [
       "test_v1_both_roles.TestWhoseTurnAtIdle.test_dev_的_status_归属那一行是_dev_且给出重跑指引"
+    ],
+    "dev 完成时不拒失效校验": [
+      "test_v1_done_dev_stale.TestDevCompletionRefused.test_dev_重跑之后同一条放行_tester_随后能认领"
     ],
     "gitignore 不含 .DS_Store": [
       "test_v1_os_files.TestIgnoredOnceGitignoreHasThem.test_跟上之后_DS_Store_不挡交接"
@@ -117,6 +120,9 @@
     ],
     "status 头部不标只追加": [
       "test_v1_review_append.TestStatusMarksAppendOnly.test_执行者头部那一行也标出只追加"
+    ],
+    "tester 完成时不提示 dev 重跑": [
+      "test_v1_done_dev_stale.TestTesterCompletionHints.test_tester_完成时放行_并提示_dev_先重跑"
     ],
     "verify-setup 不警告 refactor 缺保护测试": [
       "test_v1_brownfield.TestRefactorNeedsSafetyNet.test_verify_setup_对没声明保护测试的_refactor_照旧警告"
