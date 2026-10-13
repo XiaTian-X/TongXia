@@ -152,6 +152,7 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "roadmap-basis",         # 路线图有改写时,依据必须指向一份真实产物
     "contract-change-basis", # 改承重文件时,声明必须指向一份真实产物
     "contract-change-now",   # 带声明的那次交接必须当场留决策(不是等到 DONE)
+    "done-dev-verified",     # dev 完成工作项时自己的开工前校验必须作数(W50)
 )
 
 
@@ -2142,6 +2143,18 @@ def cmd_handoff(root, cfg, args):
             % (state["item_type"], phase))
     target = flow["transitions"][(phase, verdict)]
 
+    # W50:dev 执行、会完成工作项的交接,dev 的开工前校验已不作数就当场拒绝。工作项进行中契约变过之后两个角色的
+    # 校验都失效;tester 那一半在下一次认领时自愈,dev 那一半在 cover 里没有 impl 回合 —— 不在这里拦住,
+    # 就要等 tester 认领被拒、人类再把 dev 单独叫回来(第二十七轮 W48 之后实际发生过)。这时基线是绿的,
+    # verify-setup 当场就能过。放在抓改动与提交之前:先提交再拒等于没拦。
+    if target == "DONE" and me == "dev" and cfg["require_setup_verification"]:
+        dev_stale = stale_verification(root, cfg, state, "dev")
+        if dev_stale:
+            die("拒绝交接 —— 这次交接会完成工作项,而你(dev)的开工前校验已不作数:\n\n%s\n\n"
+                "就这样完成的话,tester 认领下一项会被拒(两个角色的校验都要作数),\n"
+                "得等人类把你单独叫回来。现在基线是绿的:先重跑上面那条 verify-setup,再交接。"
+                % dev_stale)
+
     entries = changed_entries(root)
     # W35:落在孤儿位置以外的未跟踪系统文件,这一回合当它不存在 —— 不进写权限边界、不进提交。
     # 下面每一道判定看的都是 `entries`,所以在这里一次拿掉,不在每道判定里各写一遍。
@@ -2520,6 +2533,12 @@ def cmd_handoff(root, cfg, args):
     print("  下一阶段: %s  → 归属: %s" % (next_phase, PHASE_OWNER[next_phase]))
     if finished_item:
         print("  工作项「%s」已完成并双向通过。" % finished_item)
+        # W50 的另一半:tester 完成的工作项(refactor 的 review-impl),dev 的校验失效也解不开,只能说清楚。
+        if me != "dev" and cfg["require_setup_verification"] \
+                and stale_verification(root, cfg, state, "dev"):
+            print("  但 dev 的开工前校验已不作数(工作项进行中契约变过):认领下一项之前,"
+                  "要先让 dev 重跑\n      PAIR_ROLE=dev python3 %s verify-setup --drafter self|other"
+                  % PROG_HINT)
     if left_os:
         print()
         print("  以下是操作系统写的文件(有人用文件管理器看过这个目录),没有提交、留在工作区:")
