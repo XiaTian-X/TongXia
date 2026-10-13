@@ -708,7 +708,7 @@
     **不出现** `Traceback`;②成功路径输出不变;③失败时已经建出的目标目录留给用户看,不删
   - 对应契约:`docs/pair-run/CONTRACT.md` → make-demo 里 git 失败要说明白
 
-- [ ] **W52** [feature] — `mutation_check` 预检拒绝改用退出码 3,把 2 留给 argparse
+- [x] **W52** [feature] — `mutation_check` 预检拒绝改用退出码 3,把 2 留给 argparse
   - **来源**:路线图开放条目第 7 条。`--no-baseline` 被预检拒绝与 argparse 用法错误都退 2,只读退出码分不清"基线不绿、拒绝归因"与"命令行写错了";
     `docs/contributing.md` 现在靠"看 stderr 有没有 `usage:`"区分
   - 验收标准:①预检拒绝退出码 3;argparse 用法错误照旧 2;其余退出码不变;②`docs/contributing.md` 的退出码说明改成现在的样子(去掉"两种 2、看 usage"那段);

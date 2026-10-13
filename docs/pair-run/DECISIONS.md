@@ -664,3 +664,8 @@
 - 理由: `make-demo.py` 的 git 三步原先 `check=True`,失败只给堆栈。W51 改成点名哪一步、给 git 原话(两路都给,钩子可能把原因打在标准输出)、说目录留着。第一版 commit 失败时的提示把两条出路混在一句里:"只在这个目录里关掉签名"紧跟"修好之后删掉目录再重跑"—— 照做,配置随目录一起删掉,commit 再失败一次。tester 在 review-impl 读出来打回;改成两条分开说:修好原因(全局配置或环境变量)删目录重跑,或就在这个目录里做完最后一步(`init`、`add` 已成功、文件已暂存)。dev 与 tester 都照"就地做完"那条手工走了一遍,提交成功。今后提示里给出的命令序列,交接前在一个真实失败的场景里照着走一遍;几条出路并列时,检查每条是否依赖另一条会撤销的状态。`init`、`add` 不猜原因 —— 多半是目录或磁盘问题,给原话比猜强。
 - 已否决: 出错就删掉目标目录 —— 用户看不到现场;替用户关掉签名 —— 想签名的人会静默失去签名(此前已定)。
 - 影响路径: `examples/make-demo.py`, `tests/conformance/test_v1_make_demo_git_fail.py`
+## W52 — 退出码一码一义;"看输出区分"只是撞码时的权宜
+
+- 理由: `mutation_check` 的预检拒绝与 argparse 用法错误都退 2,`contributing.md` 只能写"看 stderr 有没有 `usage:`"来区分 —— 那是文档在替代码补一个本该由代码给出的区分。当时不改,是怕动 `mutation_check.py` 让缓存基线指纹失配;那只是一次重跑的成本。W52 把预检拒绝改成 3,`contributing.md` 只留一句来历。分工照第二十三轮 W40:`mutation_check.py` 在 tester 路径,tester 在 spec 回合实现并写用例,dev 改文档、在 review-test 评审代码。dev 改文档时 grep 出用例没钉的第三处(指纹闸那段的 `return 2`)一并改了。review 时探过:退回 `return 2`、拒绝改成 `return 1` 都红两条(有失败项、运行器崩溃两种拒绝都在),用法错误照旧 2 且不走到预检。今后新增退出码时,一个码只表达一件事;做不到时在决策里写明欠账,而不是只在文档里教人怎么分辨。
+- 已否决: 保持文档口径 —— 每个读退出码的调用方都要自己实现"看 usage"。把用法错误也改掉 —— 2 是 argparse 的惯例,改它反而让人意外。
+- 影响路径: `tests/conformance/mutation_check.py`, `tests/conformance/test_mutation_exit_codes.py`, `docs/contributing.md`
