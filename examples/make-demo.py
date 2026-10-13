@@ -102,21 +102,25 @@ def ensure_identity(target):
         subprocess.run(("git",) + args, cwd=target, check=True)
 
 
-# 每一步失败时最常见的原因。只给 commit 写:init 与 add 失败多半是目录或磁盘本身的问题,
-# 猜原因不如把 git 的原话给用户看。
-STEP_HINTS = {
-    "commit": ("最常见的两个原因:\n"
-               "  - git 身份推不出来:git config --global user.name \"你的名字\"、"
-               "git config --global user.email \"你的邮箱\"\n"
-               "    (不想改全局配置,就带上 GIT_AUTHOR_NAME/GIT_AUTHOR_EMAIL/"
-               "GIT_COMMITTER_NAME/GIT_COMMITTER_EMAIL 环境变量跑这一次)\n"
-               "  - 配了 commit.gpgsign=true 却没有可用的签名密钥:配好密钥,"
-               "或者只在这个目录里 git config commit.gpgsign false"),
-}
+# commit 失败时的原因与出路(W51)。init 与 add 失败多半是目录或磁盘本身的问题,猜原因不如把 git 的原话给用户看,
+# 只说"目录留着,修好删掉再重跑"。commit 失败时 init 与 add 已经成功,目录可以直接用 —— 所以多给一条"就地做完":
+# 只在这个目录里改的配置,删目录重跑就没了,两条出路不能混着说(review-impl 打回过一次)。
+COMMIT_HINT = """最常见的两个原因:
+  - git 身份推不出来:git config --global user.name "你的名字"、git config --global user.email "你的邮箱"
+    (不想改全局配置,就带上 GIT_AUTHOR_NAME/GIT_AUTHOR_EMAIL/GIT_COMMITTER_NAME/GIT_COMMITTER_EMAIL 环境变量重跑)
+  - 配了 commit.gpgsign=true 却没有可用的签名密钥:把签名密钥配好
+目录 %(target)s 留着没删,两种接着走的办法:
+  - 修好上面的原因(全局配置或环境变量),删掉这个目录再重跑;
+  - 或者就在这个目录里做完最后一步,只影响这个目录、不用重跑(文件已经 add 过了):
+      cd %(target)s
+      git config user.name "你的名字" && git config user.email "你的邮箱"   # 身份推不出来时
+      git config commit.gpgsign false                                      # 没有签名密钥时
+      git commit -q -m "chore: 装上结对协议"
+"""
 
 
 def git_step(target, args):
-    """跑一步 git;失败时说清楚是哪一步、git 原话是什么、多半是什么原因,返回 False(W51)。
+    """跑一步 git;失败时说清楚是哪一步、git 原话是什么、怎么接着走,返回 False(W51)。
 
     原先三步都是 check=True,失败时用户看到的是一整段 CalledProcessError 堆栈 ——
     看不到是哪一步,也看不到 git 自己说了什么。已经建出来的目标目录不删,留给用户看。"""
@@ -125,12 +129,15 @@ def git_step(target, args):
     if proc.returncode == 0:
         return True
     step = args[0]
-    said = (proc.stderr or proc.stdout).decode("utf-8", "replace").strip() or "(git 没有输出)"
+    # 两路都给:commit 钩子可能把原因打在标准输出上。
+    said = "\n".join(b.decode("utf-8", "replace").strip()
+                     for b in (proc.stderr, proc.stdout) if b.strip()) or "(git 没有输出)"
     sys.stderr.write("git %s 失败(退出码 %d)。git 的原话:\n  %s\n"
                      % (step, proc.returncode, said.replace("\n", "\n  ")))
-    if step in STEP_HINTS:
-        sys.stderr.write(STEP_HINTS[step] + "\n")
-    sys.stderr.write("已经建出来的目录留着没删:%s\n修好之后删掉它再重跑。\n" % target)
+    if step == "commit":
+        sys.stderr.write(COMMIT_HINT % {"target": target})
+    else:
+        sys.stderr.write("已经建出来的目录留着没删:%s\n修好之后删掉它再重跑。\n" % target)
     return False
 
 
