@@ -360,3 +360,12 @@ tester 那一份 `other`。这里只记我重读时挑出的、改掉的,以及�
 - 同意。W48 的 review-test 里我核过:变异缓存里没有任何变异以符号引用这组用例为抓手,隔离副本里 skip 不会让哪个变异变成存活;本地与 CI 都是 git 检出,这组照常跑。
   这一段与第十四轮 W30 的处理同形(问不了 git 时 skip 并写明理由,不报错、不拿空集)。
 - 本轮剩下的 W49 一节没变:样板 `DECISIONS.md` 与 `DECISIONS_SKELETON` 逐字节一致、`protocol-spec.md` §9 补全量红那一行,我 impl 回合改这两份文件。
+
+## 补记(第二十八轮 W50–W52 立项之后重跑)
+
+**起草人自审:是** —— 三节都是我立项时代笔的,证明力打折,以 tester 那份为准。
+
+- **完成工作项时 dev 的校验已失效要当场处理**(W50):判据能写断言 —— cover 项里改契约后 dev 的 approve 被拒、含 `verify-setup`;重跑后放行、tester 随后能认领。
+  读法:"会推进到 DONE"按 `handoff` 算出的目标阶段判,不按 verdict 判;拒绝要放在提交之前(不能先提交再拒)。tester 完成的情形用 refactor 项的 review-impl。
+- **make-demo 里 git 失败要说明白**(W51):判据靠 PATH 上的假 `git` 让某一步失败,其余参数转给真 git;我改 `examples/make-demo.py`。
+- **变异检查的预检拒绝用退出码 3**(W52):`mutation_check.py` 在 tester 路径,我只改 `contributing.md` 两处(第 108 行附近"以退出码 2 拒绝执行"与退出码那一段)。
