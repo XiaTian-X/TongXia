@@ -704,5 +704,102 @@ class TestLoadBearingDocHeaders(unittest.TestCase):
                     "%s 的开头没有点名 `--contract-change` —— 读的人不知道"
                     "现在怎么改它。开头几行:\n%s" % (rel, head))
 
+
+# W53:规范性文档说的"最大缺口"要指向仍开放的路线图条目。读法见契约本节「读法」(spec 回合带声明补):
+# 段内拼行;引号里的是引述,先去掉;"指向"取"最大缺口"之后、到句末标点为止的第一个条目编号。
+LDQ, RDQ, LCQ, RCQ, CHECK_MARK = chr(0x201C), chr(0x201D), chr(0x300C), chr(0x300D), chr(0x2705)
+_QUOTED = re.compile('"[^"]*"|%s[^%s]*%s|%s[^%s]*%s' % (LDQ, RDQ, RDQ, LCQ, RCQ, RCQ))
+_GAP_POINTER = re.compile(r"最大缺口[^。;;!?]*?(P\d+-\d+)")
+
+
+def biggest_gap_pointers(text):
+    """`text` 里"最大缺口"指向的条目编号,按出现顺序。"""
+    out = []
+    for para in re.split(r"\n\s*\n", text):
+        joined = _QUOTED.sub("", re.sub(r"\s*\n\s*", "", para))
+        out += [m.group(1) for m in _GAP_POINTER.finditer(joined)]
+    return out
+
+
+def roadmap_item_done(improvements, item):
+    """路线图条目 `item` 的标题带不带 ✅;找不到这个标题返回 None。"""
+    m = re.search(r"(?m)^#+ %s(?![\d-]).*$" % re.escape(item), improvements)
+    return None if m is None else (CHECK_MARK in m.group(0))
+
+
+def biggest_gap_violations(docs, improvements):
+    """`docs`:{相对路径: 文本}。返回 [(路径, 条目, 原因)]。"""
+    bad = []
+    for rel, text in sorted(docs.items()):
+        for item in biggest_gap_pointers(text):
+            done = roadmap_item_done(improvements, item)
+            if done is None:
+                bad.append((rel, item, "路线图里没有这个条目"))
+            elif done:
+                bad.append((rel, item, "这个条目已标 ✅"))
+    return bad
+
+
+class TestBiggestGapPointsToOpenItem(unittest.TestCase):
+    """契约「文档说的最大缺口要指向仍开放的条目」(W53)。"""
+
+    def setUp(self):
+        self.improvements = (REPO / "docs" / "improvements.md").read_text(encoding="utf-8")
+
+    def scope_texts(self):
+        files = symbol_ref_scope()
+        if files is None:
+            self.skipTest("问不了本仓库的 git(mutation_check 的隔离副本排除 .git):范围无从判定。文档在变异检查里不被改动。")
+        return {_rel(p): p.read_text(encoding="utf-8") for p in files}
+
+    def test_规范性文档里的最大缺口都指向仍开放的条目(self):
+        bad = biggest_gap_violations(self.scope_texts(), self.improvements)
+        self.assertEqual(bad, [], "\n".join("%s:最大缺口指向 %s —— %s" % b for b in bad))
+
+    def test_design_philosophy_仍然点出最大缺口(self):
+        """删掉那句不算修好:契约要它指向一个仍开放的条目。"""
+        text = (REPO / "docs" / "design-philosophy.md").read_text(encoding="utf-8")
+        self.assertTrue(biggest_gap_pointers(text), "design-philosophy.md 里没有一处'最大缺口'指向路线图条目")
+
+    def test_把被指向的条目标成已落地_又红(self):
+        """契约判据:将来那个条目落地时,用例提醒改文档。拿今天 design-philosophy 指向的条目现场标 ✅。"""
+        text = (REPO / "docs" / "design-philosophy.md").read_text(encoding="utf-8")
+        items = biggest_gap_pointers(text)
+        if not items:
+            self.fail("前提:design-philosophy.md 里要有一处指向")
+        item = items[0]
+        marked = re.sub(r"(?m)^(#+ %s(?![\d-]).*)$" % re.escape(item), r"\1  " + CHECK_MARK + " 已落地",
+                        self.improvements, count=1)
+        self.assertNotEqual(marked, self.improvements, "前提:路线图里要有 %s 的标题" % item)
+        self.assertIn(("design-philosophy.md", item),
+                      [(Path(r).name, i) for r, i, _ in biggest_gap_violations({"docs/design-philosophy.md": text}, marked)])
+
+
+class TestBiggestGapReading(unittest.TestCase):
+    """读法的几格(契约「读法」):各自用一段造出来的文字钉住。"""
+
+    def test_同一句里的条目编号算指向(self):
+        self.assertEqual(biggest_gap_pointers("这是已知的最大缺口,见 improvements.md 的 P0-2。"), ["P0-2"])
+
+    def test_折行不影响(self):
+        self.assertEqual(biggest_gap_pointers("这是已知的最大缺口,见\nimprovements.md 的 P0-2。"), ["P0-2"])
+
+    def test_引号里的是引述_不算(self):
+        for q in ('"这是已知的最大缺口,见 P0-2"', LDQ + "这是已知的最大缺口,见 P0-2" + RDQ,
+                  LCQ + "这是已知的最大缺口,见 P0-2" + RCQ):
+            self.assertEqual(biggest_gap_pointers("文档原先写着%s,已过期。" % q), [], q)
+
+    def test_句末之后的编号不算(self):
+        self.assertEqual(biggest_gap_pointers("内容层是最大缺口。P0-2 早已落地。"), [])
+
+    def test_取第一个编号(self):
+        self.assertEqual(biggest_gap_pointers("最大缺口指向 P0-1(不是 P0-2)。"), ["P0-1"])
+
+    def test_标题判定(self):
+        imp = "## P0-1 用例级\n## P0-2 评审带证据  " + CHECK_MARK + " 已落地\n## P0-12 别的\n"
+        self.assertIs(roadmap_item_done(imp, "P0-1"), False)
+        self.assertIs(roadmap_item_done(imp, "P0-2"), True)
+        self.assertIsNone(roadmap_item_done(imp, "P0-9"))
+
 if __name__ == "__main__":
     unittest.main()

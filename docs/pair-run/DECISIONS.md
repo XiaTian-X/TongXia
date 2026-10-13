@@ -674,3 +674,8 @@
 - 理由: 剩下的开放条目里,对协议行为说了过期的话的规范文档排第一(W53):`design-philosophy.md` 说"没做到 evidence-grounded、最大缺口是 P0-2",P0-2 已落地多轮;同一节"打回绕四个回合"在 W17 之后也不对了。加一条能自我提醒的检查 —— "最大缺口"指向的条目一旦标 ✅ 就红,免得下一次落地时再过期。第二是变异缓存与设计的漂移和一句过强的注释(W54),不影响结论,但会让后来者以为不必复核;按第二十三轮 W40 的分工走 feature。
 - 已否决: 这一轮清掉开放条目第 14 条的裸坐标 —— 剩下的绝大多数在已解决条目的历史记录里,4 处在 ADR-023 里;与「定位重框」第 6 条一样撞"记录只追加"的纪律,交人类裁决。
 - 影响路径: `docs/design-philosophy.md`, `tests/conformance/test_docs_consistency.py`, `tests/conformance/mutation_check.py`, `tests/conformance/mutation-cache.json`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W53 — 扫文档里的说法时,引述不算文档自己的陈述
+
+- 理由: 「文档说的最大缺口要指向仍开放的条目」的范围是 W48 的闭合定义,`PLAN.md`、`CONTRACT.md`、`improvements.md` 都在里面,而它们描述这个问题时原样引了那句旧话。照"同一句里有最大缺口和条目编号"扫,`design-philosophy.md` 改好之后这三处仍指向已落地的 P0-2,用例永远红;按句号切也不够,PLAN 的工作项整条只有一两个句号。spec 回合带声明补「读法」:段内拼行、去掉引号里的引述、取"最大缺口"之后到句末标点为止的第一个条目编号。实扫:今天只有 `design-philosophy.md` 指向已落地条目,其余三份指向开放的 P0-1。另钉"design-philosophy 仍要有一处指向"(删掉那句不算修好),读法的每一格各用一段造出来的文字钉住。
+- 已否决: 把 `PLAN`/`CONTRACT`/`improvements` 排除出范围 —— 范围与 W48 同一个闭合定义,另开例外会让两条检查各管各的;只扫 `design-philosophy.md` —— 下一份文档写出过期的"最大缺口"时没人发现。
+- 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/test_docs_consistency.py`, `docs/design-philosophy.md`
