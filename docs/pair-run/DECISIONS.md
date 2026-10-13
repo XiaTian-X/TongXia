@@ -649,3 +649,8 @@
 - 理由: 样板 `docs/DECISIONS.md` 的文件头与 `DECISIONS_SKELETON` 漂开,是因为样板是某一时刻手写的,骨架后来改了口径;`init` 对已存在的文件跳过,`make-demo.py` 重跑也不会自愈。这次直接用 `pair.py` 的常量写出样板(骨架用全角标点,手抄最容易差一个字符),并加逐字节一致的用例与变异点 —— 与第十二轮 W28、第二十六轮 W46 对入口文件的处理同形。`protocol-spec.md` §9 的退出码表缺"全量套件红",而 `command-reference.md` 早已补上:同一件事写在两份文档里,先补的那份对,后补的那份漏;用例钉住了 §9 必须有那一行。review 时探过:样板头改回旧口径、删掉 §9 那一行、把它挪出 §9,各红对应一条。
 - 已否决: 让 `make-demo.py` 生成时覆盖样板的 `DECISIONS.md` —— 样板是被跟踪的出厂物,用户直接看的是仓库里那份。逐行比对 §9 与 `command-reference.md` 的退出码表 —— 两份的措辞各有侧重,钉"码 2 有一行说全量"就够。
 - 影响路径: `examples/demo-project/docs/DECISIONS.md`, `docs/protocol-spec.md`, `tests/conformance/test_v1_shipped.py`, `tests/conformance/mutation_check.py`
+## SETUP — 第二十八轮先修开放条目 50,再按严重程度挑第 4、7 条,人类裁决"先做第 50 条,再按严重程度挑下一批"
+
+- 理由: 条目 50 每出现一次就多一次人类往返,而它在 cover 项里必然出现;dev 的 `status` 当时其实打了"校验已不作数(不阻断)",没挡住 —— 只提示不阻断的东西会被略过(第六轮条目 20 的另一面)。修法放在完成交接上:dev 执行的完成交接拒绝,逼 dev 当场重跑(那时基线是绿的,`verify-setup` 能过);tester 执行的完成交接只能提示,因为那是 dev 的校验,tester 解不开。接着按严重程度挑:第 4 条是新用户第一个跑的脚本,出错时只给堆栈;第 7 条退出码撞码只在手动路径,但修法小、文档里已写好干净修法。第 7 条的改动在 tester 路径,照第二十三轮 W40 的分工走 feature。
+- 已否决: 让 `claim` 在 dev 校验失效时放行 —— 推翻 W19,两个角色读的契约可能不是同一份。只把 `status` 的提示加粗 —— 第二十七轮证明提示会被略过。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `examples/make-demo.py`, `tests/conformance/mutation_check.py`, `docs/contributing.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`

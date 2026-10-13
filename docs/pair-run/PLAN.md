@@ -685,3 +685,32 @@
   - 验收标准:①样板项目的 `docs/DECISIONS.md` 与 `DECISIONS_SKELETON` 逐字节一致(用例今天红);②`protocol-spec.md` §9 退出码表里码 2 的行覆盖全量套件红
     (用例今天红);③dev 改样板文件与规范文档,不改 `pair.py`;④变异点:改 `DECISIONS_SKELETON` 而样板没跟上,用例红
   - 对应契约:`docs/pair-run/CONTRACT.md` → 样板决策记录与退出码表不漂移
+
+### 第二十八轮:先修开放条目 50,再按严重程度挑两项(第 4、7 条)
+
+> 人类裁决"先做第 50 条,再按严重程度挑下一批",授权 dev 代笔立项并排序。第 50 条每次出现都多一次人类往返,排第一;
+> 第 4 条是每个新用户第一次碰到的脚本(出错时甩原始堆栈);第 7 条是退出码撞码(只在手动 `--no-baseline` 路径,但修法小)。
+> 暂不做:第 2 条(缓存只影响快慢)、第 8 条(注释措辞)、第 14 条(66 处裸坐标,量大单独一轮)、「定位重框」一节第 6 条(需人类裁决)与第 7 条(措辞)。
+
+- [ ] **W50** [feature] — 完成工作项时 dev 的开工前校验已失效,当场处理,不等下一次认领卡住
+  - **来源**:路线图开放条目 50。第二十七轮 W48(cover)里 tester 带声明改了契约;dev 在 review-test 照样通过、完成了工作项,
+    之后 tester 认领 W49 被拒(W19 要两个角色的校验都作数),人类只好把 dev 单独叫回来重跑 `verify-setup`
+  - 验收标准:①由 dev 执行、会完成工作项的那次 `handoff`(review-test 的 approve,以及任何推进到 DONE 的 dev 交接),dev 的开工前校验已不作数时**拒绝**,
+    理由说明下一次认领会因此被拒、并给出 `verify-setup` 命令;重跑之后同一次交接放行;②由 tester 执行的完成交接(如 refactor 的 review-impl),
+    dev 的校验已不作数时**不拒绝**,收尾提示里说明 dev 要先重跑 `verify-setup`、tester 才能认领;③校验作数时行为不变;
+    `require_setup_verification` 为假时不检查;④不推进到 DONE 的交接不受影响;⑤变异点:拆掉拒绝、tester 完成时不提示,各有用例红
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 完成工作项时 dev 的校验已失效要当场处理
+
+- [ ] **W51** [bug] — `make-demo.py` 里 git 失败时给出说明,不甩原始堆栈
+  - **来源**:路线图开放条目第 4 条。`make-demo.py` 的 `git init`/`add`/`commit` 用 `check=True`,失败时用户看到一整段 `CalledProcessError` 堆栈,
+    看不到是哪一步、git 说了什么、多半是什么原因;同一个文件在目标目录非空时却有友好提示
+  - 验收标准:①`init`、`add`、`commit` 任一步失败:退出码非 0,输出点名是哪一步、git 的原始输出,给出最常见原因(git 身份没配、签名配置)与下一步;
+    **不出现** `Traceback`;②成功路径输出不变;③失败时已经建出的目标目录留给用户看,不删
+  - 对应契约:`docs/pair-run/CONTRACT.md` → make-demo 里 git 失败要说明白
+
+- [ ] **W52** [feature] — `mutation_check` 预检拒绝改用退出码 3,把 2 留给 argparse
+  - **来源**:路线图开放条目第 7 条。`--no-baseline` 被预检拒绝与 argparse 用法错误都退 2,只读退出码分不清"基线不绿、拒绝归因"与"命令行写错了";
+    `docs/contributing.md` 现在靠"看 stderr 有没有 `usage:`"区分
+  - 验收标准:①预检拒绝退出码 3;argparse 用法错误照旧 2;其余退出码不变;②`docs/contributing.md` 的退出码说明改成现在的样子(去掉"两种 2、看 usage"那段);
+    ③`mutation_check.py` 在 tester 路径:改动与用例由 tester 在 spec 回合写(同第二十三轮 W40),dev 在 impl 回合只改 `contributing.md`,用例钉住文档里的码
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 变异检查的预检拒绝用退出码 3

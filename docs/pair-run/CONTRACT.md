@@ -1839,3 +1839,63 @@ tester 在第二十七轮认领前的审查里挑出(⑬)。
 **判据** 用例:样板 `DECISIONS.md` == `DECISIONS_SKELETON`(今天红);`protocol-spec.md` §9 表里码 2 的行有一行说的是全量套件(今天红)。变异点:改 `DECISIONS_SKELETON` 的文字,样板没跟上 → 红。
 
 **不做** 不比较样板的 `PLAN.md`、`CONTRACT.md` 与骨架(样板写的是真实工作项,本来就不等于骨架)。
+
+## 完成工作项时 dev 的校验已失效要当场处理
+
+- 依据: 人类定稿
+
+**背景** 认领(`claim`)要求两个角色的开工前校验都作数(第六轮 W19);校验作不作数比的是契约**工作区内容**的 sha(W13)。工作项进行中 tester 带声明改了契约
+(第九轮 W9 的合法化路径)之后,两个角色的校验都失效。tester 下一次认领时会被拒并被告知重跑,这一半是自愈的;dev 那一半不是 ——
+`feature`/`bug` 里 dev 有 impl 回合,通常顺手重跑了(第二十三轮 W40、第二十六轮 W44);`cover` 没有 dev 的 impl 回合,dev 在 review-test 照样通过、
+完成工作项,于是第二十七轮 W48 之后 tester 认领 W49 被拒,人类得把 dev 单独叫回来重跑 `verify-setup`,再叫 tester 回来认领。dev 的 `status` 在那一回合里
+其实打了"你上次的开工前校验已经不作数了(不阻断本命令)",没挡住。
+
+**行为**
+- 由 **dev** 执行、会把工作项推进到 DONE 的 `handoff`(review-test 的 approve,以及其他推进到 DONE 的 dev 交接):`require_setup_verification` 为真、
+  且 dev 的开工前校验已不作数时**拒绝**。理由写明:这次交接会完成工作项,而 dev 的校验已不作数,下一次认领会因此被拒、得等人类把 dev 叫回来;
+  现在就重跑 `verify-setup`(给出命令),再交接。重跑之后同一次交接放行。
+- 由 **tester** 执行的完成交接(如 `refactor` 的 review-impl approve):不拒绝(那是 dev 的校验,tester 解不开);完成后的收尾提示里说明
+  dev 的开工前校验已不作数,要先让 dev 重跑 `verify-setup`,tester 才能认领下一项。
+- dev 的校验作数、`require_setup_verification` 为假、或这次交接不推进到 DONE 时,行为不变。
+
+**判据** 用例:cover 项,spec 回合 tester 带声明改契约 → review-test 里 dev approve 被拒、输出含 `verify-setup`;dev 重跑 `verify-setup` 之后同一条 approve 放行、
+随后 tester `claim` 下一项成功。对照:没改契约时 approve 照常。tester 完成的情形:refactor 项里契约被改 → tester 的 review-impl approve 成功、输出提示 dev 先重跑。
+变异点:拆掉拒绝;tester 完成时不提示。
+
+**不做** 不改 `claim` 的两角色校验要求(W19);不替 dev 自动重跑 `verify-setup`(它要交出审查结论,只能本人写)。
+
+## make-demo 里 git 失败要说明白
+
+- 依据: 人类定稿
+
+**背景** `examples/make-demo.py` 建样板项目的最后三步是 `git init`、`git add -A`、`git commit`,都用 `subprocess.run(..., check=True)`。任一步失败
+(最常见:git 身份推不出来 —— 脚本有条件式兜底,但仍有缝;或配了 `commit.gpgsign=true` 却没有可用的签名密钥),用户看到的是一整段
+`CalledProcessError` 堆栈,看不到是哪一步、git 说了什么。同一个文件在目标目录非空时却打印"目标目录 … 非空,拒绝覆盖。"再返回 1 —— 风格不一致。
+这是新用户试用时第一个跑的脚本。
+
+**行为** 三步任一失败:返回非 0,打印是哪一步(`init` / `add` / `commit`)、git 的原始输出(标准错误),以及最常见的原因与下一步
+(git 身份没配:`git config user.name/user.email`;配了签名却没有密钥:`commit.gpgsign`)。不出现 Python 堆栈。已经建出来的目标目录不删,留给用户看。
+成功路径的输出不变。
+
+**判据** 用例:PATH 最前放一个假 `git`,让 `commit` 失败(其余参数转给真 git)→ `make-demo.py` 返回非 0、输出含 `commit` 与假 git 打出的错误文字、
+不含 `Traceback`;同样让 `init` 失败 → 点名 `init`。成功路径照旧(既有用例)。
+
+**不做** 不改身份兜底的逻辑;不强关签名(第二十轮之前已定:那会让想签名的人静默失去签名)。
+
+## 变异检查的预检拒绝用退出码 3
+
+- 依据: 人类定稿
+
+**背景** `tests/conformance/mutation_check.py` 的 `--no-baseline` 被基线预检拒绝时退出码 2;argparse 的用法错误(`--slice` 不是 `k/n`、长选项拼错)也是 2。
+只读退出码的调用方分不清"副本环境不绿、拒绝归因"与"命令行写错了"。`docs/contributing.md` 现在写"两种 2,看 stderr 有没有 `usage:`",
+并记着"干净修法是预检拒绝改退 3"。当时没改,是因为动 `mutation_check.py` 会让缓存基线指纹失配 —— 那是预期内的成本。
+
+**行为** 预检拒绝退出码 3;argparse 用法错误照旧 2;其余退出码(0、1)不变。`docs/contributing.md` 的退出码说明改成现在的样子,去掉"两种 2、看 `usage:`"那段。
+
+**分工** `mutation_check.py` 在 tester 路径,dev 在 impl 回合写不了:改动与用例由 tester 在 spec 回合写好(同第二十三轮 W40),
+spec 回合结束时红的只有"`contributing.md` 写的是 3"那一条,由 dev 在 impl 回合让它绿。dev 在 review-test 评审 `mutation_check.py` 的改动。
+
+**判据** 用例:预检返回"不放行"时 `main(["--no-baseline"])` 返回 3(可替换预检函数,不必真跑全量);用法错误(`--slice abc`)仍是 2;
+`docs/contributing.md` 的退出码说明里有预检拒绝对应 3、不再有"看 `usage:`"。
+
+**不做** 不改 `run.py` 的退出码(它的 3 是环境自检,另一个程序)。
