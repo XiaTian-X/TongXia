@@ -669,3 +669,8 @@
 - 理由: `mutation_check` 的预检拒绝与 argparse 用法错误都退 2,`contributing.md` 只能写"看 stderr 有没有 `usage:`"来区分 —— 那是文档在替代码补一个本该由代码给出的区分。当时不改,是怕动 `mutation_check.py` 让缓存基线指纹失配;那只是一次重跑的成本。W52 把预检拒绝改成 3,`contributing.md` 只留一句来历。分工照第二十三轮 W40:`mutation_check.py` 在 tester 路径,tester 在 spec 回合实现并写用例,dev 改文档、在 review-test 评审代码。dev 改文档时 grep 出用例没钉的第三处(指纹闸那段的 `return 2`)一并改了。review 时探过:退回 `return 2`、拒绝改成 `return 1` 都红两条(有失败项、运行器崩溃两种拒绝都在),用法错误照旧 2 且不走到预检。今后新增退出码时,一个码只表达一件事;做不到时在决策里写明欠账,而不是只在文档里教人怎么分辨。
 - 已否决: 保持文档口径 —— 每个读退出码的调用方都要自己实现"看 usage"。把用法错误也改掉 —— 2 是 argparse 的惯例,改它反而让人意外。
 - 影响路径: `tests/conformance/mutation_check.py`, `tests/conformance/test_mutation_exit_codes.py`, `docs/contributing.md`
+## SETUP — 第二十九轮按严重程度挑下一批,人类裁决"按严重程度挑下一批开始"
+
+- 理由: 剩下的开放条目里,对协议行为说了过期的话的规范文档排第一(W53):`design-philosophy.md` 说"没做到 evidence-grounded、最大缺口是 P0-2",P0-2 已落地多轮;同一节"打回绕四个回合"在 W17 之后也不对了。加一条能自我提醒的检查 —— "最大缺口"指向的条目一旦标 ✅ 就红,免得下一次落地时再过期。第二是变异缓存与设计的漂移和一句过强的注释(W54),不影响结论,但会让后来者以为不必复核;按第二十三轮 W40 的分工走 feature。
+- 已否决: 这一轮清掉开放条目第 14 条的裸坐标 —— 剩下的绝大多数在已解决条目的历史记录里,4 处在 ADR-023 里;与「定位重框」第 6 条一样撞"记录只追加"的纪律,交人类裁决。
+- 影响路径: `docs/design-philosophy.md`, `tests/conformance/test_docs_consistency.py`, `tests/conformance/mutation_check.py`, `tests/conformance/mutation-cache.json`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
