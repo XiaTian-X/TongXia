@@ -567,3 +567,14 @@ spec 回合 tester 写用例(红),impl 回合 dev 只能改 `contributing.md`,`r
 
 上次校验之后契约只变了一处:「符号引用检查与规范性文档同一个范围」里我在 W48 的 spec 回合补的"问不了 git 时 skip"(W48 已完成)。
 **「样板决策记录与退出码表不漂移」一节一个字没变**,第二十七轮补记里对它的核对原样成立。
+
+## 补记(第二十八轮 W50–W52 立项之后重跑)
+
+上次校验之后契约加了「第二十八轮」三节(dev 代笔);第二十七轮三节在 W47–W49 完成(我在 W48 补的 skip 已在上一份补记)。**没有缺陷。**
+
+- 「完成工作项时 dev 的校验已失效要当场处理」(W50):判据可走通 —— review-test 阶段 dev 重跑 `verify-setup` 是允许的(它不走写权限边界、
+  只提交状态与结论;第二十三轮 W40 的 dev 就是在工作项中途重跑的),重跑之后同一条 approve 放行、tester 随后能认领。
+  "推进到 DONE"包括 `feature`/`bug` 的 review-test approve 与 `cover` 的 review-test approve;`refactor` 由 tester 完成,只提示。
+- 「make-demo 里 git 失败要说明白」(W51):假 `git` 放 PATH 最前、其余参数转给真 git(先用 `shutil.which` 记下真 git 的路径),
+  只让某一个子命令失败 —— 可写。
+- 「变异检查的预检拒绝用退出码 3」(W52):分工照 W40 的先例写明了;`main` 进程内调用、替换预检函数,不跑全量,可写。
