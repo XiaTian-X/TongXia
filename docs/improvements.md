@@ -1252,7 +1252,7 @@ GIT_AUTHOR_IDENT` 之外再探 `git config --get commit.gpgsign`,只在它为
 `true` 且探测不到可用 key 时才关掉)。反对的理由是"有没有可用 key"这件事
 本身探测不可靠(要真的试签一次才知道),为此加的逻辑复杂度超过它挡住的场景。
 
-### 4. `examples/make-demo.py` 失败时抛裸 traceback(原第 11 条)
+### 4. `examples/make-demo.py` 失败时抛裸 traceback(原第 11 条)  ✅ 已解决(第二十八轮 W51)
 
 `:84` 的 `check=True` 在 git 失败时直接抛 `CalledProcessError`,用户看到的是
 一整段 Python traceback(实测里最后几行是 `subprocess.run(...)` 的栈帧),

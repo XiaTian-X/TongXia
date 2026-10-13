@@ -102,6 +102,38 @@ def ensure_identity(target):
         subprocess.run(("git",) + args, cwd=target, check=True)
 
 
+# 每一步失败时最常见的原因。只给 commit 写:init 与 add 失败多半是目录或磁盘本身的问题,
+# 猜原因不如把 git 的原话给用户看。
+STEP_HINTS = {
+    "commit": ("最常见的两个原因:\n"
+               "  - git 身份推不出来:git config --global user.name \"你的名字\"、"
+               "git config --global user.email \"你的邮箱\"\n"
+               "    (不想改全局配置,就带上 GIT_AUTHOR_NAME/GIT_AUTHOR_EMAIL/"
+               "GIT_COMMITTER_NAME/GIT_COMMITTER_EMAIL 环境变量跑这一次)\n"
+               "  - 配了 commit.gpgsign=true 却没有可用的签名密钥:配好密钥,"
+               "或者只在这个目录里 git config commit.gpgsign false"),
+}
+
+
+def git_step(target, args):
+    """跑一步 git;失败时说清楚是哪一步、git 原话是什么、多半是什么原因,返回 False(W51)。
+
+    原先三步都是 check=True,失败时用户看到的是一整段 CalledProcessError 堆栈 ——
+    看不到是哪一步,也看不到 git 自己说了什么。已经建出来的目标目录不删,留给用户看。"""
+    proc = subprocess.run(("git",) + args, cwd=target,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if proc.returncode == 0:
+        return True
+    step = args[0]
+    said = (proc.stderr or proc.stdout).decode("utf-8", "replace").strip() or "(git 没有输出)"
+    sys.stderr.write("git %s 失败(退出码 %d)。git 的原话:\n  %s\n"
+                     % (step, proc.returncode, said.replace("\n", "\n  ")))
+    if step in STEP_HINTS:
+        sys.stderr.write(STEP_HINTS[step] + "\n")
+    sys.stderr.write("已经建出来的目录留着没删:%s\n修好之后删掉它再重跑。\n" % target)
+    return False
+
+
 def main():
     if len(sys.argv) != 2:
         print(__doc__)
@@ -120,11 +152,13 @@ def main():
     if not link.exists():
         link.symlink_to(Path("../../.agents/skills/pair-protocol"))
 
-    subprocess.run(("git", "init", "-q"), cwd=target, check=True)
+    if not git_step(target, ("init", "-q")):
+        return 1
     ensure_identity(target)
     for args in (("add", "-A"),
                  ("commit", "-q", "-m", "chore: 装上结对协议")):
-        subprocess.run(("git",) + args, cwd=target, check=True)
+        if not git_step(target, args):
+            return 1
 
     print("已创建:%s\n" % target)
     print("试跑:")
