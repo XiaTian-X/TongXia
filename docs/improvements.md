@@ -1322,7 +1322,7 @@ wheel 与 `pair init` 扩散到消费项目,不像本仓文档只影响这里。
 人类完成"为准。**代码侧矛盾先于本轮存在**,本轮只是把它写成了无条件
 规则 —— 限定句消除的是本轮引入的那部分。
 
-### 7. `mutation_check.py` 预检拒绝的退出码 2 与 argparse 用法错误撞码
+### 7. `mutation_check.py` 预检拒绝的退出码 2 与 argparse 用法错误撞码  ✅ 已解决(第二十八轮 W52)
 
 `:563` 的 `return 2`(`--no-baseline` 被预检拒绝)与 argparse 的
 `SystemExit(2)` 同码 —— 后者包括 `:527` 的 `ap.error`(`--slice` 不是
