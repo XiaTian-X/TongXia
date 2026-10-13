@@ -30,3 +30,21 @@
 - `said = (proc.stderr or proc.stdout)`:stderr 非空时 stdout 整段丢掉。commit 钩子把原因打在 stdout 时会丢一半;两路都给更稳。
 - 成功时 `git add -A` 的警告(如行尾转换)现在被吞掉,原先会透出。样板里没有会触发它的文件。
 - `ensure_identity` 里写兜底身份的 `git config` 仍是 `check=True`,失败会出堆栈;契约只点了三步,没算进来。
+
+---
+
+# W51 — review-impl 第二次(tester)
+
+结论:**通过**。
+
+- `COMMIT_HINT` 把两条出路分开说:修好原因(全局配置或环境变量)→ 删目录重跑;或就地做完(`cd`、按原因二选一 `git config`、`git commit`)。
+  只在目录内生效的配置不再和"删目录重跑"混在一起。`init`/`add` 失败照旧只说"修好删掉再重跑"。
+- 实测就地那条:用环境变量让签名开着、密钥不存在跑 `make-demo.py` → `commit` 失败、提示如上;照提示在目录里关签名、`git commit`
+  → 提交成功,`pair.py status` 正常。`init` 失败手工跑一遍:点名 init、git 原话、没有原因段、`rc=1`。
+- git 原话两路都给(上次"没覆盖的"第一条)。全套 628 绿,我的 7 条全绿。
+
+## 没覆盖的
+
+- 就地那条提示里 `cd %(target)s` 没加引号,路径带空格时要用户自己补。
+- "两条出路"的文案没有用例守;用例只钉 `user.email`、`commit.gpgsign` 与步骤名。
+- 上次记的另两条(成功时 `add -A` 的警告被吞、`ensure_identity` 的 `check=True`)照旧,不在契约里。

@@ -1,9 +1,9 @@
 {
   "round": 48,
-  "phase": "review-impl",
+  "phase": "review-test",
   "item": "W51",
   "item_type": "bug",
-  "last_actor": "dev",
+  "last_actor": "tester",
   "changes_count": 1,
   "completed_items": [
     "W2",
