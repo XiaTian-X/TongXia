@@ -679,7 +679,7 @@
   - (spec 回合带声明补)问不了本仓库 git(变异检查的隔离副本)时这条检查 skip,不报错、不拿空集
   - 对应契约:`docs/pair-run/CONTRACT.md` → 符号引用检查与规范性文档同一个范围
 
-- [ ] **W49** [bug] — 样板的决策记录文件头与 `init` 一致,协议规范的退出码表补全
+- [x] **W49** [bug] — 样板的决策记录文件头与 `init` 一致,协议规范的退出码表补全
   - **来源**:路线图「本轮定位重框」一节第 4、5 条。样板 `docs/DECISIONS.md` 的文件头仍是旧口径(与 `DECISIONS_SKELETON` 差一段),`make-demo.py` 发给每个新用户;
     `docs/protocol-spec.md` §9 的退出码表只列了推送失败那一条码 2,缺"工作项完成那一回合全量套件红",`docs/command-reference.md` 早已补上
   - 验收标准:①样板项目的 `docs/DECISIONS.md` 与 `DECISIONS_SKELETON` 逐字节一致(用例今天红);②`protocol-spec.md` §9 退出码表里码 2 的行覆盖全量套件红

@@ -644,3 +644,8 @@
 - 理由: 范围按"被 git 跟踪的 `.md`"算,而第十六轮 W33 之后 `mutation_check` 的基线跑在排除 `.git` 的隔离副本里 —— 在那里 `git ls-files` 报错会让基线红、整个变异检查停下,拿到空集又让检查静默恒真。照第十四轮 W30 的决策,问不了时 skip 并写明理由;文档在变异检查里不被改动,不损失防护。实测:无 `.git` 的副本里这一组 4 条 skip、其余照绿;有 `.git` 时往 `references/brownfield.md` 写一处不存在的符号 → 红,写进笔记 → 不红。
 - 已否决: 问不了 git 时退回按文件系统找 `.md` —— 副本里会把 `.venv`、`build/` 这类被忽略目录里的 `.md` 一起扫进来,口径与真实仓库不同。
 - 影响路径: `tests/conformance/test_docs_consistency.py`, `docs/pair-run/CONTRACT.md`, `docs/pair-run/PLAN.md`
+## W49 — 分发物从源头常量生成,不手抄;同一件事在两份文档里时,用例钉住后写的那份
+
+- 理由: 样板 `docs/DECISIONS.md` 的文件头与 `DECISIONS_SKELETON` 漂开,是因为样板是某一时刻手写的,骨架后来改了口径;`init` 对已存在的文件跳过,`make-demo.py` 重跑也不会自愈。这次直接用 `pair.py` 的常量写出样板(骨架用全角标点,手抄最容易差一个字符),并加逐字节一致的用例与变异点 —— 与第十二轮 W28、第二十六轮 W46 对入口文件的处理同形。`protocol-spec.md` §9 的退出码表缺"全量套件红",而 `command-reference.md` 早已补上:同一件事写在两份文档里,先补的那份对,后补的那份漏;用例钉住了 §9 必须有那一行。review 时探过:样板头改回旧口径、删掉 §9 那一行、把它挪出 §9,各红对应一条。
+- 已否决: 让 `make-demo.py` 生成时覆盖样板的 `DECISIONS.md` —— 样板是被跟踪的出厂物,用户直接看的是仓库里那份。逐行比对 §9 与 `command-reference.md` 的退出码表 —— 两份的措辞各有侧重,钉"码 2 有一行说全量"就够。
+- 影响路径: `examples/demo-project/docs/DECISIONS.md`, `docs/protocol-spec.md`, `tests/conformance/test_v1_shipped.py`, `tests/conformance/mutation_check.py`
