@@ -699,3 +699,8 @@
 - 理由: `design-decisions.md` 开头约定每条 ADR 写五项,14 条没照做(12 条缺"否掉的方案"、ADR-020 三项变体或缺、ADR-022 一项变体),两份 README 还把约定当成了事实。人类裁决(2026-10-13)不改 ADR 原文:偏差追加在开头登记,README 的概括改成与实际一致(它们是说明,不是记录)。用例按"行首加粗、名字恰好相等"的口径逐条扫,有偏差的 ADR 编号必须在偏差说明里逐个出现(区间不算);再用 ADR-001 到 ADR-024 原文的 sha256 钉住 —— 否则"把变体名改成标准名"也能让登记那条变绿,而那正是裁决不许的修法。指纹不依赖 `git show`(CI 浅克隆),结尾分隔线不计入(以后追加 ADR-025 不误红)。dev 写偏差说明时直接用 tester 的扫描函数跑出清单,不用立项时的粗扫(粗扫数的是 13 条,口径一定之后是 14 条)。review 时探过:追加一条缺字段的 ADR-025 不登记 → 红,登记后绿;把 ADR-020 的变体改成标准名 → "原文没改"与"口径前提"两条红。
 - 已否决: 统一 ADR 字段名 —— 改证据;只改 README 不登记 —— 下一个读 ADR 的人照样以为五项都在。
 - 影响路径: `docs/design-decisions.md`, `docs/README.md`, `README.md`, `tests/conformance/test_docs_consistency.py`
+## SETUP — 第三十一轮做测试分层的第 0 层,人类裁决"按这个顺序来,先规划再审查,没问题后实施"(2026-10-14)
+
+- 理由: 人类指出每次都跑全量浪费资源、大项目更严重。dev 提的方案分四层:第 0 层同样的内容不跑第二次;第 2 层完成时的全量只拦新增的红(依赖 P0-1 用例级结果);第 1 层回合内只跑受影响的测试(依赖第 2 层兜底,否则挑漏的回归会被当成范围外放过);第 3 层 CI 已有。登记为路线图开放条目 51–53,本轮做第 0 层。规划阶段 dev 自审改掉了三处:原方案让 `status` 完全不跑测试,会让简报出现第三种状态,而简报格式被 W2 的契约钉成只有 GREEN/RED —— 改成"已知就复用、未知才跑";回合开始的内容与上一次交接测的内容差一个 `.pair/state.json`,不排除就永远对不上;协议日志在 harness 的 `.gitignore` 里不全,必须显式排除。结果记在已有的日志最后一行,不新增文件、忽略行与边界豁免(新增 `.pair/` 下的文件会撞冻结路径)。dev 的工作习惯同步改:交接与 `verify-setup` 之前不再手动跑全量。
+- 已否决: 门禁改用 `run.py --changed` —— 工作区没有改动时它直接返回 0,`status` 与认领时的基线检查会变成空检查;实现回合几乎都改 `pair.py`,它一律退回全量,省不下多少;`pair.py` 的守卫之间有顺序依赖,按路径挑会漏。`status` 完全不跑测试 —— 见上。多条历史结果的缓存 —— 回合序列里要复用的都是紧挨着的上一次,多存只增加失效判断。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/troubleshooting.md`, `docs/contributing.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`

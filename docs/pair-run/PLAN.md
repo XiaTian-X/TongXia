@@ -759,3 +759,17 @@
     ②dev 在 `design-decisions.md` 开头的说明之后**追加**一段偏差说明,不改任何一条 ADR 的原文;③`docs/README.md` 那句"每条含……"改成与实际一致;
     ④以后新增的 ADR 若缺字段又没登记,用例红
   - 对应契约:`docs/pair-run/CONTRACT.md` → ADR 字段的偏差登记在案
+
+### 第三十一轮:测试分层的第 0 层 —— 同样的内容不跑第二次
+
+> 人类在 2026-10-14 提出"每次都跑全量浪费资源,大项目更严重",同意 dev 提的四层方案并要求按序做、先规划再审查后实施;
+> 规划经 dev 自审(结论写进 SETUP 决策)后人类批准,授权 dev 代笔立项。四层登记为路线图开放条目 51–53(第 3 层 CI 已有)。
+
+- [ ] **W57** [feature] — 测试结果按内容记,内容没变就不重跑
+  - **来源**:路线图开放条目 51。一个工作项里全量跑 8–10 次:`status` 每次都跑(不论轮没轮到)、`verify-setup` 跑全量还跑变异检查、每次交接跑 —— 多数时候两次之间内容没变
+  - 验收标准:①`run_tests` 先算这次要测的内容的指纹 = 测试命令(含 `PAIR_TEST_CMD` 覆盖后的实际值)+ 工作区内容的 git 树哈希;与该命令上一次运行的指纹相同就复用上次的结果,不重跑;
+    `status`、`verify-setup`、`handoff`、`init` 都走这一条;②树哈希排除协议自己写的东西:`.pair/state.json`、协议日志(`PROTOCOL_LOGS`)、评审目录(`shared_paths`)、
+    记忆层(`notes_dir`、`decisions_file`);不排除 `.pair/config.json`;③不新增文件:指纹与退出码记在对应日志(`.pair/.last-test.log` / `.last-full-test.log`)的最后一行,
+    复用时日志就是那次运行的输出;④`PAIR_FRESH_TESTS=1` 或删掉日志 → 强制重跑;⑤复用时 GREEN/RED 与上次一致,简报格式不变(仍只有 GREEN/RED);
+    ⑥文档:`protocol-spec.md`、`command-reference.md`、`troubleshooting.md`、`contributing.md` 跟上;⑦变异点:不比指纹、排除项多排 `.pair/config.json`、指纹不含命令,各有用例红
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 测试结果按内容记,内容没变就不重跑
