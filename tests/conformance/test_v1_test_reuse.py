@@ -155,6 +155,26 @@ class TestRerunWhenFingerprintChanges(ReuseBase):
         self.assertEqual(self.runs(), self.base + 2)
 
 
+
+@unittest.skipIf(os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0),
+                 "要靠读权限让 git add -A 失败:Windows 与 root 下 chmod 000 不拦读")
+class TestFingerprintUnavailable(ReuseBase):
+    """W57 review-impl 打回过的那一格:`git add -A` 失败时临时索引原样是真实索引的副本,工作区改动不进指纹 ——
+    改了实现也复用旧结果。算不出指纹就照常执行、不留记录。"""
+
+    def test_有读不了的文件时_加了没有实现的测试照样重跑_是红的(self):
+        secret = self.repo.dir / "secret.bin"
+        secret.write_text("x", encoding="utf-8")
+        secret.chmod(0)
+        self.addCleanup(secret.chmod, 0o644)
+        self.status()
+        before = self.runs()
+        self.repo.write("tests/W9", "没有实现的测试")
+        r = self.status()
+        self.assertEqual(self.runs(), before + 1, "算不出指纹时不该复用")
+        self.assertIn("RED", r.out.split("测试状态", 1)[1].split("\n", 1)[0])
+
+
 class TestExcludedPaths(ReuseBase):
     """协议自己写的东西不进指纹。"""
 

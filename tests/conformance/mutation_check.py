@@ -1029,6 +1029,11 @@ MUTATIONS = [
     ('记忆层关着也排除出指纹',
      '    if memory_on(cfg):\n        out += [p for p in (cfg.get("notes_dir"), cfg.get("decisions_file")) if p]\n',
      '    if True:\n        out += [p for p in (cfg.get("notes_dir"), cfg.get("decisions_file")) if p]\n'),
+
+    # W57 review-test 打回后补的那一格(spec 回合登记)。
+    ('算不出指纹也拿去比',
+     '    if added.returncode != 0 or listed.returncode != 0 or tracked_raw is None:\n        return None\n',
+     '    if tracked_raw is None:\n        tracked_raw = ""\n'),
 ]
 
 # unittest 的失败行有两种形态:

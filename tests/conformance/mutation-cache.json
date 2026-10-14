@@ -1,5 +1,5 @@
 {
-  "baseline": "d3d83f82ffaf2c3a",
+  "baseline": "1d29d087f31f88b0",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -579,6 +579,9 @@
     ],
     "简报不标只追加": [
       "test_v1_review_append.TestStatusMarksAppendOnly.test_执行者看到的只能写那一行也标出只追加"
+    ],
+    "算不出指纹也拿去比": [
+      "test_v1_test_reuse.TestFingerprintUnavailable.test_有读不了的文件时_加了没有实现的测试照样重跑_是红的"
     ],
     "系统文件照旧参与写权限边界": [
       "test_v1_os_files_left.TestNextTurnNotBlocked.test_tester_留下的_DS_Store_不挡_dev_的交接"
