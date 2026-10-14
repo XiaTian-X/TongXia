@@ -704,3 +704,8 @@
 - 理由: 人类指出每次都跑全量浪费资源、大项目更严重。dev 提的方案分四层:第 0 层同样的内容不跑第二次;第 2 层完成时的全量只拦新增的红(依赖 P0-1 用例级结果);第 1 层回合内只跑受影响的测试(依赖第 2 层兜底,否则挑漏的回归会被当成范围外放过);第 3 层 CI 已有。登记为路线图开放条目 51–53,本轮做第 0 层。规划阶段 dev 自审改掉了三处:原方案让 `status` 完全不跑测试,会让简报出现第三种状态,而简报格式被 W2 的契约钉成只有 GREEN/RED —— 改成"已知就复用、未知才跑";回合开始的内容与上一次交接测的内容差一个 `.pair/state.json`,不排除就永远对不上;协议日志在 harness 的 `.gitignore` 里不全,必须显式排除。结果记在已有的日志最后一行,不新增文件、忽略行与边界豁免(新增 `.pair/` 下的文件会撞冻结路径)。dev 的工作习惯同步改:交接与 `verify-setup` 之前不再手动跑全量。
 - 已否决: 门禁改用 `run.py --changed` —— 工作区没有改动时它直接返回 0,`status` 与认领时的基线检查会变成空检查;实现回合几乎都改 `pair.py`,它一律退回全量,省不下多少;`pair.py` 的守卫之间有顺序依赖,按路径挑会漏。`status` 完全不跑测试 —— 见上。多条历史结果的缓存 —— 回合序列里要复用的都是紧挨着的上一次,多存只增加失效判断。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/troubleshooting.md`, `docs/contributing.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W57 — 复用结果的指纹要覆盖测试实际依赖的东西,包括"哪些文件被跟踪"
+
+- 理由: 契约的指纹是命令加工作区树哈希;树哈希按 `add -A` 算,跟踪与否不分,提交前后相同。本仓库的规范文档检查(W48、W53、W55)只扫已跟踪的 `.md`:交接时新写、未跟踪的坏文档在那一次不被检查,提交之后 status 与只写评审的交接全部复用,完成时的全量(`mutation_check` 的基线在无 `.git` 副本里)又 skip —— 整项没人跑到;今天是下一次 status 重跑把它抓出来。spec 回合带声明补:指纹再加已跟踪路径的集合(去掉同样的排除项),HEAD 与历史写进前提与边界,记忆层只在 memory 开着时排除。参考实现里实测代价:交接加了新文件时,对方回合开头的 status 多跑一次,之后照常复用;六个变异点(恒重跑、恒复用、多排配置、不含命令、不含已跟踪集合、记忆层关着也排除)各有用例红。
+- 已否决: 不加这一项、把规范文档检查改成也扫未跟踪文件 —— 只修本仓库,别的项目里依赖 `git ls-files` 的测试照样被错误复用;交接先暂存改动再跑测试 —— 改变了测试看到的仓库状态,是另一笔设计账,留给 dev 判断。
+- 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_test_reuse.py`, `.agents/skills/pair-protocol/scripts/pair.py`
