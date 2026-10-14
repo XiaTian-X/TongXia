@@ -722,7 +722,7 @@
 > 暂不做、交人类裁决:开放条目第 14 条与「定位重框」一节第 6 条 —— 前者剩下的裸坐标绝大多数在已解决条目的历史记录里,其余 4 处在 ADR-023 里;
 > 后者要改既有 ADR 的字段名。两者都撞"记录只追加、不改写"的纪律,改不改是人类的决定。
 
-- [ ] **W53** [bug] — `design-philosophy.md` 里两处过期的结论
+- [x] **W53** [bug] — `design-philosophy.md` 里两处过期的结论
   - **来源**:路线图「定位重框」一节第 7 条,外加立项时读到的同一节另一处。`design-philosophy.md` 说协议"没做到 evidence-grounded……这是已知的最大缺口,
     见 improvements.md 的 P0-2",而 P0-2 早已落地(ADR-014),`architecture.md` 也写着 approve 要交检查清单、changes 要指到位置;同一节又说
     "在 review-test 上打回要绕经 spec、impl、review-impl,是四个回合",第六轮 W17 之后只涉及测试的打回走 `spec -> review-test`
