@@ -278,6 +278,7 @@ pair.py handoff "说明" --allow-deletion "删除理由"
 
 **处理** `PAIR_FRESH_TESTS=1` 跑一次(例如 `PAIR_FRESH_TESTS=1 PAIR_ROLE=dev python3 .pair/enforcer.py status`),或删掉 `.pair/.last-test.log`。
 有内容改动的交接照常重跑,不会把过期的结果当裁判。
+算不出指纹时(例如工作区里有读不了的文件,`git add -A` 失败)总是重跑,也不留记录 —— 宁可多跑,不拿看不见改动的指纹去复用。
 
 ### 同一工作项被打回 3 次,协议停了
 

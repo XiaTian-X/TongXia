@@ -758,7 +758,10 @@ def content_fingerprint(root, cfg, cmd):
     工作区内容取自一个临时索引:以真实索引为种子(`add -A` 走 stat 缓存,大仓库也快)把整个工作区
     (含未跟踪、尊重 `.gitignore`)加进去,读每一项的模式与 blob 哈希 —— 与树哈希等价,不碰真实索引。
     已跟踪路径的集合另算(W57 spec 回合带声明补):测试可以依赖"哪些文件被跟踪",本仓库的文档检查只扫
-    已跟踪的 `.md`;不算它,交接时新写、未跟踪的坏文档会在提交之后一路复用到完成。"""
+    已跟踪的 `.md`;不算它,交接时新写、未跟踪的坏文档会在提交之后一路复用到完成。
+
+    **算不出来就返回 None**,调用方照常执行、不写记录(W57 review-impl 打回):`add -A` 失败时(工作区里一个读不了的文件就够)
+    临时索引原样是真实索引的副本,工作区的改动一项都不进指纹 —— 改了实现也会复用旧的 GREEN。"""
     excluded = fingerprint_excluded(cfg)
     keep = lambda path: not matches_any(path, excluded)
     seed = git("rev-parse", "--git-path", "index", cwd=root, check=False)
@@ -769,17 +772,20 @@ def content_fingerprint(root, cfg, cmd):
         if seed and (root / seed.strip()).exists():
             shutil.copyfile(str(root / seed.strip()), tmp)
         env = dict(os.environ, GIT_INDEX_FILE=tmp)
-        subprocess.run(["git", "add", "-A"], cwd=str(root), env=env,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        staged = subprocess.run(["git", "ls-files", "-s", "-z"], cwd=str(root), env=env,
-                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL).stdout
+        added = subprocess.run(["git", "add", "-A"], cwd=str(root), env=env,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        listed = subprocess.run(["git", "ls-files", "-s", "-z"], cwd=str(root), env=env,
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     finally:
         if os.path.exists(tmp):
             os.unlink(tmp)
+    tracked_raw = git("ls-files", "-z", cwd=root, check=False)
+    if added.returncode != 0 or listed.returncode != 0 or tracked_raw is None:
+        return None
+    staged = listed.stdout
     entries = [e for e in staged.decode("utf-8", "replace").split("\0")
                if e and keep(e.split("\t", 1)[-1])]
-    tracked = sorted(p for p in (git("ls-files", "-z", cwd=root, check=False) or "").split("\0")
-                     if p and keep(p))
+    tracked = sorted(p for p in tracked_raw.split("\0") if p and keep(p))
     h = hashlib.sha256()
     for part in [cmd, "\n".join(entries), "\n".join(tracked)]:
         h.update(part.encode("utf-8") + b"\0\0")
@@ -812,7 +818,7 @@ def run_tests(root, cfg, cmd=None, log_rel=None):
         die("未配置 test_cmd。请编辑 %s 填入本项目的测试命令。" % CONFIG_REL)
     log = root / (log_rel or TESTLOG_REL)
     key = content_fingerprint(root, cfg, cmd)
-    if os.environ.get("PAIR_FRESH_TESTS") != "1":
+    if key is not None and os.environ.get("PAIR_FRESH_TESTS") != "1":
         prev = last_test_record(log)
         if prev is not None and prev[0] == key:
             return prev[1] == 0
@@ -820,8 +826,9 @@ def run_tests(root, cfg, cmd=None, log_rel=None):
     with open(log, "wb") as f:
         rc = subprocess.call(cmd, shell=True, cwd=str(root),
                              stdout=f, stderr=subprocess.STDOUT)
-    with open(log, "ab") as f:
-        f.write(("\n%s %s %d\n" % (TEST_RECORD_TAG, key, rc)).encode("utf-8"))
+    if key is not None:                                 # 算不出指纹就不留记录:下一次照常执行
+        with open(log, "ab") as f:
+            f.write(("\n%s %s %d\n" % (TEST_RECORD_TAG, key, rc)).encode("utf-8"))
     return rc == 0
 
 
