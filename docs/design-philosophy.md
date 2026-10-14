@@ -99,17 +99,19 @@ Adversarial Review 给这件事起了名字 —— **false-consensus failure mod
 双方在没有充分证据的情况下收敛到一致。它的处方是让异议
 "minimal, structured, and evidence-grounded"。
 
-本协议目前做到了 minimal 和 structured(异议必须写进 `docs/reviews/`,
-`handoff changes` 必须附理由,空字符串被拒),**没做到 evidence-grounded** ——
-脚本拦不住"看起来不错"。这是已知的最大缺口,见 improvements.md 的 P0-2。
+本协议做到了 minimal 和 structured(异议必须写进 `docs/reviews/`,
+`handoff changes` 必须附理由,空字符串被拒),也在**结构层**做到了 evidence-grounded:
+`approve` 要交出具体查过什么与还没覆盖什么,`changes` 要指到 `路径:行号`,缺了脚本就拒绝(ADR-014)。
+**内容层仍然拦不住** —— "每一项都查了、每一项都说没问题"能过全部检查。红绿只到工作项级别,
+测试集里哪些用例真在守契约、哪些只是恰好绿,脚本看不见:这是已知的最大缺口,见 improvements.md 的 P0-1。
 
 ### 对抗是为了交付,不是为了显得没在点头
 
 评审的价值在于**真的挑出问题**。但为了显得"没有互相点头"而制造一次打回,
 比点头更糟**在明处**:点头至少不额外烧额度,而它会消耗掉该工作项三次打回
 额度里的一次(额度用尽即撞死锁闸、停轮转交人类)、浪费至少两个回合
-(在 review-test 上打回要绕经 spec、impl、review-impl,是四个回合)、
-把交付往后拖。
+(在 review-test 上打回:只涉及测试的走 `spec -> review-test`,两个回合;涉及实现的
+还要经过 impl 与 review-impl,四个回合)、把交付往后拖。
 dogfood 的真实评审里,tester 写下过这么一句 ——
 **"我找不到可打回的东西,不是不敢打"**
 ([reviews/W1-review-impl-2.md](reviews/W1-review-impl-2.md))。那一回合它选择了
