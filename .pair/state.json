@@ -1,8 +1,8 @@
 {
   "round": 52,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W55",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -61,7 +61,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "906f0affa4aa6365ed0a3b20a50cd85ab0c99992",
   "setup_verified_contract": {
     "tester": "906f0affa4aa6365ed0a3b20a50cd85ab0c99992",
     "dev": "906f0affa4aa6365ed0a3b20a50cd85ab0c99992"
