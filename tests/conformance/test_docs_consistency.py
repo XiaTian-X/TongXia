@@ -801,5 +801,130 @@ class TestBiggestGapReading(unittest.TestCase):
         self.assertIs(roadmap_item_done(imp, "P0-2"), True)
         self.assertIsNone(roadmap_item_done(imp, "P0-9"))
 
+
+# W55:省掉文件名的裸行号坐标。读法见契约本节「读法」(spec 回合带声明补,开工前审查 ⑮)。
+# 代码片段按 CommonMark 配对:开头几个反引号,就由同样长度、两边不挨着别的反引号的一串收尾。
+_CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")
+_BARE_COORD = re.compile(r":\d+(?:-\d+)?")
+_DOGFOOD_RUN = re.compile(r"docs/dogfood-run-[^/]*\.md")
+_EXEMPT_ENTRY = (CHECK_MARK, "— 只留档", "— 已知边界")
+
+
+def bare_coordinates(text):
+    """围栏外、单独成一个代码片段的 `:数字` / `:数字-数字`,返回 [(行号, 坐标)]。
+    片段内容带反引号的(双反引号写出的例子)是在说起这种写法,不算。"""
+    out = []
+    for i, line in enumerate(_blank_fences(text).split("\n"), 1):
+        for m in _CODE_SPAN.finditer(line):
+            body = m.group(2)
+            if "`" not in body and _BARE_COORD.fullmatch(body.strip()):
+                out.append((i, body.strip()))
+    return out
+
+
+def roadmap_exempt_lines(text):
+    """`improvements.md` 里落在豁免条目内的行号:标题带 ✅ / "— 只留档" / "— 已知边界",或是「已解决(留档)」一节;
+    条目从标题到下一个同级或更高级的标题,子标题继承。"""
+    exempt, stack = set(), []
+    for i, line in enumerate(_blank_fences(text).split("\n"), 1):
+        m = re.match(r"(#+)\s+(.*)$", line)
+        if m:
+            level, title = len(m.group(1)), m.group(2).strip()
+            while stack and stack[-1][0] >= level:
+                stack.pop()
+            stack.append((level, any(k in title for k in _EXEMPT_ENTRY) or title == "已解决(留档)"))
+        if any(flag for _, flag in stack):
+            exempt.add(i)
+    return exempt
+
+
+def coordinate_violations(docs):
+    """`docs`:{相对路径: 文本}。返回 [(路径, 行号, 坐标)];豁免见契约。"""
+    bad = []
+    for rel, text in sorted(docs.items()):
+        if rel == "docs/design-decisions.md" or _DOGFOOD_RUN.fullmatch(rel):
+            continue
+        skip = roadmap_exempt_lines(text) if rel == "docs/improvements.md" else set()
+        bad += [(rel, i, c) for i, c in bare_coordinates(text) if i not in skip]
+    return bad
+
+
+class TestNoBareCoordinates(unittest.TestCase):
+    """契约「裸坐标进检查,历史记录豁免」(W55)。"""
+
+    def test_规范性文档里豁免之外没有裸坐标(self):
+        files = symbol_ref_scope()
+        if files is None:
+            self.skipTest("问不了本仓库的 git(mutation_check 的隔离副本排除 .git):范围无从判定。文档在变异检查里不被改动。")
+        bad = coordinate_violations({_rel(p): p.read_text(encoding="utf-8") for p in files})
+        self.assertEqual(bad, [], "省掉文件名的行号坐标会随被引文件增删行而指向别处,改成 `<路径>#<符号>`:\n"
+                         + "\n".join("  %s:%d 里的 `%s`" % b for b in bad))
+
+    def test_违规信息点名文件与坐标(self):
+        bad = coordinate_violations({"docs/guide.md": "第一行\n见 `:123` 起。\n"})
+        self.assertEqual(bad, [("docs/guide.md", 2, ":123")])
+
+
+class TestBareCoordinateReading(unittest.TestCase):
+    """读法的每一格,各用一段造出来的文字钉住。"""
+
+    def test_单反引号的坐标算(self):
+        self.assertEqual(bare_coordinates("见 `:1787`,以及 `:315-316`。"), [(1, ":1787"), (1, ":315-316")])
+
+    def test_双反引号写出的例子不算(self):
+        self.assertEqual(bare_coordinates("只写 `` `:1787` ``、省掉文件名的坐标"), [])
+
+    def test_围栏里不算(self):
+        self.assertEqual(bare_coordinates("```\n`:12`\n```\n"), [])
+
+    def test_带文件名或别的内容的不算(self):
+        self.assertEqual(bare_coordinates("`pair.py:12`、`:12a`、`a:12`、`: 12`"), [])
+
+    def test_不在代码片段里的不算(self):
+        self.assertEqual(bare_coordinates("立项时的 :1787 这类坐标"), [])
+
+    def test_同一行双反引号例子之后的真坐标照样算(self):
+        self.assertEqual(bare_coordinates("例如 `` `:1` ``;本条在 `:455` 起。"), [(1, ":455")])
+
+
+class TestBareCoordinateExemptions(unittest.TestCase):
+    """豁免的每一格。路线图的文字是造出来的,结构照 `improvements.md`。"""
+
+    ROADMAP = "\n".join([
+        "# 路线图",                                  # 1
+        "## P0-1 开放的",                            # 2
+        "见 `:1`。",                                 # 3  红
+        "### 方案",                                  # 4
+        "见 `:2`。",                                 # 5  红:开放条目的子标题不豁免
+        "## P0-2 已落地  " + CHECK_MARK + " 已落地",  # 6
+        "见 `:3`。",                                 # 7
+        "### 细节",                                  # 8
+        "见 `:4`。",                                 # 9  子标题继承豁免
+        "## P0-3 又一个开放的",                      # 10
+        "见 `:5`。",                                 # 11 红:✅ 条目到这里结束
+        "### 9. 计数不符  — 只留档",                 # 12
+        "见 `:6`。",                                 # 13
+        "### 3. 签名  — 已知边界,有意不修",          # 14
+        "见 `:7`。",                                 # 15
+        "## 已解决(留档)",                          # 16
+        "### 1. 旧事",                               # 17
+        "见 `:8`。",                                 # 18
+    ]) + "\n"
+
+    def test_路线图里只有开放条目里的坐标算(self):
+        bad = coordinate_violations({"docs/improvements.md": self.ROADMAP})
+        self.assertEqual([(i, c) for _, i, c in bad], [(3, ":1"), (5, ":2"), (11, ":5")])
+
+    def test_ADR_与独立运行报告整份豁免(self):
+        text = "见 `:123`。\n"
+        self.assertEqual(coordinate_violations({"docs/design-decisions.md": text,
+                                                "docs/dogfood-run-7.md": text,
+                                                "docs/dogfood-run-7-log.md": text}), [])
+
+    def test_同样的文字放进别的规范文档就红(self):
+        """豁免按文件与条目给,不是按"看起来像历史":同一段路线图文字换个文件名,豁免全部不生效。"""
+        bad = coordinate_violations({"docs/roadmap-copy.md": self.ROADMAP})
+        self.assertEqual(len(bad), 8)
+
 if __name__ == "__main__":
     unittest.main()
