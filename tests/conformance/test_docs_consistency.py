@@ -11,6 +11,7 @@ contributing.md 也写下了纪律 ——"文档描述行为,pair.py 定义行�
 这些检查全部只比对结构,不判断文案好坏。
 """
 
+import hashlib
 import importlib.util
 import json
 import os
@@ -925,6 +926,130 @@ class TestBareCoordinateExemptions(unittest.TestCase):
         """豁免按文件与条目给,不是按"看起来像历史":同一段路线图文字换个文件名,豁免全部不生效。"""
         bad = coordinate_violations({"docs/roadmap-copy.md": self.ROADMAP})
         self.assertEqual(len(bad), 8)
+
+
+# W56:ADR 字段的偏差登记在案。口径(契约交给 tester 定):
+# - 字段 = 位于行首的 `**名字**`;标准五项 背景 / 决策 / 理由 / 代价 / 被否掉的方案,**名字恰好相等**才算有 ——
+#   "代价与已知边界""理由与取舍""理由:……"这类变体名算缺那一项(契约要求变体也要点名);
+# - "否掉的方案"与"被否掉的方案"同算一项:全体条目都写前者,这是一处统一的命名差,偏差说明里要单独说一次,不逐条点名;
+# - 偏差说明 = 第一个 `## ADR-` 标题之前的那部分(开头说明加上 dev 追加的那段);每条有偏差的 ADR,编号要在那里**逐个**出现
+#   (写 "ADR-009 到 ADR-019" 不算点名了中间那几条)。
+ADR_STANDARD_FIELDS = ("背景", "决策", "理由", "代价", "被否掉的方案")
+_ADR_FIELD_ALIASES = {"否掉的方案": "被否掉的方案"}
+_ADR_HEADING = re.compile(r"(?m)^## (ADR-\d+)")
+# 既有 ADR(ADR-001 到 ADR-024)原文的指纹,取自 W56 认领之前:各节经 `adr_body` 去掉结尾分隔线与空白、按编号换行拼接后的 sha256。
+# 不用 `git show <提交>` 比对 —— CI 的检出是浅克隆,拿不到那个提交;指纹在任何检出里都算得出来。
+ADR_PINNED = tuple("ADR-%03d" % i for i in range(1, 25))
+ADR_PINNED_SHA256 = "b3fc2a6ae943751d827c8e117533f68eb1cbd82dcf172ee34730ac51eae2626e"
+
+
+def adr_sections(text):
+    """{编号: 那一节的全文},按出现顺序。"""
+    heads = list(_ADR_HEADING.finditer(text))
+    return {m.group(1): text[m.start():(heads[i + 1].start() if i + 1 < len(heads) else len(text))]
+            for i, m in enumerate(heads)}
+
+
+def adr_body(section):
+    """一节去掉结尾的分隔线与空白 —— 后面追加新 ADR 时前一节结尾多一条 `---`,不算改了原文。"""
+    return re.sub(r"(?:\s*\n---[ \t]*)+\s*$", "", section).rstrip()
+
+
+def adr_preamble(text):
+    """第一个 `## ADR-` 之前的部分:开头说明与偏差说明。"""
+    m = _ADR_HEADING.search(text)
+    return text if m is None else text[:m.start()]
+
+
+def adr_missing_fields(section):
+    names = {_ADR_FIELD_ALIASES.get(n, n) for n in re.findall(r"(?m)^\*\*([^*\n]+)\*\*", section)}
+    return [f for f in ADR_STANDARD_FIELDS if f not in names]
+
+
+def adr_unregistered(text):
+    """有偏差、编号却没在偏差说明里逐个出现的 ADR:[(编号, 缺的字段)]。"""
+    pre = adr_preamble(text)
+    out = []
+    for num, sec in adr_sections(text).items():
+        missing = adr_missing_fields(sec)
+        if missing and not re.search(r"%s(?!\d)" % re.escape(num), pre):
+            out.append((num, missing))
+    return out
+
+
+class TestAdrDeviationsRegistered(unittest.TestCase):
+    """契约「ADR 字段的偏差登记在案」(W56)。"""
+
+    def setUp(self):
+        self.text = (REPO / "docs" / "design-decisions.md").read_text(encoding="utf-8")
+
+    def test_有偏差的_ADR_都在偏差说明里被点名(self):
+        bad = adr_unregistered(self.text)
+        self.assertEqual(bad, [], "这些 ADR 缺标准字段(或用了变体名),编号没在 design-decisions.md 开头的偏差说明里逐个出现:\n"
+                         + "\n".join("  %s 缺 %s" % (n, "、".join(m)) for n, m in bad))
+
+    def test_偏差说明讲了_否掉的方案_这处统一命名差(self):
+        self.assertRegex(adr_preamble(self.text), r"(?<!被)否掉的方案",
+                         "全体条目写的是'否掉的方案',开头说的是'被否掉的方案' —— 偏差说明要说一次")
+
+    def test_前提_口径在真实数据上确实挑出了偏差(self):
+        """口径若坏到什么都挑不出,上面那条恒绿。ADR 追加式,这几条的原文不会变。"""
+        missing = {n: adr_missing_fields(s) for n, s in adr_sections(self.text).items()}
+        self.assertEqual(missing["ADR-020"], ["理由", "代价", "被否掉的方案"])
+        self.assertEqual(missing["ADR-022"], ["理由"])
+        self.assertEqual(missing["ADR-006"], ["被否掉的方案"])
+        self.assertEqual(missing["ADR-001"], [])
+
+    def test_既有_ADR_的原文一个字没改(self):
+        """契约「不做」:不改任何一条 ADR。把变体名改成标准名也能让上面那条绿 —— 那正是不许的修法。"""
+        now = adr_sections(self.text)
+        for num in ADR_PINNED:
+            self.assertIn(num, now, "%s 不见了" % num)
+        digest = hashlib.sha256("\n".join(adr_body(now[n]) for n in ADR_PINNED).encode("utf-8")).hexdigest()
+        self.assertEqual(digest, ADR_PINNED_SHA256, "ADR-001 到 ADR-024 里有原文被改了(偏差只追加说明,不改原文)")
+
+
+class TestAdrDeviationReading(unittest.TestCase):
+    """口径的每一格,用造出来的 ADR 钉住。"""
+
+    FULL = "**背景** a\n\n**决策** b\n\n**理由** c\n\n**代价** d\n\n**否掉的方案**\n- e\n"
+
+    def doc(self, preamble, *adrs):
+        return "# 决策记录\n\n" + preamble + "\n\n---\n\n" + "".join(
+            "## %s 标题\n\n%s\n" % (num, body) for num, body in adrs)
+
+    def test_五项齐全的不用登记(self):
+        self.assertEqual(adr_unregistered(self.doc("", ("ADR-001", self.FULL))), [])
+
+    def test_新加一条缺字段又没登记_红(self):
+        body = self.FULL.replace("**代价** d\n\n", "")
+        self.assertEqual(adr_unregistered(self.doc("", ("ADR-001", self.FULL), ("ADR-025", body))),
+                         [("ADR-025", ["代价"])])
+
+    def test_登记了就不红(self):
+        body = self.FULL.replace("**代价** d\n\n", "")
+        self.assertEqual(adr_unregistered(self.doc("ADR-025 没有代价一项。", ("ADR-025", body))), [])
+
+    def test_变体名算缺那一项(self):
+        body = self.FULL.replace("**代价** d", "**代价与已知边界** d").replace("**理由** c", "**理由与取舍** c")
+        self.assertEqual(adr_missing_fields(body), ["理由", "代价"])
+
+    def test_加粗不在行首的不算字段(self):
+        self.assertEqual(adr_missing_fields(self.FULL.replace("**背景** a", "说明 **背景** a")), ["背景"])
+
+    def test_被否掉的方案与否掉的方案同算一项(self):
+        self.assertEqual(adr_missing_fields(self.FULL.replace("**否掉的方案**", "**被否掉的方案**")), [])
+
+    def test_写成区间不算逐个点名(self):
+        body = self.FULL.replace("**代价** d\n\n", "")
+        bad = adr_unregistered(self.doc("ADR-009 到 ADR-011 没有代价一项。",
+                                        ("ADR-009", body), ("ADR-010", body), ("ADR-011", body)))
+        self.assertEqual([n for n, _ in bad], ["ADR-010"])
+
+    def test_编号要整段匹配(self):
+        """ADR-0100 不算点名了 ADR-010。"""
+        body = self.FULL.replace("**代价** d\n\n", "")
+        self.assertEqual([n for n, _ in adr_unregistered(self.doc("见 ADR-0100。", ("ADR-010", body)))], ["ADR-010"])
 
 if __name__ == "__main__":
     unittest.main()
