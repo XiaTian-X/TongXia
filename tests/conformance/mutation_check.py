@@ -1004,6 +1004,31 @@ MUTATIONS = [
     ('tester 完成时不提示 dev 重跑',
      '        if me != "dev" and cfg["require_setup_verification"] \\\n',
      '        if False and cfg["require_setup_verification"] \\\n'),
+
+    # W57 测试结果按内容记(review-impl 登记)。
+    ('测试结果恒重跑',
+     '        if prev is not None and prev[0] == key:\n',
+     '        if False:\n'),
+
+    ('测试结果不比指纹恒复用',
+     '        if prev is not None and prev[0] == key:\n',
+     '        if prev is not None:\n'),
+
+    ('指纹不含测试命令',
+     '    for part in [cmd, "\\n".join(entries), "\\n".join(tracked)]:\n',
+     '    for part in ["\\n".join(entries), "\\n".join(tracked)]:\n'),
+
+    ('指纹不含已跟踪集合',
+     '    for part in [cmd, "\\n".join(entries), "\\n".join(tracked)]:\n',
+     '    for part in [cmd, "\\n".join(entries)]:\n'),
+
+    ('指纹排除项多排配置文件',
+     '    out = [STATE_REL] + list(PROTOCOL_LOGS) + list(cfg.get("shared_paths") or [])\n',
+     '    out = [STATE_REL, CONFIG_REL] + list(PROTOCOL_LOGS) + list(cfg.get("shared_paths") or [])\n'),
+
+    ('记忆层关着也排除出指纹',
+     '    if memory_on(cfg):\n        out += [p for p in (cfg.get("notes_dir"), cfg.get("decisions_file")) if p]\n',
+     '    if True:\n        out += [p for p in (cfg.get("notes_dir"), cfg.get("decisions_file")) if p]\n'),
 ]
 
 # unittest 的失败行有两种形态:

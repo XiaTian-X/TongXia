@@ -1,5 +1,5 @@
 {
-  "baseline": "148861107b446f1e",
+  "baseline": "d3d83f82ffaf2c3a",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -490,6 +490,15 @@
     "拆掉重钉后 sha 的 strip": [
       "test_v1_judge.TestJudgeRepinAtDone.test_写进正文的值不带换行"
     ],
+    "指纹不含已跟踪集合": [
+      "test_v1_test_reuse.TestRerunWhenFingerprintChanges.test_未跟踪文件只是被提交_内容没变"
+    ],
+    "指纹不含测试命令": [
+      "test_v1_test_reuse.TestRerunWhenFingerprintChanges.test_测试命令变了_配置文件不动"
+    ],
+    "指纹排除项多排配置文件": [
+      "test_v1_test_reuse.TestRerunWhenFingerprintChanges.test_改了配置文件但测试命令没变"
+    ],
     "捷径不比 review-impl 时的契约": [
       "test_v1_rebound_shortcut.TestShortcutNotTaken.test_review_test_期间契约被人提交过_照旧进_impl"
     ],
@@ -556,6 +565,12 @@
     "没有判定行的 impl 交接不单独计": [
       "test_v1_effective.TestUnjudgedHistory.test_旧提交单独计数_新的不算未判定"
     ],
+    "测试结果不比指纹恒复用": [
+      "test_boundaries.TestDeletionGuard.test_删除已有测试被拒绝"
+    ],
+    "测试结果恒重跑": [
+      "test_v1_test_reuse.TestExcludedPaths.test_决策记录"
+    ],
     "第二次打回改成按工作项算": [
       "test_v1_validity.TestSameTurnGatesUnchanged.test_第二次打回_更早回合的决策不算"
     ],
@@ -606,6 +621,9 @@
     ],
     "规范性文档不算删除": [
       "test_v1_docreason.TestDocReasonRequired.test_删掉一份规范性文档同样要理由"
+    ],
+    "记忆层关着也排除出指纹": [
+      "test_v1_test_reuse.TestMemoryOff.test_记忆层关着时笔记目录照常进指纹"
     ],
     "评审记录改写 handoff 不判": [
       "test_v1_review_immutable.TestRewriteIsRefused.test_不分角色不分阶段_dev_在_impl_改写也被拒"
