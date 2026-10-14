@@ -271,6 +271,14 @@ pair.py handoff "说明" --allow-deletion "删除理由"
 **处理** dev 通读契约里变了的那几节,往自己的 `setup-verification-dev.md` 末尾追加一段补记,重跑 `verify-setup`,再交接。
 由 tester 完成的工作项(`refactor` 的 review-impl)不拒绝,收尾会提示"认领下一项之前要先让 dev 重跑"。
 
+### 测试结果看着过期了:改了依赖或环境,`status` 还是旧的 GREEN/RED
+
+**原因** 第三十一轮 W57 起,测试命令与工作区内容(含已跟踪路径的集合)都没变时,协议直接用上一次的结果,不重跑。
+被 `.gitignore` 忽略的东西(依赖目录、虚拟环境、`.env`)、测试环境本身(装没装某个工具)、HEAD 与提交历史都不在指纹里。
+
+**处理** `PAIR_FRESH_TESTS=1` 跑一次(例如 `PAIR_FRESH_TESTS=1 PAIR_ROLE=dev python3 .pair/enforcer.py status`),或删掉 `.pair/.last-test.log`。
+有内容改动的交接照常重跑,不会把过期的结果当裁判。
+
 ### 同一工作项被打回 3 次,协议停了
 
 **这是设计。** 把双方分歧写清楚,交给人类裁决。

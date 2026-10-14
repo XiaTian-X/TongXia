@@ -151,6 +151,14 @@
 `run_tests()` 执行 `PAIR_TEST_CMD` 环境变量或 `config.test_cmd`,
 输出重定向到 `.pair/.last-test.log`,**退出码为 0 即 GREEN**。
 
+**同样的内容不跑第二次**(第三十一轮 W57)。执行之前先算指纹:实际要执行的命令 + 工作区内容(临时索引里每一项的模式与
+blob 哈希,含未跟踪、尊重 `.gitignore`)+ 已跟踪路径的集合;排除 `.pair/state.json`、协议日志、评审目录(`shared_paths`)
+与记忆层(memory 开着时的 `notes_dir`、`decisions_file`)。日志最后一行记 `[pair-test-record] <指纹> <退出码>`;
+指纹与上一次相同就直接用记下的退出码,不执行、不改日志 —— 日志仍是产生这个结果的那次运行的输出。
+`status`、`verify-setup`、`handoff`、`init` 都走这一条;`full_test_cmd` 用自己的日志、各记各的。
+前提是测试确定、环境不变:被忽略的依赖目录、测试环境本身、HEAD 与提交历史都不在指纹里。
+`PAIR_FRESH_TESTS=1` 或删掉日志即强制重跑。
+
 `cover` 类型在 GREEN 要求未满足时给出专门文案:测试变红说明发现了真实缺陷,
 应当告诉人类改成 `[bug]` 类型,**不得**在 cover 回合里放宽断言让它变绿。
 

@@ -32,6 +32,9 @@ python3 tests/conformance/run.py
 python3 tests/conformance/mutation_check.py
 ```
 
+**在结对回合里不必在交接前手动跑一遍全量**:`handoff`(与 `verify-setup`)自己会跑 `test_cmd`,内容没变还会直接复用上一次的结果(W57)。
+回合中途想看效果,跑相关的模块(`run.py <模块名>` 或 `--changed`)就够了,全量留给交接那一遍当裁判。
+
 **跑之前有两项前提**,`run.py` 起跑前自检,不满足就点名说明、一个用例都不跑(退出码 3):
 
 - **PATH 上的 `python3` 就是你要测的那个解释器。** harness 用 PATH 上的 `python3` 起 `pair.py`,
