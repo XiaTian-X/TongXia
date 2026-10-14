@@ -679,3 +679,8 @@
 - 理由: 「文档说的最大缺口要指向仍开放的条目」的范围是 W48 的闭合定义,`PLAN.md`、`CONTRACT.md`、`improvements.md` 都在里面,而它们描述这个问题时原样引了那句旧话。照"同一句里有最大缺口和条目编号"扫,`design-philosophy.md` 改好之后这三处仍指向已落地的 P0-2,用例永远红;按句号切也不够,PLAN 的工作项整条只有一两个句号。spec 回合带声明补「读法」:段内拼行、去掉引号里的引述、取"最大缺口"之后到句末标点为止的第一个条目编号。实扫:今天只有 `design-philosophy.md` 指向已落地条目,其余三份指向开放的 P0-1。另钉"design-philosophy 仍要有一处指向"(删掉那句不算修好),读法的每一格各用一段造出来的文字钉住。
 - 已否决: 把 `PLAN`/`CONTRACT`/`improvements` 排除出范围 —— 范围与 W48 同一个闭合定义,另开例外会让两条检查各管各的;只扫 `design-philosophy.md` —— 下一份文档写出过期的"最大缺口"时没人发现。
 - 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/test_docs_consistency.py`, `docs/design-philosophy.md`
+## W54 — 不会自愈的数据漂移,用一条形状用例守;归一化之后跑一次默认路径自证
+
+- 理由: 变异缓存的写回只发生在"抓到且不是缓存命中"时,快路径命中就原样保留 —— `MAX_CACHED > 1` 时代留下的 20 条多抓手条目永远不会自己变回设计的样子。修法不是放宽写回条件(那会改掉"命中说明缓存已对"的前提),而是一次性归一化加一条形状用例:每条 catchers 不超过 `MAX_CACHED`。归一化之后跑一次默认路径自证:211 个变异全部被抓到;review-impl 还发现有一条截剩的第一个抓手已不再抓住它的变异,快路径回退跑全量、重写成另一个 —— 正是契约依赖的自愈,也说明旧数据里本来就藏着失效的抓手。同一项里把"预检失败集为空则 rc≠0 必然由变异引起"改成写明前提(测试确定、环境不变)并说明为什么不是必然:一句过强的注释会让后来者以为这里不必复核。review 时探过形状用例:一条记两个抓手红、`MAX_CACHED=2` 时同样数据绿、catchers 读出空的红、没有缓存文件 skip。
+- 已否决: 放宽"快路径命中时不重写" —— 见路线图第 2 条的比较。改文档措辞去迁就数据 —— 漂移在数据侧。
+- 影响路径: `tests/conformance/mutation_check.py`, `tests/conformance/mutation-cache.json`, `tests/conformance/test_mutation_tooling.py`
