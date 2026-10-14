@@ -153,6 +153,17 @@ class TestCacheShape(unittest.TestCase):
         dupes = sorted({n for n in names if names.count(n) > 1})
         self.assertFalse(dupes, "变异点重名会让缓存互相覆盖:%s" % dupes)
 
+    def test_每条缓存的抓手不超过_MAX_CACHED(self):
+        """W54:注释与 contributing.md 都说每个变异只记 MAX_CACHED 个抓手;写回时 `f[:MAX_CACHED]` 截断,
+        但快路径命中时不重写 —— `MAX_CACHED > 1` 时代留下的条目永远不会自愈,只能靠这条发现。"""
+        if not (Path(__file__).with_name("mutation-cache.json")).exists():
+            self.skipTest("没有缓存文件,无从判定")
+        _, cache = MUT.load_cache()
+        self.assertTrue(cache, "前提:缓存文件在,catchers 却读出空的")
+        over = sorted("%s(%d 个)" % (k, len(v)) for k, v in cache.items() if len(v) > MUT.MAX_CACHED)
+        self.assertFalse(over, "这些条目的抓手超过 MAX_CACHED=%d,截到前 %d 个后跑一次默认路径自证:\n  %s"
+                         % (MUT.MAX_CACHED, MUT.MAX_CACHED, "\n  ".join(over)))
+
 
 if __name__ == "__main__":
     unittest.main()

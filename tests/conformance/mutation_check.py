@@ -1043,8 +1043,10 @@ MAX_CACHED = 1
 #
 # 所以 `--no-baseline` 还要过第二道闸:precheck_no_baseline 在未变异的隔离
 # 副本(与 check_one 的判定环境同构)里跑一遍全量套件,失败集非空就拒绝
-# 检查;为空则两条路径的 rc≠0 都必然由变异引起,判据恢复可靠。预检不写缓存、
-# 不放宽 verified —— "指纹对不对得上"仍由 baseline_verified 独自裁定。
+# 检查;为空则**在测试确定、环境不变的前提下**,两条路径的 rc≠0 可以归因到变异。
+# 这不是必然(W54):预检是一次采样,check_one 在几十个另建的副本里各跑一次,运行器也不同
+# (预检并行、判定串行),对负载或时序敏感的测试可以预检绿、某个副本红 —— 那一条会被误记成"抓到"。
+# 预检不写缓存、不放宽 verified —— "指纹对不对得上"仍由 baseline_verified 独自裁定。
 BASELINE_KEY = "baseline"
 CATCHERS_KEY = "catchers"
 
