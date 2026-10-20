@@ -211,6 +211,19 @@ dev 跑一次 `npm install` 改了 lockfile 就被判越界是不合理的。把
 在 `docs/reviews/baseline.md` 写明放弃了哪些用例、为什么。
 **这不是把"绿"放宽,是缩小它的范围并留痕。**
 
+**可选:让测试命令写出 JUnit XML,协议就能说出红的是哪几条**(`test_report` / `full_test_report`):
+
+```json
+"test_cmd":         "pytest tests/billing --junitxml=.pair/junit.xml",
+"test_report":      ".pair/junit.xml",
+"full_test_cmd":    "pytest --junitxml=.pair/junit-full.xml",
+"full_test_report": ".pair/junit-full.xml"
+```
+
+其他栈的写法:jest 用 `jest-junit` reporter,vitest 用 `--reporter=junit --outputFile=…`,Go 用 `gotestsum --junitfile …`,
+PHPUnit 用 `--log-junit …`,RSpec 用 `rspec_junit_formatter`,Maven Surefire 默认就写在 `target/surefire-reports/`(需要合并成一份时自己合)。
+报告放在哪都行(`.pair/` 下也可以):协议在执行前删掉旧报告、不提交它、不让它挡写权限边界;读不出或与退出码对不上时只看退出码并警告,不会卡住。
+
 ### 已有的 CLAUDE.md / AGENTS.md 会被合并,不会被覆盖
 
 `init` 把协议激活段落插到文件**开头**,原内容原样保留在后面,

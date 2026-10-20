@@ -27,6 +27,7 @@ import subprocess
 import tempfile
 import sys
 import unicodedata
+import xml.etree.ElementTree as ET
 from pathlib import Path, PurePosixPath
 
 ROLES = ("tester", "dev")
@@ -316,6 +317,9 @@ def load_config(root, required=True):
     # test_cmd 收窄到本轮范围(存量项目的老套件可能红、可能极慢),
     # 同时不让范围之外的回归悄无声息。
     cfg.setdefault("full_test_cmd", None)
+    # W58:两条测试命令各自写出的 JUnit XML(可选)。不配时只看退出码。
+    cfg.setdefault("test_report", None)
+    cfg.setdefault("full_test_report", None)
     cfg.setdefault("plan_file", "docs/PLAN.md")
     cfg.setdefault("contract_file", "docs/CONTRACT.md")
     cfg.setdefault("sync", False)
@@ -747,6 +751,7 @@ def fingerprint_excluded(cfg):
     `.pair/config.json` 不在里面 —— 本仓库的测试就读它。协议日志显式列出,不靠项目的 `.gitignore`
     (harness 的 `.gitignore` 只有两行)。记忆层只在 memory 开着时算协议的东西,关着时是普通文件。"""
     out = [STATE_REL] + list(PROTOCOL_LOGS) + list(cfg.get("shared_paths") or [])
+    out += report_paths(cfg)                            # W58:报告是产物,每次运行都变
     if memory_on(cfg):
         out += [p for p in (cfg.get("notes_dir"), cfg.get("decisions_file")) if p]
     return out
@@ -802,9 +807,73 @@ def last_test_record(log):
     except OSError:
         return None
     parts = tail.split()
-    if len(parts) != 3 or parts[0] != TEST_RECORD_TAG or not re.fullmatch(r"-?\d+", parts[2]):
-        return None
-    return parts[1], int(parts[2])
+    if len(parts) != 4 or parts[0] != TEST_RECORD_TAG or not re.fullmatch(r"-?\d+", parts[2]):
+        return None                                     # 旧格式(没有报告哈希那一栏)读不懂,当没有
+    return parts[1], int(parts[2]), parts[3]
+
+
+def report_paths(cfg):
+    """配置里的 JUnit XML 报告路径(W58)。"""
+    return [p for p in (cfg.get("test_report"), cfg.get("full_test_report")) if p]
+
+
+def report_for(cfg, log_rel):
+    """这条测试命令的报告路径:全量那条用 full_test_report,门禁用 test_report。"""
+    return cfg.get("full_test_report" if log_rel == FULL_TESTLOG_REL else "test_report")
+
+
+def report_digest(root, report_rel):
+    """报告内容的哈希;没有配置或文件不在记 `-`(W58:复用时报告也要对得上)。"""
+    if not report_rel:
+        return "-"
+    try:
+        return hashlib.sha256((root / report_rel).read_bytes()).hexdigest()[:16]
+    except OSError:
+        return "-"
+
+
+def junit_failures(path):
+    """JUnit XML 里红着的用例 ID(W58)。ID = classname.name(没有 classname 就只用 name);
+    含 failure 或 error 子元素算红,skipped 不算;嵌套与多个 testsuite 一起遍历。读不出抛 ValueError。"""
+    try:
+        tree = ET.parse(str(path))
+    except (OSError, ET.ParseError) as e:
+        raise ValueError(str(e))
+    out = []
+    for case in tree.getroot().iter("testcase"):
+        if case.find("failure") is None and case.find("error") is None:
+            continue
+        name, cls = case.get("name") or "", case.get("classname") or ""
+        out.append("%s.%s" % (cls, name) if cls else name)
+    return out
+
+
+def read_report(root, report_rel, rc):
+    """→ (红用例列表或 None, 警告或 None)。读不出、或与退出码对不上(spec 回合带声明补 ⑰)就当没有报告:
+    退出码非 0 而报告无红(套件跑到一半崩了),或退出码 0 而报告有红(命令吞掉了退出码)。"""
+    if not report_rel:
+        return None, None
+    try:
+        failed = junit_failures(root / report_rel)
+    except ValueError as e:
+        return None, "报告 %s 读不出(%s),这一次只看退出码。" % (report_rel, e)
+    if (rc != 0) != bool(failed):
+        return None, ("报告 %s 与退出码对不上(退出码 %d,报告里红 %d 条),这一次只看退出码。"
+                      % (report_rel, rc, len(failed)))
+    return failed, None
+
+
+def run_tests_detail(root, cfg, cmd=None, log_rel=None):
+    """跑一条测试命令(或复用上一次),返回 (是否绿, 红用例列表或 None)。读不出报告时往 stderr 打一行警告。"""
+    report_rel = report_for(cfg, log_rel)
+    green = run_tests(root, cfg, cmd=cmd, log_rel=log_rel)
+    log = root / (log_rel or TESTLOG_REL)
+    rec = last_test_record(log)
+    rc = rec[1] if rec is not None else (0 if green else 1)
+    failed, warning = read_report(root, report_rel, rc)
+    if warning:
+        sys.stderr.write("[结对协议] 警告:%s\n" % warning)
+    return green, failed
 
 
 def run_tests(root, cfg, cmd=None, log_rel=None):
@@ -817,18 +886,26 @@ def run_tests(root, cfg, cmd=None, log_rel=None):
     if not cmd:
         die("未配置 test_cmd。请编辑 %s 填入本项目的测试命令。" % CONFIG_REL)
     log = root / (log_rel or TESTLOG_REL)
+    report_rel = report_for(cfg, log_rel)
     key = content_fingerprint(root, cfg, cmd)
     if key is not None and os.environ.get("PAIR_FRESH_TESTS") != "1":
         prev = last_test_record(log)
         if prev is not None and prev[0] == key:
-            return prev[1] == 0
+            if prev[2] == report_digest(root, report_rel):   # W58:报告被删、被改就不算同一次
+                return prev[1] == 0
+    if report_rel:                                      # W58:先删旧报告,命令没写就是"没有报告"
+        try:
+            (root / report_rel).unlink()
+        except OSError:
+            pass
     log.parent.mkdir(parents=True, exist_ok=True)
     with open(log, "wb") as f:
         rc = subprocess.call(cmd, shell=True, cwd=str(root),
                              stdout=f, stderr=subprocess.STDOUT)
     if key is not None:                                 # 算不出指纹就不留记录:下一次照常执行
         with open(log, "ab") as f:
-            f.write(("\n%s %s %d\n" % (TEST_RECORD_TAG, key, rc)).encode("utf-8"))
+            f.write(("\n%s %s %d %s\n" % (TEST_RECORD_TAG, key, rc,
+                                          report_digest(root, report_rel))).encode("utf-8"))
     return rc == 0
 
 
@@ -1531,7 +1608,7 @@ def cmd_status(root, cfg, args):
     owner = phase_owner(root, cfg, state)
 
     tampered = state_is_tampered(root)
-    green = run_tests(root, cfg)
+    green, failed_cases = run_tests_detail(root, cfg)
 
     role_hint = "写测试,不写实现" if me == "tester" else "写实现,不写测试"
     item_label = state["item"] or "（无,等待认领）"
@@ -1544,6 +1621,11 @@ def cmd_status(root, cfg, args):
     print(" 当前工作项: %s" % item_label)
     print(" 当前阶段 : %s   → 归属: %s" % (phase, owner))
     print(" 测试状态 : %s   (详见 %s)" % ("GREEN" if green else "RED", TESTLOG_REL))
+    if failed_cases:                                    # W58:有报告就说清红在哪,dev 不必再跑一遍
+        for case in failed_cases[:20]:
+            print("            红: %s" % case)
+        if len(failed_cases) > 20:
+            print("            …… 另有 %d 条(见报告 %s)" % (len(failed_cases) - 20, cfg.get("test_report")))
     print(" 可写路径 : %s" % writable_display(cfg, phase, me))
     print(" 已完成项 : %d" % len(state["completed_items"]))
     if state["deadlock_hits"]:
@@ -2246,6 +2328,9 @@ def cmd_handoff(root, cfg, args):
     # 下面每一道判定看的都是 `entries`,所以在这里一次拿掉,不在每道判定里各写一遍。
     left_os = os_files_left(entries, cfg)
     entries = [(xy, p) for xy, p in entries if p not in left_os]
+    # W58:配置的报告是测试命令写出的产物,与协议日志一样不参与边界判定、不进提交。
+    reports = report_paths(cfg)
+    entries = [(xy, p) for xy, p in entries if p not in reports]
     # W37:提交前算好(提交之后就没有"相对 HEAD 的新增行"了),交接成功后再打印。
     combining = combining_in_new_lines(root, cfg, entries)
 
@@ -2609,6 +2694,8 @@ def cmd_handoff(root, cfg, args):
     if left_os:
         # 退回未暂存:它们留在工作区,不删 —— 不是 agent 写的,删不删是人类的事。
         git("reset", "-q", "--", *left_os, cwd=root)
+    if reports:
+        git("reset", "-q", "--", *reports, cwd=root, check=False)
     git("commit", "-q", "-m", "%s: %s" % (prefix, message), "-m", body, cwd=root)
 
     push_failed = cfg.get("sync") and git("push", cwd=root, check=False) is None

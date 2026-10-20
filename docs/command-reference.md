@@ -43,6 +43,7 @@ pair.py status
 
 退出码 0。这是只读命令,唯一的副作用是刷新 `.pair/.last-test.log`。
 内容(与测试命令)自上一次运行以来没变时,不重跑、直接用上次的结果(W57,见 `PAIR_FRESH_TESTS`)。
+配了 `test_report`(JUnit XML)时,测试状态下面列出红着的用例,最多 20 条(W58)。
 
 ---
 

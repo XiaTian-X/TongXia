@@ -343,6 +343,8 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 | `review_append_paths` | object | `{}` | `{角色: [路径]}`。评审阶段的执行者可以往自己名下**已提交**的这些文件**只追加**(没有删除行,中间插入也算);不是 `shared_paths`,其他阶段不可写 |
 | `scope` | string[] | `[]` | 本轮结对能碰的范围。空 = 不限。评审目录与记忆层豁免 |
 | `full_test_cmd` | string\|null | `null` | 全量套件。只在工作项完成时跑一次,**只报告不阻断**(退出码 2) |
+| `test_report` | string\|null | `null` | `test_cmd` 写出的 JUnit XML 路径(W58)。配了之后 `status` 列出红着的用例;执行前删旧报告,读不出或与退出码对不上就只看退出码并警告。报告豁免写权限边界、不进提交 |
+| `full_test_report` | string\|null | `null` | `full_test_cmd` 写出的 JUnit XML 路径(W58),同上 |
 | `plan_file` | string | `docs/PLAN.md` | — |
 | `contract_file` | string | `docs/CONTRACT.md` | — |
 | `sync` | bool | `false` | 分离工作副本拓扑:status 前 pull,handoff 后 push |
