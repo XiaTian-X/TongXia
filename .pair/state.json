@@ -1,8 +1,8 @@
 {
   "round": 57,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W60",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -66,7 +66,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "1d2e0c8dca8c94be8449a522804679be8693c64c",
   "setup_verified_contract": {
     "tester": "1d2e0c8dca8c94be8449a522804679be8693c64c",
     "dev": "1d2e0c8dca8c94be8449a522804679be8693c64c"
