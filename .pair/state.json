@@ -1,8 +1,8 @@
 {
   "round": 55,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W58",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -64,7 +64,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "b5852c38344a3a98a5278046580571dbae186acb",
   "setup_verified_contract": {
     "tester": "b5852c38344a3a98a5278046580571dbae186acb",
     "dev": "b5852c38344a3a98a5278046580571dbae186acb"
