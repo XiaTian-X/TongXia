@@ -406,6 +406,7 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 | `rebound_from` | string\|null | 上一次打回来自哪一阶段;不是打回的交接清成 `null`。只涉及测试的打回走捷径要看它 |
 | `reviewed_contract` | string\|null | 最近一次 review-impl approve 时契约文件**工作区内容**的 blob sha。捷径要求现在的契约与它相同 |
 | `last_full_failed` | bool | 最近一次工作项完成时,全量套件(`full_test_cmd`)是否红。PLAN 全部完成之后 `status` / `whose-turn` / `handoff` 的完成提示读它:为真时不说"请向人类报告项目完成",改说项目算不算结束由人类决定。没配 `full_test_cmd` 记为 `false`;老状态没有这个键按 `false` |
+| `full_failures` | string[]\|null | 上一次全量里红着的用例 ID(排序列表,W59)。`verify-setup` 跑全量且读得出 `full_test_report` 时写入,每次工作项完成时更新;完成时新增的红 = 这一次红着的 − 它。不知道时为 `null`(没配报告、报告读不出、老状态),那时完成照旧只报告 |
 
 老状态文件缺少新键时取默认值,对应检查自动跳过 —— 存量仓库零成本升级。
 **例外是 `setup_verified_contract`**:缺失时 `claim` 要求重跑一次 `verify-setup`。

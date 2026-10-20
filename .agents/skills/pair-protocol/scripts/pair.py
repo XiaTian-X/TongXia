@@ -157,6 +157,7 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "contract-change-basis", # 改承重文件时,声明必须指向一份真实产物
     "contract-change-now",   # 带声明的那次交接必须当场留决策(不是等到 DONE)
     "done-dev-verified",     # dev 完成工作项时自己的开工前校验必须作数(W50)
+    "full-new-failures",     # 完成时全量里新增的红(上一次绿、这一次红)拒绝完成,除非带声明(W59)
 )
 
 
@@ -256,6 +257,9 @@ DEFAULT_STATE = {
     # 完成提示读它 —— 否则 W43 只管住了完成那一次,之后照旧说"请向人类报告项目完成"。
     # 老状态里没有这个键 = 不红,存量项目零成本升级。
     "last_full_failed": False,
+    # W59:上一次全量里红着的用例 ID(排序列表),完成时用来分"这个工作项弄红的"与"原来就红的"。
+    # 不知道时为 None(没配 full_test_report、报告读不出、老状态没有这个键)—— 那时完成照旧只报告。
+    "full_failures": None,
 }
 
 # `- [ ] **W1** [bug] — 标题`,类型可省略(缺省 feature)
@@ -1080,6 +1084,25 @@ def stale_verification(root, cfg, state, role):
             % (why, role, role, reverify_how(role, gap), role, PROG_HINT))
 
 
+def new_full_failures(failed, baseline):
+    """这一次全量红着、上一次没红的用例(W59)。任一边不知道就返回 []:不知道的不拦。"""
+    if failed is None or baseline is None:
+        return []
+    return sorted(set(failed) - set(baseline))
+
+
+def last_full_new_failures(root, cfg, state):
+    """上一次全量(按全量日志末尾的记录与报告,不重跑)里新增的红(W59 spec 回合带声明补 ⑱)。
+
+    记录里的报告哈希对得上、报告与退出码一致才算数;任何一项读不出就返回 [](照 W17 原样)。"""
+    report_rel = cfg.get("full_test_report")
+    rec = last_test_record(root / FULL_TESTLOG_REL)
+    if not report_rel or rec is None or rec[2] != report_digest(root, report_rel):
+        return []
+    failed, _ = read_report(root, report_rel, rec[1])
+    return new_full_failures(failed, state.get("full_failures"))
+
+
 def rebound_shortcut(root, cfg, state, green, changed_named_frozen):
     """review-test 打回之后的 spec 回合,能不能跳过 impl 与 review-impl 直接进 review-test(W17)。
 
@@ -1101,6 +1124,10 @@ def rebound_shortcut(root, cfg, state, green, changed_named_frozen):
     if state.get("rebound_from") != "review-test":
         return False
     if changed_named_frozen:
+        return False
+    # W59 ⑱:上一次完成被"新增的红"拒绝过 —— 那多半在实现里,tester 的修正回合门禁照样绿,
+    # 走捷径就直接回 review-test,dev 再 approve 再被拒,一圈烧一次打回额度。进 impl,由 dev 修。
+    if last_full_new_failures(root, cfg, state):
         return False
     return state.get("reviewed_contract") == worktree_sha(root, cfg["contract_file"])
 
@@ -2610,6 +2637,23 @@ def cmd_handoff(root, cfg, args):
             die("同一工作项已经被打回 %d 次。协议要求此时停止自动轮转。\n"
                 "请把双方分歧写清楚,交给人类裁决。不要继续来回。" % changes_n)
 
+    # --- 完成时的全量(W59)-----------------------------------------------------
+    # 放在翻转回合(勾 PLAN.md)之前:有新增的红就拒绝,拒绝时什么都不能落盘,工作区也要与交接之前相同。
+    full_green, full_failed_cases, full_new = True, None, []
+    if target == "DONE" and cfg.get("full_test_cmd"):
+        full_green, full_failed_cases = run_tests_detail(root, cfg, cmd=cfg["full_test_cmd"],
+                                                         log_rel=FULL_TESTLOG_REL)
+        full_new = new_full_failures(full_failed_cases, state.get("full_failures"))
+        if full_new and not args.accept_new_failures:
+            back = ("用 handoff changes 打回:tester 补完用例之后会进 impl,由 dev 修。" if me == "dev"
+                    else "用 handoff changes 打回:直接进 impl,由 dev 修。")
+            die("拒绝完成 —— 全量套件里有 %d 条用例上一次是绿的,这个工作项把它们弄红了:\n  %s%s\n\n"
+                "原来就红着的不算(它们照旧只报告)。这一回合不能改代码:%s\n"
+                "确认它们不归本项(例如 flaky),带声明放行:--accept-new-failures \"理由\"。详见 %s"
+                % (len(full_new), "\n  ".join(full_new[:20]),
+                   "\n  …… 另有 %d 条" % (len(full_new) - 20) if len(full_new) > 20 else "",
+                   back, FULL_TESTLOG_REL))
+
     # --- 翻转回合 ---------------------------------------------------------
     finished_item = None
     if target == "DONE":
@@ -2639,10 +2683,9 @@ def cmd_handoff(root, cfg, args):
     # 本来就无权修,阻断等于把它们锁死在一个自己解不开的局面里。
     # W44:在 save_state 与提交**之前**跑,结果写进状态、随这一次提交落地。提交之后再补写,
     # 状态文件就留在工作区里是改过的 —— 那正是 state_is_tampered 的定义,下一次交接会把记录还原掉。
-    full_failed = False
-    if finished_item and cfg.get("full_test_cmd"):
-        full_failed = not run_tests(root, cfg, cmd=cfg["full_test_cmd"],
-                                    log_rel=FULL_TESTLOG_REL)
+    full_failed = bool(finished_item and cfg.get("full_test_cmd") and not full_green)
+    if finished_item and full_failed_cases is not None:
+        state["full_failures"] = sorted(set(full_failed_cases))    # W59:更新基线(修好的自然去掉)
     if finished_item:
         state["last_full_failed"] = full_failed
     save_state(root, state)
@@ -2666,6 +2709,9 @@ def cmd_handoff(root, cfg, args):
     if args.allow_deletion and deleted:
         body += "\n删除测试(已声明): %s\n  %s" % (args.allow_deletion,
                                                  "\n  ".join(deleted))
+    if args.accept_new_failures and full_new:          # W59:只在真有新增的红时生效
+        body += "\n新增的红(已声明): %s\n  %s" % (args.accept_new_failures,
+                                                 "\n  ".join(full_new))
     if args.no_decision and no_decision_read:
         body += "\n未留决策(已声明): %s" % args.no_decision
     if args.doc_reason and touched_docs:
@@ -3715,9 +3761,11 @@ def cmd_verify_setup(root, cfg, args):
              "      这是门禁范围被缩小的唯一留痕。" % BASELINE_REL)
 
     # --- 全量套件(只报告)---------------------------------------------------
+    full_baseline = None
     if cfg.get("full_test_cmd"):
-        if not run_tests(root, cfg, cmd=cfg["full_test_cmd"],
-                         log_rel=FULL_TESTLOG_REL):
+        full_ok, full_baseline = run_tests_detail(root, cfg, cmd=cfg["full_test_cmd"],
+                                                  log_rel=FULL_TESTLOG_REL)
+        if not full_ok:
             warn("全量套件是红的:%s\n"
                  "      这本身不阻断(门禁是收窄过的 test_cmd),但请确认人类知道\n"
                  "      放弃了哪些用例、为什么。详见 %s"
@@ -3982,6 +4030,8 @@ def cmd_verify_setup(root, cfg, args):
             "不要覆盖(W13 起两个角色都是这么做的)。\n\n"
             "如果这份改动不是你做的,不要撤销 —— 告诉人类。" % report_rel)
     state["setup_verified"] = True
+    if full_baseline is not None:                       # W59:全量的基线从开工前校验这一次起
+        state["full_failures"] = sorted(set(full_baseline))
     # 按角色记下这次校验的是哪一份契约(工作区内容)。先复制再写:load_state
     # 是浅拷贝,直接往默认值里的 dict 写会改到 DEFAULT_STATE 本身。
     # 解析不出角色时(W12 的回落路径)记不了 —— 那个角色认领时会被要求重跑。
@@ -4075,6 +4125,8 @@ def main(argv=None):
     p_ho.add_argument("words", nargs="*")
     p_ho.add_argument("--allow-deletion", metavar="理由", default=None,
                       help="显式声明本次删除了测试,并给出理由")
+    p_ho.add_argument("--accept-new-failures", metavar="理由", default=None,
+                      help="完成时全量套件有新增的红、确认不归本项(例如 flaky)时带声明放行")
     p_ho.add_argument("--no-decision", metavar="理由", default=None,
                       help="显式声明本工作项的笔记没有值得沉淀成决策的内容")
     p_ho.add_argument("--doc-reason", metavar="理由", default=None,
