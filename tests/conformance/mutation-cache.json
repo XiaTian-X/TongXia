@@ -1,5 +1,5 @@
 {
-  "baseline": "bc958a1090c38523",
+  "baseline": "be25a539dea0893b",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -214,6 +214,9 @@
     "声明恒写-未留决策": [
       "test_v1_effective.TestNoDecisionOnlyWhenRead.test_不在完成那一次时不留痕"
     ],
+    "复用时不看报告哈希": [
+      "test_v1_junit_report.TestReuseWithReport.test_报告被删了_照常执行"
+    ],
     "契约变更计数恒为 0": [
       "test_v1_frozen.TestReportShowsContractChanges.test_report_那一行跟着契约变更走"
     ],
@@ -235,11 +238,26 @@
     "当场留决策改成按工作项算": [
       "test_v1_validity.TestSameTurnGatesUnchanged.test_带声明改契约_更早回合的决策不算当场"
     ],
+    "执行前不删旧报告": [
+      "test_v1_junit_report.TestDegrades.test_上一次的报告还在而这一次没写_不读上一次的"
+    ],
     "承重文件的交付算成空转": [
       "test_v1_effective.TestReportSplitsRounds.test_只改了承重文件的_impl_回合不算开销"
     ],
     "把 RED 豁免放宽成整个红绿豁免": [
       "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
+    ],
+    "报告与退出码对不上照样信": [
+      "test_v1_junit_report.TestDegrades.test_退出码为零而报告有红"
+    ],
+    "报告参与写权限边界": [
+      "test_v1_junit_report.TestReportNotCommitted.test_spec_与_impl_两次交接都不提交报告"
+    ],
+    "报告被提交": [
+      "test_v1_junit_report.TestReportNotCommitted.test_spec_与_impl_两次交接都不提交报告"
+    ],
+    "报告进指纹": [
+      "test_v1_junit_report.TestReuseWithReport.test_报告没动_复用_照样列出红用例"
     ],
     "拆掉 PLAN 全完成的终止检查": [
       "test_positive.TestFullCycle.test_全部完成后停止轮转"
@@ -597,6 +615,9 @@
     ],
     "索引判据看整个索引": [
       "test_v1_setup_report.TestNoIndexDiffDoesNotFail.test_索引里预先暂存了别的东西时照样不提交"
+    ],
+    "红用例不设上限": [
+      "test_v1_junit_report.TestListsRedCases.test_最多列_20_条_其余写另有几条"
     ],
     "组合符不提示": [
       "test_v1_combining_hint.TestNewLinesAreFlagged.test_Mc_也算组合符"

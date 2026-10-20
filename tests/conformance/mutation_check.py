@@ -1034,6 +1034,35 @@ MUTATIONS = [
     ('算不出指纹也拿去比',
      '    if added.returncode != 0 or listed.returncode != 0 or tracked_raw is None:\n        return None\n',
      '    if tracked_raw is None:\n        tracked_raw = ""\n'),
+
+    # W58 可选的 JUnit XML 报告(review-impl 登记)。
+    ('报告与退出码对不上照样信',
+     '    if (rc != 0) != bool(failed):\n',
+     '    if False:\n'),
+
+    ('复用时不看报告哈希',
+     '            if prev[2] == report_digest(root, report_rel):',
+     '            if True:'),
+
+    ('执行前不删旧报告',
+     '            (root / report_rel).unlink()\n',
+     '            pass\n'),
+
+    ('报告进指纹',
+     '    out += report_paths(cfg)',
+     '    out += []'),
+
+    ('报告参与写权限边界',
+     '    entries = [(xy, p) for xy, p in entries if p not in reports]\n',
+     '    entries = list(entries)\n'),
+
+    ('报告被提交',
+     '        git("reset", "-q", "--", *reports, cwd=root, check=False)\n',
+     '        pass\n'),
+
+    ('红用例不设上限',
+     '        for case in failed_cases[:20]:\n',
+     '        for case in failed_cases:\n'),
 ]
 
 # unittest 的失败行有两种形态:
