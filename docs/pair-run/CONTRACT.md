@@ -2073,6 +2073,14 @@ W59 会把"半个套件起不来"的回归算成没有新增的红、放行完�
 - 没有 `full_test_report`、报告读不出、或基线为 `null` → 行为与现在完全相同;读得出报告时把这一次的结果记成基线。
 - 登记 `ENFORCEMENTS`(`full-new-failures`)与 `architecture.md` 的强制力分布表;`troubleshooting.md` 补一节;`protocol-spec.md` 的状态 schema 加这个键。
 
+**补充**(W59 的 spec 回合带声明补,开工前审查 ⑱)`feature`/`bug`/`cover` 由 dev 在 review-test 完成。被拒后 dev 用 `changes` 打回进 `spec`,
+而新增的红多半在实现里;tester 的修正回合只能动测试,门禁多半是绿的,W17 捷径成立就直接回 review-test,dev 再 approve 再被拒,一圈烧一次打回额度。所以:
+- review-test 打回之后的 spec 回合,**上一次全量有新增的红**时不走 W17 捷径(那一回合 GREEN 也进 `impl`,由 dev 修)。"上一次全量"按全量日志末尾的记录与
+  `full_test_report` 判,不重跑:记录里的报告哈希对得上、报告与退出码一致,新增 = 报告里红着的 − 状态里的 `full_failures`;任何一项读不出就不另拦(照 W17 原样)。
+- 拒绝文案按完成者写去向:review-test(dev)—— 用 `changes` 打回,tester 补完用例后会进 `impl`、由 dev 修;refactor 的 review-impl(tester)—— 用 `changes` 打回,直接进 `impl`。
+- "什么都不落盘"包括工作区:被拒之后,除协议日志与报告外,工作区与交接之前相同(`PLAN.md` 不能被勾上)。
+- 判据再加一格:被拒 → dev `changes` → tester 只改一条测试、GREEN 交接 → 进 `impl` 而不是 `review-test`。
+
 **判据** 用例(假的全量命令按布局写出报告):①基线里 A 红、这一次 A 与 B 红 → 完成被拒、点名 B、不点名 A、什么都没提交;②同样情形带 `--accept-new-failures` → 放行、
 提交正文有声明;③只有 A 红 → 放行、退出码 2;④A 修好 → 完成后基线里没有 A;⑤没有报告 → 与今天相同;⑥`verify-setup` 跑全量后基线被写入。变异点:拆掉拒绝、新增按"这一次红着的"而不减基线、声明不生效。
 

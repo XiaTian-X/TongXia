@@ -724,3 +724,8 @@
 - 理由: 契约只在"没有报告或解析失败"时降级回退出码。还有第三种:报告读得出却与退出码矛盾 —— 套件跑到一半崩了,报告里只有崩之前跑完的、一条红都没有,退出码非 0;或测试命令吞掉了退出码,退出码 0 而报告里有红。前一种若照样信报告,W59 会把"半个套件起不来"的回归算成没有新增的红、放行完成,而这是最重的那种回归。spec 回合带声明补「补充」:报告与退出码一致才用,否则当作读不出、警告点名报告路径。GREEN/RED 始终只由退出码定,报告只用来说"红在哪"。参考实现里六个探针(不删旧报告、报告进指纹、不比报告哈希、不查一致、不从本回合改动里拿掉、不退回未暂存)各只红对应的用例。
 - 已否决: 退出码非 0、报告全绿时按报告判绿 —— 报告是运行器的自述,崩溃时它最不可信;一致性不符时拒绝交接 —— 契约要求报告出问题"绝不因此阻断"。
 - 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_junit_report.py`, `.agents/skills/pair-protocol/scripts/pair.py`
+## W59 — 一条拒绝要给出走得通的去向:在 review-test 上拒绝时,打回不能被 W17 捷径送回原处
+
+- 理由: `feature`/`bug`/`cover` 由 dev 在 review-test 完成;因新增的红被拒后,dev 只能 `changes` 打回进 `spec`。新增的红多半在实现里,tester 修不了;tester 的修正回合只动测试、门禁多半是绿的,W17 捷径成立就直接回 review-test,dev 再 approve、再被拒,每圈烧一次打回额度,第三圈撞死锁闸 —— 契约原文"用 changes 打回给对方修"在主路径上走不通。spec 回合带声明补「补充」:review-test 打回之后的 spec 回合,上一次全量有新增的红(按全量日志的记录与报告判,不重跑)就不走捷径,GREEN 也进 impl;拒绝文案按完成者写去向;"什么都不落盘"包括工作区 —— `cmd_handoff` 在 W44 那次全量之前就勾了 `PLAN.md`,拒绝要放在勾之前。参考实现里七个探针(拆掉拒绝、不减基线、声明不生效、捷径不看新增、完成时不更新基线、verify-setup 不写基线、拒绝放在勾 PLAN 之后)各红对应用例。
+- 已否决: 拒绝时把"被拒过"写进状态,让捷径读它 —— 拒绝必须什么都不落盘;让 dev 在 review-test 里直接修 —— 评审回合只读是整套边界的前提。
+- 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_full_new_failures.py`, `.agents/skills/pair-protocol/scripts/pair.py`
