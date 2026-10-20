@@ -345,6 +345,7 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 | `full_test_cmd` | string\|null | `null` | 全量套件。只在工作项完成时跑一次,**只报告不阻断**(退出码 2) |
 | `test_report` | string\|null | `null` | `test_cmd` 写出的 JUnit XML 路径(W58)。配了之后 `status` 列出红着的用例;执行前删旧报告,读不出或与退出码对不上就只看退出码并警告。报告豁免写权限边界、不进提交 |
 | `full_test_report` | string\|null | `null` | `full_test_cmd` 写出的 JUnit XML 路径(W58),同上 |
+| `affected_test_cmd` | string\|null | `null` | 工作项进行中的门禁只跑受影响的测试(W60)。`{paths}` 换成自认领起本工作项改动的路径(只留存在的文件、去掉协议产物,逐个 shell 转义)。只在配了 `full_test_cmd` 与 `full_test_report` 时用(`verify-setup` 检查);没有 `item_base`、路径为空或超过 200 条、`PAIR_TEST_CMD` 覆盖、空闲时用 `test_cmd`。配了 `test_report` 时它也要写那份报告 |
 | `plan_file` | string | `docs/PLAN.md` | — |
 | `contract_file` | string | `docs/CONTRACT.md` | — |
 | `sync` | bool | `false` | 分离工作副本拓扑:status 前 pull,handoff 后 push |
@@ -407,6 +408,7 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 | `reviewed_contract` | string\|null | 最近一次 review-impl approve 时契约文件**工作区内容**的 blob sha。捷径要求现在的契约与它相同 |
 | `last_full_failed` | bool | 最近一次工作项完成时,全量套件(`full_test_cmd`)是否红。PLAN 全部完成之后 `status` / `whose-turn` / `handoff` 的完成提示读它:为真时不说"请向人类报告项目完成",改说项目算不算结束由人类决定。没配 `full_test_cmd` 记为 `false`;老状态没有这个键按 `false` |
 | `full_failures` | string[]\|null | 上一次全量里红着的用例 ID(排序列表,W59)。`verify-setup` 跑全量且读得出 `full_test_report` 时写入,每次工作项完成时更新;完成时新增的红 = 这一次红着的 − 它。不知道时为 `null`(没配报告、报告读不出、老状态),那时完成照旧只报告 |
+| `item_base` | string\|null | 认领那一刻的 HEAD(W60)。`affected_test_cmd` 的路径从它算起;老状态没有它时门禁用 `test_cmd` |
 
 老状态文件缺少新键时取默认值,对应检查自动跳过 —— 存量仓库零成本升级。
 **例外是 `setup_verified_contract`**:缺失时 `claim` 要求重跑一次 `verify-setup`。

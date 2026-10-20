@@ -224,6 +224,21 @@ dev 跑一次 `npm install` 改了 lockfile 就被判越界是不合理的。把
 PHPUnit 用 `--log-junit …`,RSpec 用 `rspec_junit_formatter`,Maven Surefire 默认就写在 `target/surefire-reports/`(需要合并成一份时自己合)。
 报告放在哪都行(`.pair/` 下也可以):协议在执行前删掉旧报告、不提交它、不让它挡写权限边界;读不出或与退出码对不上时只看退出码并警告,不会卡住。
 
+**可选:工作项进行中,门禁只跑受影响的测试**(`affected_test_cmd`,大项目用)。`{paths}` 会换成这个工作项自认领以来改动过的文件(只留存在的,
+去掉评审、笔记、状态、日志这些协议产物,逐个 shell 转义):
+
+```json
+"affected_test_cmd": "npx jest --findRelatedTests {paths} --reporters=default --reporters=jest-junit",
+"full_test_cmd":     "npx jest --reporters=default --reporters=jest-junit",
+"full_test_report":  "junit.xml"
+```
+
+vitest 用 `npx vitest related {paths} --run`;pytest-testmon 这类自己判断范围的工具可以不写 `{paths}`(`pytest --testmon`)。
+选择器收到的路径里可能有文档等非代码文件,它要能忽略不认识的路径(上面这些工具都可以)。
+
+**必须同时配 `full_test_cmd` 与 `full_test_report`**,否则 `verify-setup` 判失败:选择器可能漏选,漏选的回归只能靠工作项完成时的全量
+(只拦上一次绿、这一次红的用例)拦下。配了 `test_report` 时,`affected_test_cmd` 也要写同一份报告。空闲时、没有改动、改动超过 200 个文件时照旧跑 `test_cmd`。
+
 ### 已有的 CLAUDE.md / AGENTS.md 会被合并,不会被覆盖
 
 `init` 把协议激活段落插到文件**开头**,原内容原样保留在后面,

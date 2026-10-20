@@ -22,6 +22,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -260,6 +261,8 @@ DEFAULT_STATE = {
     # W59:上一次全量里红着的用例 ID(排序列表),完成时用来分"这个工作项弄红的"与"原来就红的"。
     # 不知道时为 None(没配 full_test_report、报告读不出、老状态没有这个键)—— 那时完成照旧只报告。
     "full_failures": None,
+    # W60:认领那一刻的 HEAD。"本工作项改动的路径"从它算起,给 affected_test_cmd 用;老状态没有 = 不选,跑 test_cmd。
+    "item_base": None,
 }
 
 # `- [ ] **W1** [bug] — 标题`,类型可省略(缺省 feature)
@@ -324,6 +327,8 @@ def load_config(root, required=True):
     # W58:两条测试命令各自写出的 JUnit XML(可选)。不配时只看退出码。
     cfg.setdefault("test_report", None)
     cfg.setdefault("full_test_report", None)
+    # W60:工作项进行中门禁只跑受影响的测试(可选,`{paths}` 占位符);必须同时配了全量与全量报告。
+    cfg.setdefault("affected_test_cmd", None)
     cfg.setdefault("plan_file", "docs/PLAN.md")
     cfg.setdefault("contract_file", "docs/CONTRACT.md")
     cfg.setdefault("sync", False)
@@ -880,13 +885,46 @@ def run_tests_detail(root, cfg, cmd=None, log_rel=None):
     return green, failed
 
 
+AFFECTED_MAX_PATHS = 200
+
+
+def item_changed_paths(root, cfg, base):
+    """本工作项改动的路径(W60):`base`(认领那一刻的 HEAD)到工作区的已跟踪改动(只留还存在的文件)
+    加未跟踪的文件,去掉 W57 指纹的排除项。排序 —— 同样的内容生成同样的命令,复用照常生效。"""
+    diff = git("diff", "--name-only", "-z", "--no-renames", base, cwd=root, check=False)
+    if diff is None:
+        return None
+    paths = set(p for p in diff.split("\0") if p)
+    paths |= set(p for xy, p in changed_entries(root) if xy == "??")
+    excluded = fingerprint_excluded(cfg)
+    return sorted(p for p in paths if (root / p).is_file() and not matches_any(p, excluded))
+
+
+def gate_command(root, cfg, log_rel):
+    """这一次门禁跑哪条命令(W60)。`PAIR_TEST_CMD` 覆盖优先;工作项进行中、配了 affected_test_cmd 且有第 2 层兜底
+    (full_test_cmd 与 full_test_report)时,用它并把 `{paths}` 换成本工作项改动的路径;其余一律 test_cmd。
+    退回 test_cmd:没有 item_base、路径为空(各工具对空参数行为不一)、超过 AFFECTED_MAX_PATHS 条(命令行过长)。"""
+    plain = os.environ.get("PAIR_TEST_CMD") or cfg.get("test_cmd")
+    affected = cfg.get("affected_test_cmd")
+    if (os.environ.get("PAIR_TEST_CMD") or not affected or log_rel == FULL_TESTLOG_REL
+            or not (cfg.get("full_test_cmd") and cfg.get("full_test_report"))):
+        return plain
+    state = load_state(root)
+    if not state.get("item") or not state.get("item_base"):
+        return plain
+    paths = item_changed_paths(root, cfg, state["item_base"])
+    if not paths or len(paths) > AFFECTED_MAX_PATHS:
+        return plain
+    return affected.replace("{paths}", " ".join(shlex.quote(p) for p in paths))
+
+
 def run_tests(root, cfg, cmd=None, log_rel=None):
     """跑一条测试命令;内容与命令都没变时直接用上一次的结果(W57)。
 
     测试结果是内容的函数:同样的内容、同样的命令,结果一样。status、verify-setup、handoff、init 都走这里,
     各自不再判断要不要跑。前提是测试确定、环境不变 —— 被 `.gitignore` 忽略的依赖、测试环境本身、HEAD 与历史
     都不在指纹里;`PAIR_FRESH_TESTS=1` 或删掉日志即强制重跑。"""
-    cmd = cmd or os.environ.get("PAIR_TEST_CMD") or cfg.get("test_cmd")
+    cmd = cmd or gate_command(root, cfg, log_rel)
     if not cmd:
         die("未配置 test_cmd。请编辑 %s 填入本项目的测试命令。" % CONFIG_REL)
     log = root / (log_rel or TESTLOG_REL)
@@ -1895,6 +1933,7 @@ def cmd_claim(root, cfg, args):
     state["phase"] = flow_of(item_type)["start"]
     # 记下契约此刻的样子。完成时若变了,说明这轮发生过契约变更。
     state["contract_sha"] = blob_sha(root, cfg["contract_file"])
+    state["item_base"] = (git("rev-parse", "HEAD", cwd=root, check=False) or "").strip() or None
     save_state(root, state)
 
     # 认领是协议事件,立即提交:留痕,并让状态文件回到"干净",
@@ -3733,6 +3772,13 @@ def cmd_verify_setup(root, cfg, args):
             % len(ignored), ignored))
 
     # --- 测试命令与基线 ---------------------------------------------------
+    # W60:第 1 层必须有第 2 层兜底 —— 选择器漏选的,只能靠完成时的全量与报告拦下。
+    if cfg.get("affected_test_cmd"):
+        missing = [k for k in ("full_test_cmd", "full_test_report") if not cfg.get(k)]
+        if missing:
+            bad("配了 affected_test_cmd,却没配 %s。回合内只跑受影响的测试,漏选的回归要靠\n"
+                "      完成时的全量(full_test_cmd)与它的报告(full_test_report)拦下;缺了就会静默放过。"
+                % " 与 ".join(missing))
     if not cfg.get("test_cmd"):
         bad("未配置 test_cmd")
     elif not run_tests(root, cfg):
