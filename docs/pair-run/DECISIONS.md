@@ -734,3 +734,8 @@
 - 理由: 测试分层的最后一层。第 2 层(W59)已能在完成时拦下挑漏的回归,所以门禁可以在工作项进行中只跑受影响的测试。规划时自审改掉或补上的:只算本回合的改动会让 dev 的实现回合选不到 tester 新写的测试(从认领起算);路径为空时各工具行为不一(退回 `test_cmd`);路径太多撑爆命令行(超过 200 条退回);删除的文件会让选择器报错(只传存在的);协议产物进了路径集合(沿用 W57 的排除项);第 1 层没配第 2 层会静默放过回归,正是当初排序要防的(`verify-setup` 判配置错误,运行时也只在都配了时用);status 与 handoff 选的命令不一致会让复用失效(选择收在 `run_tests` 一处)。开放条目 54 涉及基线存什么、存哪,单独规划。
 - 已否决: 协议自己做依赖分析 —— 与语言绑定,各栈已有成熟选择器;把本仓库的 `run.py --changed` 当选择器 —— 它按本回合 git diff 选、没改动时返回 0。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/protocol-spec.md`, `INSTALL.md`, `docs/command-reference.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W60 — 门禁可以缩小,前提是缩小之后漏掉的东西有地方被拦下;选择收在一处
+
+- 理由: 测试分层的最后一层。工作项进行中门禁改跑 `affected_test_cmd`(`{paths}` = 自认领起本工作项改动的、还存在的文件,去掉协议产物、排序、逐个转义),大项目的交接从跑门禁全量降到只跑受影响的测试。它只在第 2 层兜底就位时才生效 —— 配了 `full_test_cmd` 与 `full_test_report`,`verify-setup` 检查,运行时再检查一遍:选择器漏选的,完成时的全量会把"上一次绿、这一次红"的拦下;本工作项新写却没被选中的用例不在基线里,同样算新增。路径从认领起算而不是只算本回合,dev 的实现回合才选得到 tester 在 spec 回合写的测试。空集、超过 200 条、没有 `item_base`、`git diff` 失败一律退回 `test_cmd`(W57 决策:算不出来就多做,不少做)。选择收在 `run_tests` 的 `gate_command` 一处,`status`、`handoff`、`verify-setup` 共用,同样的内容生成同样的命令,W57 的复用照常生效。四层至此齐了:不重跑(W57)、用例级结果(W58)、完成时只拦新增的红(W59)、回合内只跑受影响的(W60),CI 复核早已接入。
+- 已否决: 协议自己做依赖分析 —— 与语言绑定;只算本回合改动 —— 选不到对方写的测试;没配兜底也允许用 —— 正是排序要防的静默放过。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_affected_tests.py`, `tests/conformance/mutation_check.py`, `INSTALL.md`, `docs/protocol-spec.md`
