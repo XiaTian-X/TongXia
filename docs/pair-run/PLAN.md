@@ -808,3 +808,22 @@
     ④退回 `test_cmd`:没有 `item_base`、路径为空、超过 200 条、没配 `full_test_cmd` 或 `full_test_report`;
     ⑤配了 `affected_test_cmd` 却没配 `full_test_cmd` 与 `full_test_report` 时 `verify-setup` 判失败;⑥`protocol-spec.md` 配置表与状态 schema、`INSTALL.md`、`command-reference.md` 跟上
   - 对应契约:`docs/pair-run/CONTRACT.md` → 回合内只跑受影响的测试
+
+### 第三十四轮:用例消失的回归,以及本仓库启用测试分层
+
+> 人类同意把开放条目 54 与"本仓库启用测试分层"放在一起;规划经 dev 自审后人类批准(2026-10-20),授权 dev 代笔立项。
+> 两项完成后,在空闲时由 dev 以人类授权改本仓库 `.pair/config.json` 启用 W58、W59、W61(不启用 W60,理由见 SETUP 决策)。
+
+- [ ] **W61** [feature] — 完成时"上一次跑过、这一次没跑"的用例也拦下
+  - **来源**:路线图开放条目 54(第三十二轮 W59 的 review-impl 里 tester 挑出)。基线只记哪些红、不记跑过哪些,让部分用例不再被收集的回归照样放行
+  - 验收标准:①跑过的集合 = 全量报告里所有 `testcase` 的 ID,带 `skipped` 的不算;②基线写进协议产物 `.pair/full-baseline.json`(`{"executed": [...]}`,排序),
+    不进状态文件;`verify-setup` 跑全量且读得出报告时写入,每次完成时更新;排除出 W57 的指纹;文件不在或读不出 → 不拦;
+    ③完成时消失的 = 基线跑过的 − 这一次跑过的,与 W59 的新增的红合在一起拒绝完成,分两段列出(各最多 20 条);`--accept-new-failures` 同样覆盖,只在真有时生效、写进正文;
+    ④被拒之后打回的 spec 回合不走 W17 捷径(W59 ⑱ 一并算消失的);⑤`protocol-spec.md`、`command-reference.md`、`troubleshooting.md` 跟上
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 完成时不再跑的用例也拦下
+
+- [ ] **W62** [cover] — `run.py --junit-xml <路径>`:本仓库的测试也写出用例级结果
+  - **来源**:W58、W59 只在 harness 的假命令上验证过;本仓库的 `run.py` 不出 JUnit XML,自己用不上
+  - 验收标准:①给了 `--junit-xml` 时写出所有收集到的用例,`classname` = `模块.类`、`name` = `方法`,失败按各分片输出里的 `FAIL:`/`ERROR:` 行判;
+    ②写出的报告能被 `pair.py` 的读法读出、ID 与 unittest 的 ID 一致;③不给参数时输出与行为不变;④`run.py` 在 tester 路径,由 tester 写实现与用例,dev 评审
+  - 对应契约:`docs/pair-run/CONTRACT.md` → run.py 写出 JUnit XML
