@@ -1092,6 +1092,35 @@ MUTATIONS = [
     ('新增的红声明不进正文',
      '    if args.accept_new_failures and full_new:',
      '    if False:'),
+
+    # W60 回合内只跑受影响的测试(review-impl 登记)。
+    ('受影响测试空集与超限不退回',
+     '    if not paths or len(paths) > AFFECTED_MAX_PATHS:\n',
+     '    if False:\n'),
+
+    ('受影响测试运行时不看兜底配置',
+     '            or not (cfg.get("full_test_cmd") and cfg.get("full_test_report"))):\n',
+     '            ):\n'),
+
+    ('受影响测试路径排除项不排',
+     '    return sorted(p for p in paths if (root / p).is_file() and not matches_any(p, excluded))\n',
+     '    return sorted(p for p in paths if (root / p).is_file())\n'),
+
+    ('受影响测试路径含已删除的',
+     '    return sorted(p for p in paths if (root / p).is_file() and not matches_any(p, excluded))\n',
+     '    return sorted(p for p in paths if not matches_any(p, excluded))\n'),
+
+    ('受影响测试路径只算本回合',
+     '    diff = git("diff", "--name-only", "-z", "--no-renames", base, cwd=root, check=False)\n',
+     '    diff = git("diff", "--name-only", "-z", "--no-renames", "HEAD", cwd=root, check=False)\n'),
+
+    ('认领时不记 item_base',
+     '    state["item_base"] = (git("rev-parse", "HEAD", cwd=root, check=False) or "").strip() or None\n',
+     '    state["item_base"] = None\n'),
+
+    ('不检查受影响测试的兜底配置',
+     '        missing = [k for k in ("full_test_cmd", "full_test_report") if not cfg.get(k)]\n',
+     '        missing = []\n'),
 ]
 
 # unittest 的失败行有两种形态:

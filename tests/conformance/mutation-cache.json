@@ -1,5 +1,5 @@
 {
-  "baseline": "14164b83dc958690",
+  "baseline": "285438eb3d9e084b",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -142,6 +142,9 @@
     "不单独判只追加路径": [
       "test_v1_review_append.TestAnythingElseIsRefused.test_改了已有行被拒_文案说只能追加"
     ],
+    "不检查受影响测试的兜底配置": [
+      "test_v1_affected_tests.TestVerifySetupWithoutFullCmd.test_没配全量命令时_verify_setup_失败并说明"
+    ],
     "从没校验过当成存量升级": [
       "test_v1_reverify_wording.TestNeverVerified.test_claim_被拒的理由说新建_不说存量升级"
     ],
@@ -174,6 +177,21 @@
     ],
     "剩余数打成总数": [
       "test_v1_paths.TestIgnorePathsTruncation.test_超过十个只列前十并说明还剩多少"
+    ],
+    "受影响测试空集与超限不退回": [
+      "test_v1_affected_tests.TestFallsBackToGate.test_认领之后还没有改动"
+    ],
+    "受影响测试路径只算本回合": [
+      "test_v1_affected_tests.TestSelectorUsedDuringItem.test_从认领起算_dev_回合里有_tester_写的测试"
+    ],
+    "受影响测试路径含已删除的": [
+      "test_v1_affected_tests.TestSelectorUsedDuringItem.test_删除的文件不进路径"
+    ],
+    "受影响测试路径排除项不排": [
+      "test_v1_affected_tests.TestFallsBackToGate.test_认领之后还没有改动"
+    ],
+    "受影响测试运行时不看兜底配置": [
+      "test_v1_affected_tests.TestNoFullSuiteFallsBack.test_没配全量报告时工作项进行中也走门禁"
     ],
     "只认 impl 阶段的异议,漏掉评审打回": [
       "test_v1_disputes.TestPostDisputeSpec.test_cover_的_GREEN_不被这条豁免放松"
@@ -666,6 +684,9 @@
     ],
     "规范性文档不算删除": [
       "test_v1_docreason.TestDocReasonRequired.test_删掉一份规范性文档同样要理由"
+    ],
+    "认领时不记 item_base": [
+      "test_v1_affected_tests.TestFallsBackToGate.test_路径正好_200_条仍走选择器"
     ],
     "记忆层关着也排除出指纹": [
       "test_v1_test_reuse.TestMemoryOff.test_记忆层关着时笔记目录照常进指纹"
