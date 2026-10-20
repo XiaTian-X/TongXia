@@ -1063,6 +1063,35 @@ MUTATIONS = [
     ('红用例不设上限',
      '        for case in failed_cases[:20]:\n',
      '        for case in failed_cases:\n'),
+
+    # W59 完成时的全量只拦新增的红(review-impl 登记)。
+    ('新增的红不拒绝完成',
+     '        if full_new and not args.accept_new_failures:\n',
+     '        if False:\n'),
+
+    ('新增的红声明不生效',
+     '        if full_new and not args.accept_new_failures:\n',
+     '        if full_new:\n'),
+
+    ('新增的红不减基线',
+     '    return sorted(set(failed) - set(baseline))\n',
+     '    return sorted(set(failed))\n'),
+
+    ('新增的红打回后照走捷径',
+     '    if last_full_new_failures(root, cfg, state):\n',
+     '    if False:\n'),
+
+    ('完成时不更新全量基线',
+     '        state["full_failures"] = sorted(set(full_failed_cases))',
+     '        pass'),
+
+    ('开工前校验不写全量基线',
+     '        state["full_failures"] = sorted(set(full_baseline))',
+     '        pass'),
+
+    ('新增的红声明不进正文',
+     '    if args.accept_new_failures and full_new:',
+     '    if False:'),
 ]
 
 # unittest 的失败行有两种形态:

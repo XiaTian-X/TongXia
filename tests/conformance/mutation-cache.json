@@ -1,5 +1,5 @@
 {
-  "baseline": "252681bb027001fa",
+  "baseline": "14164b83dc958690",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -226,6 +226,9 @@
     "孤儿位置的系统文件也放过": [
       "test_v1_os_files.TestRefusalNamesTheExit.test_Windows_的两种也认得出"
     ],
+    "完成时不更新全量基线": [
+      "test_v1_full_new_failures.TestBaselineRecorded.test_没有基线时与今天相同_并把这一次记成基线"
+    ],
     "完成时不记录全量结果": [
       "test_v1_full_red_remembered.TestRememberedRed.test_status_不说报告完成_说算不算结束"
     ],
@@ -234,6 +237,9 @@
     ],
     "审查结论的组合符走 shared_paths 过滤": [
       "test_v1_combining_setup_report.TestReportOutsideSharedPaths.test_shared_paths_不含评审目录时照样点名"
+    ],
+    "开工前校验不写全量基线": [
+      "test_v1_full_new_failures.TestBaselineRecorded.test_verify_setup_跑全量后写入基线"
     ],
     "当场留决策改成按工作项算": [
       "test_v1_validity.TestSameTurnGatesUnchanged.test_带声明改契约_更早回合的决策不算当场"
@@ -552,6 +558,21 @@
     ],
     "文档理由不 strip": [
       "test_v1_docreason.TestDocReasonRequired.test_理由只有空白不算数"
+    ],
+    "新增的红不减基线": [
+      "test_v1_full_new_failures.TestNewFailureRefused.test_新增的红拒绝完成_点名新增的_不点名原来红的"
+    ],
+    "新增的红不拒绝完成": [
+      "test_v1_full_new_failures.TestListCapped.test_新增的红最多列_20_条"
+    ],
+    "新增的红声明不生效": [
+      "test_v1_full_new_failures.TestNewFailureRefused.test_声明之后放行_声明进提交正文_基线更新为这一次的结果"
+    ],
+    "新增的红声明不进正文": [
+      "test_v1_full_new_failures.TestNewFailureRefused.test_声明之后放行_声明进提交正文_基线更新为这一次的结果"
+    ],
+    "新增的红打回后照走捷径": [
+      "test_v1_full_new_failures.TestReboundGoesToImpl.test_有新增的红时_修正回合进_impl"
     ],
     "晋升闸读旗标时不看完成": [
       "test_v1_effective.TestNoDecisionOnlyWhenRead.test_不在完成那一次时不留痕"
