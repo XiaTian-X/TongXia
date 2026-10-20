@@ -1,9 +1,9 @@
 {
   "round": 57,
-  "phase": "spec",
+  "phase": "impl",
   "item": "W60",
   "item_type": "feature",
-  "last_actor": "dev",
+  "last_actor": "tester",
   "changes_count": 0,
   "completed_items": [
     "W2",
