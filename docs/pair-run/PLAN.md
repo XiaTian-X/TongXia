@@ -794,3 +794,17 @@
     ③`--accept-new-failures "<理由>"` 放行,只在真有新增时生效,写进提交正文;④没有新增 → 照旧只报告(退出码 2,W43/W44 的提示不变),原来红、现在绿的从基线去掉;
     ⑤没有报告或没有基线 → 行为不变(有报告就把这次记成基线);⑥登记 `ENFORCEMENTS`、`architecture.md` 强制力表、`troubleshooting.md`;`protocol-spec.md` 状态 schema 跟上
   - 对应契约:`docs/pair-run/CONTRACT.md` → 完成时的全量只拦新增的红
+
+### 第三十三轮:测试分层的第三步 —— 回合内只跑受影响的测试
+
+> 人类批准的顺序里最后一层(第 0 层 W57、第 2 层 W58–W59 已完成)。规划经 dev 自审后人类批准(2026-10-20),授权 dev 代笔立项。
+> 开放条目 54(用例消失)涉及基线存什么、存哪,下一轮单独规划。
+
+- [ ] **W60** [feature] — 可选的 `affected_test_cmd`:工作项进行中,门禁只跑本工作项改动影响到的测试
+  - **来源**:路线图开放条目 53。大项目每次交接都跑门禁全量撑不住;第 2 层(W59)已经能在完成时拦下挑漏的回归
+  - 验收标准:①可选配置 `affected_test_cmd`,可含占位符 `{paths}`,替换成本工作项改动的路径(逐个 shell 转义、空格分隔),不含占位符也可以;
+    ②工作项进行中、跑的是门禁、没被 `PAIR_TEST_CMD` 覆盖时用它,其余用 `test_cmd`;`status`、`handoff`、`verify-setup` 经 `run_tests` 共用这一条选择;
+    ③本工作项改动的路径 = 认领时记下的提交(状态 `item_base`)到工作区的差异(不含删除)+ 未跟踪文件,去掉 W57 指纹的排除项;
+    ④退回 `test_cmd`:没有 `item_base`、路径为空、超过 200 条、没配 `full_test_cmd` 或 `full_test_report`;
+    ⑤配了 `affected_test_cmd` 却没配 `full_test_cmd` 与 `full_test_report` 时 `verify-setup` 判失败;⑥`protocol-spec.md` 配置表与状态 schema、`INSTALL.md`、`command-reference.md` 跟上
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 回合内只跑受影响的测试

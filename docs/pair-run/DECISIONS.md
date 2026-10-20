@@ -729,3 +729,8 @@
 - 理由: `feature`/`bug`/`cover` 由 dev 在 review-test 完成;因新增的红被拒后,dev 只能 `changes` 打回进 `spec`。新增的红多半在实现里,tester 修不了;tester 的修正回合只动测试、门禁多半是绿的,W17 捷径成立就直接回 review-test,dev 再 approve、再被拒,每圈烧一次打回额度,第三圈撞死锁闸 —— 契约原文"用 changes 打回给对方修"在主路径上走不通。spec 回合带声明补「补充」:review-test 打回之后的 spec 回合,上一次全量有新增的红(按全量日志的记录与报告判,不重跑)就不走捷径,GREEN 也进 impl;拒绝文案按完成者写去向;"什么都不落盘"包括工作区 —— `cmd_handoff` 在 W44 那次全量之前就勾了 `PLAN.md`,拒绝要放在勾之前。参考实现里七个探针(拆掉拒绝、不减基线、声明不生效、捷径不看新增、完成时不更新基线、verify-setup 不写基线、拒绝放在勾 PLAN 之后)各红对应用例。
 - 已否决: 拒绝时把"被拒过"写进状态,让捷径读它 —— 拒绝必须什么都不落盘;让 dev 在 review-test 里直接修 —— 评审回合只读是整套边界的前提。
 - 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_full_new_failures.py`, `.agents/skills/pair-protocol/scripts/pair.py`
+## SETUP — 第三十三轮做测试分层的第 1 层,规划经自审后人类批准(2026-10-20)
+
+- 理由: 测试分层的最后一层。第 2 层(W59)已能在完成时拦下挑漏的回归,所以门禁可以在工作项进行中只跑受影响的测试。规划时自审改掉或补上的:只算本回合的改动会让 dev 的实现回合选不到 tester 新写的测试(从认领起算);路径为空时各工具行为不一(退回 `test_cmd`);路径太多撑爆命令行(超过 200 条退回);删除的文件会让选择器报错(只传存在的);协议产物进了路径集合(沿用 W57 的排除项);第 1 层没配第 2 层会静默放过回归,正是当初排序要防的(`verify-setup` 判配置错误,运行时也只在都配了时用);status 与 handoff 选的命令不一致会让复用失效(选择收在 `run_tests` 一处)。开放条目 54 涉及基线存什么、存哪,单独规划。
+- 已否决: 协议自己做依赖分析 —— 与语言绑定,各栈已有成熟选择器;把本仓库的 `run.py --changed` 当选择器 —— 它按本回合 git diff 选、没改动时返回 0。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/protocol-spec.md`, `INSTALL.md`, `docs/command-reference.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
