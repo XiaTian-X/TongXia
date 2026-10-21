@@ -1,5 +1,5 @@
 {
-  "baseline": "f96d3ad4eeb87000",
+  "baseline": "5a82a97410d66d6a",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"

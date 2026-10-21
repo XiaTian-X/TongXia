@@ -822,7 +822,7 @@
     ④被拒之后打回的 spec 回合不走 W17 捷径(W59 ⑱ 一并算消失的);⑤`protocol-spec.md`、`command-reference.md`、`troubleshooting.md` 跟上
   - 对应契约:`docs/pair-run/CONTRACT.md` → 完成时不再跑的用例也拦下
 
-- [ ] **W62** [cover] — `run.py --junit-xml <路径>`:本仓库的测试也写出用例级结果
+- [x] **W62** [cover] — `run.py --junit-xml <路径>`:本仓库的测试也写出用例级结果
   - **来源**:W58、W59 只在 harness 的假命令上验证过;本仓库的 `run.py` 不出 JUnit XML,自己用不上
   - 验收标准:①给了 `--junit-xml` 时写出所有收集到的用例,`classname` = `模块.类`、`name` = `方法`,失败按各分片输出里的 `FAIL:`/`ERROR:` 行判;
     ②写出的报告能被 `pair.py` 的读法读出、ID 与 unittest 的 ID 一致;③不给参数时输出与行为不变;④`run.py` 在 tester 路径,由 tester 写实现与用例,dev 评审
