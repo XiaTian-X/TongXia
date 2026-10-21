@@ -1,5 +1,5 @@
 {
-  "baseline": "5a82a97410d66d6a",
+  "baseline": "92573bea4ad20395",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -735,6 +735,18 @@
     ],
     "评审记录改写的拒绝晚于写状态": [
       "test_v1_review_immutable.TestVerifySetupSide.test_改写已提交的结论被拒_且拒绝早于写状态"
+    ],
+    "读得出就比_不提示红用例没有列出": [
+      "test_v1_executed_any_report.TestCrashHalfway.test_文案说明红用例这一次没有列出"
+    ],
+    "读得出就比_完成时仍要求一致": [
+      "test_v1_executed_any_report.TestCrashHalfway.test_拒绝完成_点名没跑到的_什么都没提交"
+    ],
+    "读得出就比_开工前校验仍要求一致": [
+      "test_v1_executed_any_report.TestVerifySetupWithInconsistentReport.test_崩溃形状的报告也写进基线"
+    ],
+    "读得出就比_打回后的捷径仍要求一致": [
+      "test_v1_executed_any_report.TestCrashHalfway.test_被拒_打回_只改测试_GREEN_进_impl"
     ],
     "越界文案不认系统文件": [
       "test_v1_os_files.TestRefusalNamesTheExit.test_Windows_的两种也认得出"

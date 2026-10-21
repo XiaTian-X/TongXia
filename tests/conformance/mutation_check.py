@@ -1158,6 +1158,23 @@ MUTATIONS = [
     ('不再跑的用例声明不进正文',
      '    if args.accept_new_failures and full_gone:',
      '    if False:'),
+
+    # W63 跑过的集合读得出就比(review-impl 登记)。
+    ('读得出就比_完成时仍要求一致',
+     '        full_executed = report_executed(root, cfg)\n',
+     '        full_executed = report_executed(root, cfg) if full_failed_cases is not None else None\n'),
+
+    ('读得出就比_开工前校验仍要求一致',
+     '        full_executed = report_executed(root, cfg)     # W63',
+     '        full_executed = report_executed(root, cfg) if full_baseline is not None else None     # W63'),
+
+    ('读得出就比_打回后的捷径仍要求一致',
+     '    failed, _ = read_report(root, report_rel, rec[1])\n',
+     '    failed, _ = read_report(root, report_rel, rec[1])\n    if failed is None:\n        return []\n'),
+
+    ('读得出就比_不提示红用例没有列出',
+     'reds_unlisted=full_failed_cases is None and not full_green))',
+     'reds_unlisted=False))'),
 ]
 
 # unittest 的失败行有两种形态:
