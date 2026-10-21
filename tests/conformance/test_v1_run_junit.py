@@ -54,6 +54,15 @@ class T(unittest.TestCase):
         for i in range(2):
             with self.subTest(i=i):
                 self.assertEqual(i, 0)
+
+
+class 中文类(unittest.TestCase):
+
+    def test_中文名的红用例(self):
+        self.assertEqual("甲", "乙")
+
+    def test_中文名的绿用例(self):
+        pass
 '''
 
 
@@ -87,6 +96,13 @@ class TestFailLineParsing(unittest.TestCase):
         self.assertEqual(runner.failed_ids(["FAIL: test_s (mod.Cls.test_s) (i=1)\n",
                                             "FAIL: test_t (mod.Cls) (i=2)\n"]),
                          {"mod.Cls.test_s", "mod.Cls.test_t"})
+
+    def test_中文方法名_两种形态(self):
+        """本仓库 600 多个用例方法名含中文:按 ASCII 匹配的写法在这里一条都解析不出(dev 在 W62 review-test 探过)。"""
+        self.assertEqual(runner.failed_ids(["FAIL: test_拒绝越界 (test_v1_x.T甲.test_拒绝越界)\n",
+                                            "ERROR: test_放行_对照组 (test_v1_x.T甲)\n",
+                                            "FAIL: test_子用例 (test_v1_x.T甲.test_子用例) (第几个=1)\n"]),
+                         {"test_v1_x.T甲.test_拒绝越界", "test_v1_x.T甲.test_放行_对照组", "test_v1_x.T甲.test_子用例"})
 
     def test_不是行首的不算(self):
         self.assertEqual(runner.failed_ids(["    AssertionError: FAIL: test_x (mod.Cls.test_x)\n", "OK\n"]), set())
@@ -130,8 +146,10 @@ class TestWithFailures(unittest.TestCase):
         rc, text = run_runner(self.dir, "--junit-xml", str(report))
         self.assertNotEqual(rc, 0, text)
         self.assertEqual(sorted(PAIR.junit_failures(report)),
-                         ["test_zz_mixed.T.test_bad", "test_zz_mixed.T.test_boom", "test_zz_mixed.T.test_sub"])
+                         sorted(["test_zz_mixed.T.test_bad", "test_zz_mixed.T.test_boom", "test_zz_mixed.T.test_sub",
+                                 "test_zz_mixed.中文类.test_中文名的红用例"]))
         self.assertIn("test_zz_mixed.T.test_good", report_ids(report))
+        self.assertIn("test_zz_mixed.中文类.test_中文名的绿用例", report_ids(report), "中文 ID 原样写出、utf-8 读得回")
 
     def test_报告与退出码一致_pair_py_不降级(self):
         """W58 ⑰:读得出、与退出码一致才用。"""
@@ -140,7 +158,7 @@ class TestWithFailures(unittest.TestCase):
         rel = report.relative_to(self.dir)
         failed, warning = PAIR.read_report(self.dir, str(rel), rc)
         self.assertIsNone(warning)
-        self.assertEqual(len(failed), 3)
+        self.assertEqual(len(failed), 4)
 
     def test_不给参数时不写文件_输出照旧(self):
         rc, text = run_runner(self.dir)
