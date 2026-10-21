@@ -5,6 +5,9 @@ __pycache__/
 .DS_Store
 .pair/.last-full-test.log
 .pair/.last-brief.md
+# W58 的 JUnit 报告:协议执行前删、不提交
+.pair/junit.xml
+.pair/junit-full.xml
 .pair/turns/
 .pair/scratch/
 Thumbs.db

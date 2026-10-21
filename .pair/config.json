@@ -1,6 +1,8 @@
 {
-  "test_cmd": "python3 tests/conformance/run.py",
-  "full_test_cmd": "python3 tests/conformance/mutation_check.py",
+  "test_cmd": "python3 tests/conformance/run.py --junit-xml .pair/junit.xml",
+  "test_report": ".pair/junit.xml",
+  "full_test_cmd": "python3 tests/conformance/run.py --junit-xml .pair/junit-full.xml && python3 tests/conformance/mutation_check.py",
+  "full_test_report": ".pair/junit-full.xml",
   "roles": {
     "tester": [
       "tests/conformance/**"
