@@ -1121,6 +1121,43 @@ MUTATIONS = [
     ('不检查受影响测试的兜底配置',
      '        missing = [k for k in ("full_test_cmd", "full_test_report") if not cfg.get(k)]\n',
      '        missing = []\n'),
+
+    # W61 完成时不再跑的用例也拦下(review-impl 登记)。
+    ('不再跑的用例不比跑过的集合',
+     '    return sorted(set(baseline) - set(executed))\n',
+     '    return []\n'),
+
+    ('不再跑的用例里跳过算跑过',
+     '        if case.find("skipped") is not None:\n            continue\n',
+     '        pass\n'),
+
+    ('不再跑的用例打回后照走捷径',
+     '    gone = vanished_tests(load_executed(root), report_executed(root, cfg))\n',
+     '    gone = []\n'),
+
+    ('不再跑的用例完成时不更新基线文件',
+     '        save_executed(root, full_executed)              # W61',
+     '        pass  # W61'),
+
+    ('不再跑的用例基线文件不随校验提交',
+     '        to_add.append(FULL_BASELINE_REL)\n',
+     '        pass\n'),
+
+    ('不再跑的用例基线文件进指纹',
+     '    out.append(FULL_BASELINE_REL)',
+     '    pass'),
+
+    ('不再跑的用例不拒绝完成',
+     '        if full_gone and not args.accept_new_failures:\n',
+     '        if False:\n'),
+
+    ('不再跑的用例声明不生效',
+     '        if full_gone and not args.accept_new_failures:\n',
+     '        if full_gone:\n'),
+
+    ('不再跑的用例声明不进正文',
+     '    if args.accept_new_failures and full_gone:',
+     '    if False:'),
 ]
 
 # unittest 的失败行有两种形态:

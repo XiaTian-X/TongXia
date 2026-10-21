@@ -1,5 +1,5 @@
 {
-  "baseline": "285438eb3d9e084b",
+  "baseline": "f96d3ad4eeb87000",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -138,6 +138,33 @@
     ],
     "whose-turn 不读全量记录": [
       "test_v1_full_red_remembered.TestRememberedRed.test_whose_turn_仍是_stop_并点名全量"
+    ],
+    "不再跑的用例不拒绝完成": [
+      "test_v1_full_vanished.TestVanishedReboundGoesToImpl.test_被拒_打回_只改测试_GREEN_进_impl"
+    ],
+    "不再跑的用例不比跑过的集合": [
+      "test_v1_full_vanished.TestVanishedReboundGoesToImpl.test_被拒_打回_只改测试_GREEN_进_impl"
+    ],
+    "不再跑的用例基线文件不随校验提交": [
+      "test_v1_full_new_failures.TestListCapped.test_新增的红最多列_20_条"
+    ],
+    "不再跑的用例基线文件进指纹": [
+      "test_v1_full_vanished.TestBaselineFile.test_只改基线文件不重跑门禁"
+    ],
+    "不再跑的用例声明不生效": [
+      "test_v1_full_vanished.TestVanishedRefused.test_声明之后放行_正文有声明_基线更新为这一次跑过的"
+    ],
+    "不再跑的用例声明不进正文": [
+      "test_v1_full_vanished.TestVanishedRefused.test_声明之后放行_正文有声明_基线更新为这一次跑过的"
+    ],
+    "不再跑的用例完成时不更新基线文件": [
+      "test_v1_full_vanished.TestBaselineFile.test_基线文件不在时照旧放行_完成后写入并提交"
+    ],
+    "不再跑的用例打回后照走捷径": [
+      "test_v1_full_vanished.TestVanishedReboundGoesToImpl.test_被拒_打回_只改测试_GREEN_进_impl"
+    ],
+    "不再跑的用例里跳过算跑过": [
+      "test_v1_full_vanished.TestBaselineFile.test_verify_setup_写入跑过的集合_随提交落地_工作区干净"
     ],
     "不单独判只追加路径": [
       "test_v1_review_append.TestAnythingElseIsRefused.test_改了已有行被拒_文案说只能追加"
