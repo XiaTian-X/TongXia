@@ -1151,7 +1151,10 @@ def new_full_failures(failed, baseline):
 
 
 def report_executed(root, cfg):
-    """全量报告里跑过的用例(W61);没配或读不出 → None。只在 read_report 认过这份报告之后调用。"""
+    """全量报告里跑过的用例(W61);没配或读不出 → None。
+
+    不看报告与退出码是否一致(W63):⑰ 否定的是报告自述的"没有红",不是它列出的"跑过哪些" ——
+    套件半途崩溃时报告恰好缺了崩之后的那一片,那正是要拦的。"""
     report_rel = cfg.get("full_test_report")
     if not report_rel:
         return None
@@ -1184,8 +1187,9 @@ def vanished_tests(baseline, executed):
     return sorted(set(baseline) - set(executed))
 
 
-def full_refusal(me, full_new, full_gone):
-    """完成被全量拒绝时的文案(W59 新增的红、W61 不再跑的用例):分两段,各最多 20 条。"""
+def full_refusal(me, full_new, full_gone, reds_unlisted=False):
+    """完成被全量拒绝时的文案(W59 新增的红、W61 不再跑的用例):分两段,各最多 20 条。
+    reds_unlisted:报告与退出码对不上、全量是红的(W63)—— 红用例没法列,要说出来,不然只剩"不再跑"一段像是没有红。"""
     def listing(cases):
         more = "\n  …… 另有 %d 条" % (len(cases) - 20) if len(cases) > 20 else ""
         return "  " + "\n  ".join(cases[:20]) + more
@@ -1196,6 +1200,9 @@ def full_refusal(me, full_new, full_gone):
     if full_gone:
         parts.append("全量套件里有 %d 条用例上一次跑过,这一次没跑(没被收集,或变成了跳过):\n%s\n"
                      "删测试、改名也算 —— 那是该显式确认的事。" % (len(full_gone), listing(full_gone)))
+    if reds_unlisted:
+        parts.append("全量是红的,但报告与退出码对不上,红用例这一次没有列出(只看退出码);"
+                     "不再跑的用例按报告里出现的判。")
     back = ("用 handoff changes 打回:tester 补完用例之后会进 impl,由 dev 修。" if me == "dev"
             else "用 handoff changes 打回:直接进 impl,由 dev 修。")
     return ("拒绝完成 —— %s\n\n这一回合不能改代码:%s\n"
@@ -1212,9 +1219,8 @@ def last_full_new_failures(root, cfg, state):
     if not report_rel or rec is None or rec[2] != report_digest(root, report_rel):
         return []
     failed, _ = read_report(root, report_rel, rec[1])
-    if failed is None:
-        return []
     # W61:被"不再跑的用例"拒绝过也算 —— 同一个坑。被拒时基线文件不动,比的仍是拒绝那一刻的两边。
+    # W63:报告与退出码对不上时新增的红不算(failed 为 None),跑过的集合照读。
     gone = vanished_tests(load_executed(root), report_executed(root, cfg))
     return new_full_failures(failed, state.get("full_failures")) + gone
 
@@ -2756,18 +2762,18 @@ def cmd_handoff(root, cfg, args):
 
     # --- 完成时的全量(W59)-----------------------------------------------------
     # 放在翻转回合(勾 PLAN.md)之前:有新增的红就拒绝,拒绝时什么都不能落盘,工作区也要与交接之前相同。
-    # W61:跑过的集合只在报告被认过(读得出、与退出码一致)时才读,不然不知道就不拦。
+    # W61/W63:跑过的集合只要报告读得出就读(不看与退出码是否一致);读不出就不知道、不拦。
     full_green, full_failed_cases, full_new = True, None, []
     full_executed, full_gone = None, []
     if target == "DONE" and cfg.get("full_test_cmd"):
         full_green, full_failed_cases = run_tests_detail(root, cfg, cmd=cfg["full_test_cmd"],
                                                          log_rel=FULL_TESTLOG_REL)
         full_new = new_full_failures(full_failed_cases, state.get("full_failures"))
-        if full_failed_cases is not None:
-            full_executed = report_executed(root, cfg)
+        full_executed = report_executed(root, cfg)
         full_gone = vanished_tests(load_executed(root), full_executed)
         if full_gone and not args.accept_new_failures:
-            die(full_refusal(me, full_new, full_gone))
+            die(full_refusal(me, full_new, full_gone,
+                             reds_unlisted=full_failed_cases is None and not full_green))
         if full_new and not args.accept_new_failures:
             die(full_refusal(me, full_new, []))
 
@@ -3894,8 +3900,7 @@ def cmd_verify_setup(root, cfg, args):
     if cfg.get("full_test_cmd"):
         full_ok, full_baseline = run_tests_detail(root, cfg, cmd=cfg["full_test_cmd"],
                                                   log_rel=FULL_TESTLOG_REL)
-        if full_baseline is not None:
-            full_executed = report_executed(root, cfg)
+        full_executed = report_executed(root, cfg)     # W63:读得出就写,不看与退出码是否一致
         if not full_ok:
             warn("全量套件是红的:%s\n"
                  "      这本身不阻断(门禁是收窄过的 test_cmd),但请确认人类知道\n"
