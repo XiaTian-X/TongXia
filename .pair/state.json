@@ -78,6 +78,6 @@
   "rebound_from": null,
   "reviewed_contract": "83833cedb0d856f37e1a169c6acf8d84d6bb1b58",
   "last_full_failed": false,
-  "full_failures": null,
+  "full_failures": [],
   "item_base": "10a07aa39f4a7dc0f05971772e8f87bf96d21dcf"
 }
