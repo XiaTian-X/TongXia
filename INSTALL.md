@@ -223,6 +223,8 @@ dev 跑一次 `npm install` 改了 lockfile 就被判越界是不合理的。把
 其他栈的写法:jest 用 `jest-junit` reporter,vitest 用 `--reporter=junit --outputFile=…`,Go 用 `gotestsum --junitfile …`,
 PHPUnit 用 `--log-junit …`,RSpec 用 `rspec_junit_formatter`,Maven Surefire 默认就写在 `target/surefire-reports/`(需要合并成一份时自己合)。
 报告放在哪都行(`.pair/` 下也可以):协议在执行前删掉旧报告、不提交它、不让它挡写权限边界;读不出或与退出码对不上时只看退出码并警告,不会卡住。
+配了 `full_test_report`,工作项完成时的全量还会拦下新增的红与不再跑的用例(删测试、改名要带 `--accept-new-failures` 声明)。
+跑过的用例记在 `.pair/full-baseline.json`,由协议写、随协议的提交落地 —— **不要把它加进 `.gitignore`**。
 
 **可选:工作项进行中,门禁只跑受影响的测试**(`affected_test_cmd`,大项目用)。`{paths}` 会换成这个工作项自认领以来改动过的文件(只留存在的,
 去掉评审、笔记、状态、日志这些协议产物,逐个 shell 转义):

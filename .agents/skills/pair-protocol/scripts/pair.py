@@ -159,6 +159,7 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "contract-change-now",   # 带声明的那次交接必须当场留决策(不是等到 DONE)
     "done-dev-verified",     # dev 完成工作项时自己的开工前校验必须作数(W50)
     "full-new-failures",     # 完成时全量里新增的红(上一次绿、这一次红)拒绝完成,除非带声明(W59)
+    "full-vanished",         # 完成时全量里不再跑的用例(上一次跑过、这一次没跑或跳过)拒绝完成,除非带声明(W61)
 )
 
 
@@ -167,6 +168,9 @@ CONFIG_REL = ".pair/config.json"
 TESTLOG_REL = ".pair/.last-test.log"
 FULL_TESTLOG_REL = ".pair/.last-full-test.log"
 BRIEF_REL = ".pair/.last-brief.md"
+# W61:上一次全量跑过的用例 ID。不进状态文件 —— 大项目几万条用例,每次提交的状态文件会膨胀到几 MB。
+# 和状态文件一样由协议写、随协议的提交落地;.pair 是冻结路径,agent 改不了。
+FULL_BASELINE_REL = ".pair/full-baseline.json"
 # 协议自己写的日志。它们落在 .pair/ 下,而 .pair 是冻结路径 —— 不在这里豁免,
 # agent 下一回合就会被自己刚跑的那次测试卡在越界上,而且它删不干净(下次还生成)。
 PROTOCOL_LOGS = (TESTLOG_REL, FULL_TESTLOG_REL, BRIEF_REL)
@@ -760,6 +764,7 @@ def fingerprint_excluded(cfg):
     `.pair/config.json` 不在里面 —— 本仓库的测试就读它。协议日志显式列出,不靠项目的 `.gitignore`
     (harness 的 `.gitignore` 只有两行)。记忆层只在 memory 开着时算协议的东西,关着时是普通文件。"""
     out = [STATE_REL] + list(PROTOCOL_LOGS) + list(cfg.get("shared_paths") or [])
+    out.append(FULL_BASELINE_REL)                       # W61:协议写的基线,每次完成都变
     out += report_paths(cfg)                            # W58:报告是产物,每次运行都变
     if memory_on(cfg):
         out += [p for p in (cfg.get("notes_dir"), cfg.get("decisions_file")) if p]
@@ -851,6 +856,22 @@ def junit_failures(path):
     out = []
     for case in tree.getroot().iter("testcase"):
         if case.find("failure") is None and case.find("error") is None:
+            continue
+        name, cls = case.get("name") or "", case.get("classname") or ""
+        out.append("%s.%s" % (cls, name) if cls else name)
+    return out
+
+
+def junit_executed(path):
+    """JUnit XML 里跑过的用例 ID(W61),ID 的拼法同 junit_failures。带 skipped 子元素的不算跑过 ——
+    变成跳过也是"不再守着"。读不出抛 ValueError。"""
+    try:
+        tree = ET.parse(str(path))
+    except (OSError, ET.ParseError) as e:
+        raise ValueError(str(e))
+    out = []
+    for case in tree.getroot().iter("testcase"):
+        if case.find("skipped") is not None:
             continue
         name, cls = case.get("name") or "", case.get("classname") or ""
         out.append("%s.%s" % (cls, name) if cls else name)
@@ -1129,6 +1150,59 @@ def new_full_failures(failed, baseline):
     return sorted(set(failed) - set(baseline))
 
 
+def report_executed(root, cfg):
+    """全量报告里跑过的用例(W61);没配或读不出 → None。只在 read_report 认过这份报告之后调用。"""
+    report_rel = cfg.get("full_test_report")
+    if not report_rel:
+        return None
+    try:
+        return junit_executed(root / report_rel)
+    except ValueError:
+        return None
+
+
+def load_executed(root):
+    """基线文件里上一次全量跑过的用例(W61);文件不在或读不出 → None(不知道的不拦)。"""
+    try:
+        data = json.loads((root / FULL_BASELINE_REL).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    executed = data.get("executed") if isinstance(data, dict) else None
+    return executed if isinstance(executed, list) else None
+
+
+def save_executed(root, executed):
+    """写基线文件:排序、一行一条,diff 读得懂。"""
+    text = json.dumps({"executed": sorted(set(executed))}, ensure_ascii=False, indent=1)
+    (root / FULL_BASELINE_REL).write_text(text + "\n", encoding="utf-8")
+
+
+def vanished_tests(baseline, executed):
+    """上一次跑过、这一次没跑的用例(W61)。任一边不知道就返回 []:不知道的不拦。"""
+    if baseline is None or executed is None:
+        return []
+    return sorted(set(baseline) - set(executed))
+
+
+def full_refusal(me, full_new, full_gone):
+    """完成被全量拒绝时的文案(W59 新增的红、W61 不再跑的用例):分两段,各最多 20 条。"""
+    def listing(cases):
+        more = "\n  …… 另有 %d 条" % (len(cases) - 20) if len(cases) > 20 else ""
+        return "  " + "\n  ".join(cases[:20]) + more
+    parts = []
+    if full_new:
+        parts.append("全量套件里有 %d 条用例上一次是绿的,这个工作项把它们弄红了:\n%s\n"
+                     "原来就红着的不算(它们照旧只报告)。" % (len(full_new), listing(full_new)))
+    if full_gone:
+        parts.append("全量套件里有 %d 条用例上一次跑过,这一次没跑(没被收集,或变成了跳过):\n%s\n"
+                     "删测试、改名也算 —— 那是该显式确认的事。" % (len(full_gone), listing(full_gone)))
+    back = ("用 handoff changes 打回:tester 补完用例之后会进 impl,由 dev 修。" if me == "dev"
+            else "用 handoff changes 打回:直接进 impl,由 dev 修。")
+    return ("拒绝完成 —— %s\n\n这一回合不能改代码:%s\n"
+            "确认它们不归本项(例如 flaky、有意删掉),带声明放行:--accept-new-failures \"理由\"。详见 %s"
+            % ("\n\n".join(parts), back, FULL_TESTLOG_REL))
+
+
 def last_full_new_failures(root, cfg, state):
     """上一次全量(按全量日志末尾的记录与报告,不重跑)里新增的红(W59 spec 回合带声明补 ⑱)。
 
@@ -1138,7 +1212,11 @@ def last_full_new_failures(root, cfg, state):
     if not report_rel or rec is None or rec[2] != report_digest(root, report_rel):
         return []
     failed, _ = read_report(root, report_rel, rec[1])
-    return new_full_failures(failed, state.get("full_failures"))
+    if failed is None:
+        return []
+    # W61:被"不再跑的用例"拒绝过也算 —— 同一个坑。被拒时基线文件不动,比的仍是拒绝那一刻的两边。
+    gone = vanished_tests(load_executed(root), report_executed(root, cfg))
+    return new_full_failures(failed, state.get("full_failures")) + gone
 
 
 def rebound_shortcut(root, cfg, state, green, changed_named_frozen):
@@ -2678,20 +2756,20 @@ def cmd_handoff(root, cfg, args):
 
     # --- 完成时的全量(W59)-----------------------------------------------------
     # 放在翻转回合(勾 PLAN.md)之前:有新增的红就拒绝,拒绝时什么都不能落盘,工作区也要与交接之前相同。
+    # W61:跑过的集合只在报告被认过(读得出、与退出码一致)时才读,不然不知道就不拦。
     full_green, full_failed_cases, full_new = True, None, []
+    full_executed, full_gone = None, []
     if target == "DONE" and cfg.get("full_test_cmd"):
         full_green, full_failed_cases = run_tests_detail(root, cfg, cmd=cfg["full_test_cmd"],
                                                          log_rel=FULL_TESTLOG_REL)
         full_new = new_full_failures(full_failed_cases, state.get("full_failures"))
+        if full_failed_cases is not None:
+            full_executed = report_executed(root, cfg)
+        full_gone = vanished_tests(load_executed(root), full_executed)
+        if full_gone and not args.accept_new_failures:
+            die(full_refusal(me, full_new, full_gone))
         if full_new and not args.accept_new_failures:
-            back = ("用 handoff changes 打回:tester 补完用例之后会进 impl,由 dev 修。" if me == "dev"
-                    else "用 handoff changes 打回:直接进 impl,由 dev 修。")
-            die("拒绝完成 —— 全量套件里有 %d 条用例上一次是绿的,这个工作项把它们弄红了:\n  %s%s\n\n"
-                "原来就红着的不算(它们照旧只报告)。这一回合不能改代码:%s\n"
-                "确认它们不归本项(例如 flaky),带声明放行:--accept-new-failures \"理由\"。详见 %s"
-                % (len(full_new), "\n  ".join(full_new[:20]),
-                   "\n  …… 另有 %d 条" % (len(full_new) - 20) if len(full_new) > 20 else "",
-                   back, FULL_TESTLOG_REL))
+            die(full_refusal(me, full_new, []))
 
     # --- 翻转回合 ---------------------------------------------------------
     finished_item = None
@@ -2725,6 +2803,8 @@ def cmd_handoff(root, cfg, args):
     full_failed = bool(finished_item and cfg.get("full_test_cmd") and not full_green)
     if finished_item and full_failed_cases is not None:
         state["full_failures"] = sorted(set(full_failed_cases))    # W59:更新基线(修好的自然去掉)
+    if finished_item and full_executed is not None:
+        save_executed(root, full_executed)              # W61:随下面的 `git add -A` 进这一次提交
     if finished_item:
         state["last_full_failed"] = full_failed
     save_state(root, state)
@@ -2751,6 +2831,9 @@ def cmd_handoff(root, cfg, args):
     if args.accept_new_failures and full_new:          # W59:只在真有新增的红时生效
         body += "\n新增的红(已声明): %s\n  %s" % (args.accept_new_failures,
                                                  "\n  ".join(full_new))
+    if args.accept_new_failures and full_gone:         # W61:同一个声明,只在真有不再跑的用例时生效
+        body += "\n不再跑的用例(已声明): %s\n  %s" % (args.accept_new_failures,
+                                                    "\n  ".join(full_gone))
     if args.no_decision and no_decision_read:
         body += "\n未留决策(已声明): %s" % args.no_decision
     if args.doc_reason and touched_docs:
@@ -3807,10 +3890,12 @@ def cmd_verify_setup(root, cfg, args):
              "      这是门禁范围被缩小的唯一留痕。" % BASELINE_REL)
 
     # --- 全量套件(只报告)---------------------------------------------------
-    full_baseline = None
+    full_baseline, full_executed = None, None
     if cfg.get("full_test_cmd"):
         full_ok, full_baseline = run_tests_detail(root, cfg, cmd=cfg["full_test_cmd"],
                                                   log_rel=FULL_TESTLOG_REL)
+        if full_baseline is not None:
+            full_executed = report_executed(root, cfg)
         if not full_ok:
             warn("全量套件是红的:%s\n"
                  "      这本身不阻断(门禁是收窄过的 test_cmd),但请确认人类知道\n"
@@ -4078,6 +4163,8 @@ def cmd_verify_setup(root, cfg, args):
     state["setup_verified"] = True
     if full_baseline is not None:                       # W59:全量的基线从开工前校验这一次起
         state["full_failures"] = sorted(set(full_baseline))
+    if full_executed is not None:                       # W61:跑过的集合也从这一次起
+        save_executed(root, full_executed)
     # 按角色记下这次校验的是哪一份契约(工作区内容)。先复制再写:load_state
     # 是浅拷贝,直接往默认值里的 dict 写会改到 DEFAULT_STATE 本身。
     # 解析不出角色时(W12 的回落路径)记不了 —— 那个角色认领时会被要求重跑。
@@ -4092,6 +4179,8 @@ def cmd_verify_setup(root, cfg, args):
         root, cfg, [(xy, p) for xy, p in changed_entries(root) if p == report_rel], only=report_rel)
     to_add = [STATE_REL, report_rel] + [
         p for _, p in changed_entries(root) if matches_any(p, cfg["shared_paths"])]
+    if full_executed is not None:
+        to_add.append(FULL_BASELINE_REL)
     git("add", "--", *sorted(set(to_add)), cwd=root)
     drafter_line = ("起草人自审: 是 —— 审查者参与过契约起草,本结论证明力打折"
                     if args.drafter == "self"
@@ -4172,7 +4261,7 @@ def main(argv=None):
     p_ho.add_argument("--allow-deletion", metavar="理由", default=None,
                       help="显式声明本次删除了测试,并给出理由")
     p_ho.add_argument("--accept-new-failures", metavar="理由", default=None,
-                      help="完成时全量套件有新增的红、确认不归本项(例如 flaky)时带声明放行")
+                      help="完成时全量套件有新增的红或不再跑的用例、确认不归本项(例如 flaky、有意删掉)时带声明放行")
     p_ho.add_argument("--no-decision", metavar="理由", default=None,
                       help="显式声明本工作项的笔记没有值得沉淀成决策的内容")
     p_ho.add_argument("--doc-reason", metavar="理由", default=None,

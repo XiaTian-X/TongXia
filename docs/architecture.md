@@ -137,7 +137,7 @@ agent 被人类唤醒
 
 这是理解这个架构最重要的一张表:**哪些规则是脚本拦的,哪些只能靠留痕。**
 
-<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures -->
+<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished -->
 
 | 规则 | 强制方式 | 失效条件 |
 |---|---|---|
@@ -170,6 +170,7 @@ agent 被人类唤醒
 | 契约审查逐节点名 | 脚本拒绝 | 「以下小节均无歧义:A、B、C」 |
 | dev 完成工作项时校验作数 | 脚本拒绝(tester 完成时只提示) | 改代码 |
 | 完成时全量没有新增的红 | 脚本拒绝(要配 `full_test_report`;原来就红的只报告;`--accept-new-failures` 声明放行) | 带声明放行 |
+| 完成时全量没有不再跑的用例 | 脚本拒绝(要配 `full_test_report`;没被收集、变成跳过都算;基线文件不在时不拦;同一个声明放行) | 带声明放行 |
 | **不许过拟合断言** | ❌ 只有 prose + 对方评审 | 双方都敷衍 |
 | **不许硬编码蒙混** | ❌ 只有 prose + 对方评审 | 双方都敷衍 |
 | **契约不含糊** | ❌ 只有人类 | 人类偷懒 |
