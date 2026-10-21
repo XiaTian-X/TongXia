@@ -7,6 +7,7 @@
     python3 tests/conformance/run.py memory flows # 模糊匹配模块名
     python3 tests/conformance/run.py -j1          # 串行(调试用,输出不交错)
     python3 tests/conformance/run.py --list       # 只列出会跑哪些
+    python3 tests/conformance/run.py --junit-xml .pair/junit.xml   # 另写一份 JUnit XML(W62)
 
 为什么需要它:测试本身不慢,慢在**每个用例都要起真的 git 仓库、真的
 pair.py 子进程**。这类负载是 I/O 密集的,不吃 GIL,分片并行近似线性加速。
@@ -112,12 +113,41 @@ def modules_for(files):
     return picked, why
 
 
+# `FAIL:` / `ERROR:` 行的两种形态(W62,开工前审查 ⑲):
+#   3.11+  FAIL: test_x (module.Class.test_x)
+#   3.10-  FAIL: test_x (module.Class)
+# subTest 失败时括号之后还跟着参数,如 `(i=1)` —— 只取第一对括号。与 mutation_check.py 的 FAIL_RE 同一个口径。
+FAIL_LINE = re.compile(r"^(?:FAIL|ERROR): (\w+) \(([\w.]+)\)", re.M)
+
+
+def failed_ids(outputs):
+    """各分片输出里红着的用例 ID(`模块.类.方法`)。"""
+    out = set()
+    for text in outputs:
+        for method, path in FAIL_LINE.findall(text):
+            out.add(path if path.endswith("." + method) else path + "." + method)
+    return out
+
+
+def junit_xml(ids, failed):
+    """这一次收集到的用例写成 JUnit XML:`classname` = ID 去掉最后一段,`name` = 最后一段;红的带 `<failure/>`。
+    `-q` 的输出看不到跳过,收集到的都写成跑过(契约「run.py 写出 JUnit XML」)。"""
+    from xml.sax.saxutils import quoteattr
+    cases = []
+    for i in ids:
+        cls, _, name = i.rpartition(".")
+        cases.append("  <testcase classname=%s name=%s>%s</testcase>"
+                     % (quoteattr(cls), quoteattr(name), "<failure/>" if i in failed else ""))
+    return ('<?xml version="1.0" encoding="utf-8"?>\n<testsuites>\n<testsuite name="conformance" tests="%d" failures="%d">\n'
+            "%s\n</testsuite>\n</testsuites>\n" % (len(ids), len(failed & set(ids)), "\n".join(cases)))
+
+
 def shard(ids, n):
     """轮转分片。按 id 轮转而不是按模块,因为模块之间用例数差 10 倍。"""
     return [ids[i::n] for i in range(n) if ids[i::n]]
 
 
-def run(ids, jobs):
+def run(ids, jobs, junit=None):
     if not ids:
         print("没有要跑的测试。")
         return 0
@@ -134,6 +164,11 @@ def run(ids, jobs):
     bad = [o for o, c in zip(outs, codes) if c != 0]
     for o in bad:
         sys.stdout.write(o.rstrip() + "\n")
+
+    if junit:
+        path = Path(junit)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(junit_xml(ids, failed_ids(outs)), encoding="utf-8")
 
     n_fail = sum(len(re.findall(r"^(?:FAIL|ERROR):", o, re.M)) for o in bad)
     print("\n%d 个测试 / %d 进程 / %.1fs — %s"
@@ -181,6 +216,8 @@ def main(argv=None):
     ap.add_argument("--changed", action="store_true",
                     help="只跑与工作区改动相关的测试")
     ap.add_argument("--list", action="store_true", help="只列出会跑哪些,不执行")
+    ap.add_argument("--junit-xml", metavar="路径", default=None,
+                    help="跑完另写一份 JUnit XML(W62);不给时输出与行为不变")
     args = ap.parse_args(argv)
 
     patterns = list(args.patterns)
@@ -225,7 +262,7 @@ def main(argv=None):
         sys.stderr.write("运行环境不满足,没有跑任何用例:\n\n  - %s\n\n见 docs/contributing.md「两条必跑的命令」。\n"
                          % "\n  - ".join(problems))
         return 3
-    return run(ids, args.jobs)
+    return run(ids, args.jobs, junit=args.junit_xml)
 
 
 if __name__ == "__main__":

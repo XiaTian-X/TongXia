@@ -2154,6 +2154,10 @@ vitest `related`、pytest-testmon、nx affected),但选择器可能漏选 ——
 
 **分工** `run.py` 在 tester 路径:实现与用例由 tester 在 spec 回合写(同第二十三轮 W40),dev 在 review-test 评审。
 
+**补充**(W62 的 spec 回合带声明补,开工前审查 ⑲)`FAIL:` / `ERROR:` 行有两种形态:3.11 起括号里是 `模块.类.方法`,3.10 及以前只有 `模块.类` ——
+CI 矩阵有 3.9,只认前一种时那里每个失败都对不上 ID、报告全绿,W58 的 ⑰ 只能把它降级。两种都认:括号内以 `.<方法>` 结尾就是完整 ID,否则拼上方法名
+(与 `mutation_check.py` 的 `FAIL_RE` 同一个口径);`subTest` 失败的行在括号之后还有参数,只取第一对括号。判据再加:解析函数直接喂两种形态与带 `subTest` 参数的行。
+
 **判据** 用例:给 `--junit-xml` 跑一个小模块 → 文件存在、能被 `pair.py` 的 `junit_failures` 读出、ID 与 `run.py --list` 列出的一致;
 构造一个失败的用例模块 → 它在报告里带 `failure`、退出码非 0;不给参数 → 不写文件。
 

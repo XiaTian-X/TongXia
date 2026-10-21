@@ -749,3 +749,8 @@
 - 理由: 只记红的基线看不见"不再被收集"的回归 —— 改坏发现规则、删了 `__init__.py`、导入就崩被静默跳过,红用例一条不多,完成照样放行。完成时"基线跑过的 − 这一次跑过的"(带 skipped 的不算跑过)与新增的红一起拒绝,两段列出,同一个 `--accept-new-failures` 放行,删测试与改名属于该显式确认的事。跑过的集合写进 `.pair/full-baseline.json` 而不是状态文件:大项目几万条用例会让每次提交的状态膨胀;放在 `.pair/` 冻结路径下由协议写、随 `verify-setup` 与完成的提交落地,agent 改不了,排除出 W57 指纹。被拒时不动它,⑱ 比较的仍是拒绝那一刻的两边。任一边不知道(文件不在、报告读不出或与退出码对不上)不拦。
 - 已否决: 记用例总数代替集合 —— 删一条加一条就抵消,点不出名;放进 `state.json` —— 膨胀;另设一个声明旗标 —— 两类拒绝去向相同,多一个旗标只多一处要记。现行"报告与退出码对不上时不比跑过的集合"在 review 中被双方认为偏保守(半途崩溃时跑过的集合正好能拦,而报告自述的"跑过哪些"不被退出码否定),留待另立条目改契约。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_full_vanished.py`, `tests/conformance/mutation_check.py`, `docs/protocol-spec.md`, `docs/troubleshooting.md`, `INSTALL.md`
+## W62 — 解析另一个工具的输出时,按它所有在用的版本写,不按本机的版本写
+
+- 理由: 契约只写了 3.11 起的 `FAIL: <方法> (<模块.类.方法>)`。本机是 3.14、照它写全绿,可 CI 矩阵有 3.9,那里括号里只有 `模块.类` —— 每个失败都对不上 ID、报告全绿、退出码非 0,W58 的 ⑰ 降级之后安全但没用,而且没有任何东西会红。spec 回合带声明补:两种形态都认、subTest 只取第一对括号,与 `mutation_check.py` 早就写着的 `FAIL_RE` 同一个口径;用例对解析函数直接喂两种形态,本机也守得住 3.9 那一支。探针:只认 3.11+ 形态 → 解析的三条红。端到端另有一份临时目录里的 `run.py` 跑有红有绿的模块(红的、error 的、subTest 的都带 failure,绿的不带),报告与退出码一致、`pair.py` 不降级。
+- 已否决: 在 CI 的 3.9 上靠端到端用例发现 —— 那要先有一条在 3.9 上会红的用例,而本机写不出来;改用 `unittest` 的结果对象而不解析文本 —— 要动分片方式(契约「不做」)。
+- 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/run.py`, `tests/conformance/test_v1_run_junit.py`
