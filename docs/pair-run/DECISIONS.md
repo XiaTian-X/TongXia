@@ -744,3 +744,8 @@
 - 理由: 人类同意把两件放在一起。W61 补第 2 层的漏洞:基线只记红、不记跑过哪些,让用例不再被收集的回归照样放行。跑过的集合不进状态文件(大项目会让每次提交膨胀几 MB),写进 `.pair/full-baseline.json` —— 协议写、agent 改不了、排除出指纹;变成 skipped 也算不再跑;删测试与改名一样要声明,沿用 `--accept-new-failures`;被"消失"拒绝后打回同样不走 W17 捷径(W59 ⑱ 的同一个坑)。W62 让 `run.py` 写出 JUnit XML,本仓库才能用上 W58/W59/W61 —— 协议这几层此前只在 harness 的假命令上验证过。两项完成后,在空闲时由 dev 以人类授权改本仓库 `.pair/config.json`:`test_cmd` 与 `full_test_cmd` 带上 `--junit-xml`、配 `test_report` 与 `full_test_report`,全量命令照旧串上 `mutation_check.py`;两个角色重跑 `verify-setup` 写入第一份基线。代价:完成时多跑一遍 `run.py` 全量;变异检查存活时退出码非 0 而报告全绿,报告按 W58 ⑰ 降级、只报告。
 - 已否决: 本仓库启用 `affected_test_cmd` —— 几乎每个实现回合都改 `pair.py`,改了它就该跑全量;`run.py --changed` 的规则是给人用的,对 `examples/` 选空集,不能当门禁。把 `full_failures` 也挪进基线文件 —— W59 刚落地,迁移另议。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/run.py`, `.pair/config.json`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/troubleshooting.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W61 — 基线要记"守着什么",不只记"哪些红";跑过的集合是协议产物,不是状态
+
+- 理由: 只记红的基线看不见"不再被收集"的回归 —— 改坏发现规则、删了 `__init__.py`、导入就崩被静默跳过,红用例一条不多,完成照样放行。完成时"基线跑过的 − 这一次跑过的"(带 skipped 的不算跑过)与新增的红一起拒绝,两段列出,同一个 `--accept-new-failures` 放行,删测试与改名属于该显式确认的事。跑过的集合写进 `.pair/full-baseline.json` 而不是状态文件:大项目几万条用例会让每次提交的状态膨胀;放在 `.pair/` 冻结路径下由协议写、随 `verify-setup` 与完成的提交落地,agent 改不了,排除出 W57 指纹。被拒时不动它,⑱ 比较的仍是拒绝那一刻的两边。任一边不知道(文件不在、报告读不出或与退出码对不上)不拦。
+- 已否决: 记用例总数代替集合 —— 删一条加一条就抵消,点不出名;放进 `state.json` —— 膨胀;另设一个声明旗标 —— 两类拒绝去向相同,多一个旗标只多一处要记。现行"报告与退出码对不上时不比跑过的集合"在 review 中被双方认为偏保守(半途崩溃时跑过的集合正好能拦,而报告自述的"跑过哪些"不被退出码否定),留待另立条目改契约。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_full_vanished.py`, `tests/conformance/mutation_check.py`, `docs/protocol-spec.md`, `docs/troubleshooting.md`, `INSTALL.md`
