@@ -1,5 +1,5 @@
 {
-  "baseline": "888e552f140cea3f",
+  "baseline": "d98e51c463e935d2",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -624,6 +624,30 @@
     ],
     "提交路径不看索引": [
       "test_v1_setup_commit.TestOnlyTheAddedBatchIsCommitted.test_结论有改动时_预先暂存的实现不进这次提交_仍留在索引里"
+    ],
+    "提案_init_不写提案目录": [
+      "test_v1_proposals.TestInitWritesProposals.test_init_给新项目写_docs_proposals"
+    ],
+    "提案_不查只能追加": [
+      "test_v1_proposals.TestAppendOnly.test_删除被拒"
+    ],
+    "提案_不查重叠": [
+      "test_v1_proposals.TestVerifySetupOverlap.test_与_ignore_paths_重叠_glob"
+    ],
+    "提案_不豁免_scope": [
+      "test_v1_proposals.TestScopeExempt.test_配了_scope_时提案豁免"
+    ],
+    "提案_正文不写提案行": [
+      "test_v1_proposals.TestWritableInEveryWorkingPhase.test_spec_tester"
+    ],
+    "提案_要求_doc_reason": [
+      "test_v1_proposals.TestAppendOnly.test_删除被拒"
+    ],
+    "提案_评审阶段不可写": [
+      "test_v1_proposals.TestNotRecognisedAsReview.test_打回理由没有位置_位置只写在提案里_被拒"
+    ],
+    "提案_进指纹": [
+      "test_v1_proposals.TestFingerprintExcludesProposals.test_只写提案不重跑"
     ],
     "改名合成一条只给新路径": [
       "test_v1_review_append.TestAnythingElseIsRefused.test_改名被拒"

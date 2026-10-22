@@ -1213,6 +1213,43 @@ MUTATIONS = [
     ('代办_不拦冻结路径',
      '        if matches_any(path, cfg["frozen_paths"]):\n            human.append((path, "在冻结路径下"))\n',
      '        if False:\n            human.append((path, "在冻结路径下"))\n'),
+
+    # W66 提案目录(review-impl 登记)。
+    ('提案_评审阶段不可写',
+     '    if phase != "idle":\n        shared = shared + list(cfg.get("proposal_paths") or [])\n',
+     '    if phase not in REVIEW_PHASES and phase != "idle":\n        shared = shared + list(cfg.get("proposal_paths") or [])\n'),
+
+    ('提案_不查只能追加',
+     '        if proposal_rewrite(root, cfg, path):\n',
+     '        if False:\n'),
+
+    ('提案_不查重叠',
+     '        if hit:\n            out.append((key, hit))\n',
+     '        if False:\n            out.append((key, hit))\n'),
+
+    ('提案_要求_doc_reason',
+     '        if matches_any(path, cfg.get("proposal_paths") or []):\n            continue                                    # W66',
+     '        if False:\n            continue                                    # W66'),
+
+    ('提案_进指纹',
+     '    out += list(cfg.get("proposal_paths") or [])        # W66',
+     '    out += []        # W66'),
+
+    ('提案_不豁免_scope',
+     '    exempt_from_scope = list(cfg["shared_paths"]) + list(cfg.get("proposal_paths") or [])\n',
+     '    exempt_from_scope = list(cfg["shared_paths"])\n'),
+
+    ('提案_inbox_不摆出',
+     '    prose_paths = list(cfg["shared_paths"]) + list(cfg.get("proposal_paths") or [])\n',
+     '    prose_paths = list(cfg["shared_paths"])\n'),
+
+    ('提案_正文不写提案行',
+     '    if proposals:                                       # W66',
+     '    if False:                                       # W66'),
+
+    ('提案_init_不写提案目录',
+     '        "proposal_paths": ["docs/proposals"],\n',
+     ''),
 ]
 
 # unittest 的失败行有两种形态:
