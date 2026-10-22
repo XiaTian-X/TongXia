@@ -2230,3 +2230,30 @@ decline 被带过的计数加 1、没被带过的不变、补加到上限触发�
 变异点:带代办的异议照样计数、decline 不补计、fulfill 不校验归属、fulfill 不校验改动、交接不查开着的代办。
 
 **不做** 不做 patch 应用器(脚本不代 agent 改文件);代办不跨工作项;异议文件不因带了代办而豁免;不在评审阶段开放;不让 request 交出回合。
+
+## 提案目录
+
+- 依据: 人类定稿
+
+**背景** 方向问题往往是做的过程中才暴露的;真实运行里 tester 多次说"这超出本工作项范围,建议开新工作项",协议却没有地方承载这句话(路线图 P0-5)。
+提案目录不能直接并进 `shared_paths`:那个键被异议举证、评审目录命名、打回的位置引用、记忆层自洽检查依赖,并进去"写了一份提案"就会被算成"异议落到纸面"。
+所以要一个新的路径类别。这是 P0-5 拆分里的 D1,不碰阶段机。
+
+**行为**
+- 新配置键 `proposal_paths`(路径模式列表,同 `shared_paths` 的匹配规则),默认 `[]` = 不启用。`init` 给新项目写 `["docs/proposals"]`。
+- 写权限:除 idle 外的四个阶段,两个角色都能写命中 `proposal_paths` 的文件。它不并进 `shared_paths`。
+- 已提交的、命中 `proposal_paths` 的顶层 `.md`(直接位于某个提案目录下)只能追加:相对 HEAD 有删除行(含删除、改名)即拒绝,不分阶段、不分角色(与评审目录同一口径)。
+- 四处不认它:impl 阶段 `changes` 的异议举证(只写了提案仍算没落到纸面);打回的位置引用(只从评审文件里找);评审目录命名检查;规范性文档(不要求 `--doc-reason`)。
+- 与评审目录、记忆层一样:对 `scope` 豁免;排除出第三十一轮 W57 的指纹(也就排除出第三十三轮 W60 的受影响路径);`inbox` 的"对方这一回合写给你的"摆出它的原文。
+- 交接正文:本回合新增或追加的提案,写一行 `提案: <路径…>`。
+- `verify-setup`:`proposal_paths` 与 `roles`(任一角色)、`shared_paths`、`frozen_paths`、记忆层(memory 开着时的 `notes_dir`、`decisions_file`)、`ignore_paths` 任一重叠即判失败,点名重叠的是哪个键。
+- 登记 `ENFORCEMENTS`(`proposal-append-only`);`protocol-spec.md` 配置表、§4 写权限边界与 §4.1;`command-reference.md`;`architecture.md`;`INSTALL.md` 的配置示例;
+  `rules.md` 一节"超出本工作项的方向问题写进提案";路线图 P0-5 分轮表 D1 标 ✅,P0-7 的 `artifact_paths` 评估点写结论(不另设)。
+- 本仓库 `tests/conformance/test_docs_consistency.py` 里扫"被跟踪的 `.md` 减去记忆层与评审目录"的检查,一并减去 `proposal_paths`(提案和评审一样是历史记录)。
+
+**判据** 用例:两个角色在 spec、impl、review-impl、review-test 都能写提案并交接;已提交的提案改一行被拒、删除被拒、追加放行;impl 的 `changes` 只写了提案被异议举证拒;
+打回理由没有位置引用、只写了提案被拒;提案名不对应工作项不被命名检查拒;只改提案不要求 `--doc-reason`;配了 `scope` 时提案豁免;只改提案门禁不重跑;
+`inbox` 显示提案原文、正文有 `提案:` 一行;`verify-setup` 五种重叠各判失败;默认 `[]` 时那个目录照旧受角色约束;`init` 写出 `docs/proposals`。
+变异点:提案算作异议举证、评审阶段不可写、不查只能追加、不查重叠、提案要 `--doc-reason`、提案进指纹。
+
+**不做** 不做 discuss 阶段、挂起与恢复、签字与批准(D2、D3);`report` 不统计提案(D4);提案没有必含小节(形状留给 D3);不另设 `artifact_paths`(副产物仍走 `ignore_paths`);不给老项目默认开启。

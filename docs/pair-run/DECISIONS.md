@@ -779,3 +779,8 @@
 - 理由: decline 补计到上限要"照死锁闸原样处理"。第一版的提交主题写成"拒绝代办 R1,工作项 … 触发死锁闸",状态、留痕、`whose-turn` 都对,唯独 `report` 认死锁靠行首锚定的完整主题(第十二轮 ⑤ 修过的口径),这一次死锁没被数到 —— 死锁工作项占比 0/1。改成主题用死锁闸原样那一句,拒绝记在正文第一行 `拒绝代办: R<n>`,`report` 的被拒数另认"死锁闸主题 + 这一行"。同一个提交既是死锁又是拒绝,两个指标都要数到。
 - 已否决: 放宽 `DEADLOCK_SUBJECT_RE` 去认新主题 —— 认死锁的口径多一种形状,就多一个被人手写主题误中的入口;拒绝代办撞上死锁时提交两次 —— 一次协议事件拆成两个提交,中间那个状态是"已拒绝但还没停",不该落地。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_requests.py`, `docs/command-reference.md`
+## SETUP — 第三十七轮做 P0-5 的 D1(提案目录),规划经自审后人类批准(2026-10-22)
+
+- 理由: 分轮计划里小而独立的条目已做完,下一组是 P0-5。路线图写明 D1 能独立做、不碰阶段机,而且立刻还债:"超出本工作项范围"的方向问题此前没有落点。提案是陈述,不是主张,所以四个工作阶段两个角色都能写;它又不能冒充评审或异议,所以异议举证、位置引用、评审命名、规范性文档四处显式不认它。规划时自审补上的:默认不启用(默认目录会与老项目的角色路径重叠,一上来就让 verify-setup 判失败),只有 init 给新项目写;已提交的提案只能追加(一方改不掉对方的,D3 的签字将来追加在同一份文件里);scope、W57 指纹、W60 路径与评审目录同样豁免;inbox 把它当写给对方的话;本仓库自己的文档检查要减去它。P0-7 留下的 `artifact_paths` 评估点在这里结论:不另设,提案与副产物不是一类。
+- 已否决: 并进 `shared_paths` —— 写一份提案就满足了异议举证,防护被静默削掉;默认开 `docs/proposals` —— 老项目重叠判失败;D1 与 D2 同一轮 —— D2 要改状态机(挂起与恢复),该等路径类别落地后单独规划。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `INSTALL.md`, `docs/improvements.md`, `.pair/config.json`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`

@@ -859,3 +859,19 @@
     ④交接时发给自己的代办不能开着,完成时不能有开着的代办,`claim` 清空;⑤`status` 列出发给自己的代办,`report` 加代办次数与被拒率;
     ⑥`rules.md` 写明不得用于表达分歧;`ENFORCEMENTS`、`HANDOFF_INVARIANTS`、`protocol-spec.md` §4 与 §8、`command-reference.md`、`architecture.md`、`troubleshooting.md` 跟上
   - 对应契约:`docs/pair-run/CONTRACT.md` → 代办通道
+
+### 第三十七轮:提案目录(P0-5 的 D1)
+
+> 人类要求继续按路线图推进:分轮计划里小而独立的条目已做完,下一组是 P0-5(discuss 阶段),路线图写明 D1 能独立做、不碰阶段机。
+> 本轮只做 D1;D2 要改状态机,等路径类别落地后单独规划。规划经 dev 自审后人类批准(2026-10-22),授权 dev 代笔立项。
+> W66 完成后,在空闲时由 dev 以人类授权给本仓库 `.pair/config.json` 加 `proposal_paths`。
+
+- [ ] **W66** [feature] — `proposal_paths`:双方任何阶段都能写的提案目录,不冒充评审或异议
+  - **来源**:路线图 P0-5 的 D1(分轮计划「P0-5 必须拆成四步」),同时了结 P0-7 留下的 `artifact_paths` 评估点
+  - 验收标准:①新配置键 `proposal_paths`,默认 `[]`,`init` 给新项目写 `["docs/proposals"]`;②除 idle 外四个阶段两个角色都可写,不并进 `shared_paths`;
+    ③已提交的提案顶层 `.md` 只能追加(相对 HEAD 有删除行即拒绝,不分阶段与角色);④异议举证、打回的位置引用、评审目录命名、规范性文档(`--doc-reason`)四处不认它;
+    ⑤`scope`、W57 指纹(连带 W60 路径)豁免,`inbox` 把它当写给对方的话摆出来,交接正文写一行 `提案: <路径…>`;
+    ⑥`verify-setup` 遇到它与 `roles`、`shared_paths`、`frozen_paths`、记忆层、`ignore_paths` 任一重叠判失败并点名;
+    ⑦登记 `ENFORCEMENTS`(`proposal-append-only`);`protocol-spec.md`、`command-reference.md`、`architecture.md`、`INSTALL.md`、`rules.md` 跟上;
+    路线图 D1 标 ✅、P0-7 的 `artifact_paths` 评估点写结论;⑧本仓库 `test_docs_consistency` 扫文档的那几条一并减去 `proposal_paths`(tester)
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 提案目录
