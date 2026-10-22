@@ -735,3 +735,14 @@ tester 的修正回合必须动测试;门禁(`test_cmd`)多半是绿的 —— �
   新增的红那一半由 `new_full_failures(None, …)` 返回空 —— 仍按 ⑰,不会因为放宽消失判定而顺带放宽新增的红。用例要同时守住这一点(对不上时不列红用例、不按集合拦新增)。
 - 本仓库的全量命令串着 `mutation_check`:变异存活时退出码非 0、报告完整 —— 跑过的集合完整,不会误拒;契约背景写明了,我核过命令与 `run.py` 的写法一致。
 - 本仓库配置也核过:`test_cmd`、`full_test_cmd` 带 `--junit-xml`,两份报告路径在 `.pair/` 下,`.gitignore` 加了三行。我这次重跑 `verify-setup` 会写本仓库的第一份(tester 侧)基线文件。
+
+## 补记(第三十六轮 W64、W65 立项之后重跑)
+
+上次校验之后契约加了「仓库根两个文件的内容校验」与「代办通道」两节(dev 代笔);第三十五轮一节在 W63 完成。**没有缺陷。**
+
+- 「仓库根两个文件的内容校验」(W64):两条今天就绿,cover。读 `pyproject.toml` 不能用 `tomllib`(3.11 起才有,CI 有 3.9)—— 按节标题切出
+  `[tool.hatch.build.targets.wheel.force-include]` 那一节、用正则找映射行;`GITIGNORE_LINES` 从 `pair.py` 加载。两个隔离副本探针我在 spec 回合做。
+- 「代办通道」(W65):主场景走一遍 —— dev 在 impl 被 `tests/` 里的值挡住 → `request --path tests/… "改成 X" --reason …` → `handoff changes`(带着开着的代办,不计数,代办 carried)
+  → tester 的修正回合要先处理发给自己的代办才能交接 → 改测试、`fulfill R1` → GREEN 交接:上一次打回来自 impl 而不是 review-test,W17 捷径不成立 → 进 impl。
+  判据里"tester fulfill 后 GREEN 交接进 impl"与此一致。decline 补计、补到上限撞死锁闸:用例要把计数先推到上限减一。
+  一处取舍(不是缺陷):评审阶段被请求方改不了文件,发到评审阶段的代办实际上只能 decline;没带过的 decline 不计数,不卡人。
