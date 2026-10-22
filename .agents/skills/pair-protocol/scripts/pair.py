@@ -123,6 +123,7 @@ HANDOFF_INVARIANTS = (
     "state-untampered",    # .pair/state.json 未被手工改动
     "verdict-valid",       # 评审必须给 approve/changes 且理由非空
     "transition-valid",    # (阶段, 裁决) 在该类型的转移表里
+    "request-closed",      # 发给自己的代办不能开着;完成时任何代办都不能开着(W65)
     "write-boundary",      # 改动文件命中可写路径、不在 frozen_paths 下、
                            # 且(配了 scope 时)落在 scope 内
     "test-deletion",       # 删测试必须带 --allow-deletion
@@ -160,6 +161,8 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "done-dev-verified",     # dev 完成工作项时自己的开工前校验必须作数(W50)
     "full-new-failures",     # 完成时全量里新增的红(上一次绿、这一次红)拒绝完成,除非带声明(W59)
     "full-vanished",         # 完成时全量里不再跑的用例(上一次跑过、这一次没跑或跳过)拒绝完成,除非带声明(W61)
+    "request-shape",         # request 只在自己回合的 spec/impl 用,路径必须归对方,内容与理由非空(W65)
+    "fulfill-owner",         # fulfill/decline 只能由被请求方在自己的回合执行;fulfill 要求请求的路径真有改动(W65)
 )
 
 
@@ -267,6 +270,9 @@ DEFAULT_STATE = {
     "full_failures": None,
     # W60:认领那一刻的 HEAD。"本工作项改动的路径"从它算起,给 affected_test_cmd 用;老状态没有 = 不选,跑 test_cmd。
     "item_base": None,
+    # W65:本工作项的代办(request)。每条 {id, item, by, to, paths, what, reason, base, status, carried};
+    # 认领时清空,历史在 git 里。老状态没有这个键 = 没有代办。
+    "requests": [],
 }
 
 # `- [ ] **W1** [bug] — 标题`,类型可省略(缺省 feature)
@@ -1798,6 +1804,15 @@ def cmd_status(root, cfg, args):
         print("协议状态文件由脚本维护,任何人手工修改都是违规的。")
         print("下次 handoff 会拒绝交接并还原它。")
 
+    waiting = open_requests(state, to=me)               # W65:发给你、还开着的代办
+    if waiting:
+        print()
+        print(">>> 发给你的代办(交接之前先 fulfill 或 decline):<<<")
+        for r in waiting:
+            print("  %s  来自 %s  路径 %s" % (r["id"], r["by"], " ".join(r["paths"])))
+            print("      改什么: %s" % r["what"])
+            print("      为什么对方改不了: %s" % r["reason"])
+
     if cfg["require_setup_verification"] and not state["setup_verified"]:
         print()
         print(">>> 尚未通过开工前校验。<<<")
@@ -2018,6 +2033,7 @@ def cmd_claim(root, cfg, args):
     # 记下契约此刻的样子。完成时若变了,说明这轮发生过契约变更。
     state["contract_sha"] = blob_sha(root, cfg["contract_file"])
     state["item_base"] = (git("rev-parse", "HEAD", cwd=root, check=False) or "").strip() or None
+    state["requests"] = []                              # W65:代办不跨工作项
     save_state(root, state)
 
     # 认领是协议事件,立即提交:留痕,并让状态文件回到"干净",
@@ -2473,6 +2489,17 @@ def cmd_handoff(root, cfg, args):
                 "得等人类把你单独叫回来。现在基线是绿的:先重跑上面那条 verify-setup,再交接。"
                 % dev_stale)
 
+    # --- 代办收口(W65)-----------------------------------------------------
+    # 发给你的代办不能开着交出回合:对方可能正被它挡着。完成时任何代办都不能开着 —— 工作项关掉之后没有回合会再管它。
+    waiting = open_requests(state, to=me)
+    if waiting:
+        die("拒绝交接 —— 发给你的代办还开着:%s\n\n"
+            "先处理:改好了 `fulfill <ID> \"说明\"`;认为不该由你改(或不是机械改动)`decline <ID> \"理由\"`。\n"
+            "status 会列出它们的内容。" % "、".join(r["id"] for r in waiting))
+    if target == "DONE" and open_requests(state):
+        die("拒绝完成 —— 还有开着的代办:%s。工作项关掉之后没有回合会再管它们;\n"
+            "被请求方先 fulfill 或 decline。" % "、".join(r["id"] for r in open_requests(state)))
+
     entries = changed_entries(root)
     # W35:落在孤儿位置以外的未跟踪系统文件,这一回合当它不存在 —— 不进写权限边界、不进提交。
     # 下面每一道判定看的都是 `entries`,所以在这里一次拿掉,不在每道判定里各写一遍。
@@ -2742,7 +2769,11 @@ def cmd_handoff(root, cfg, args):
 
     # --- 死锁保护 ---------------------------------------------------------
     changes_n = state["changes_count"]
-    if verdict == "changes":
+    # W65:dev 带着自己发出、还开着的代办异议 —— 不计数,代办记为被带过;对方 decline 其中一条就补计。
+    carried = open_requests(state, by=me) if is_dispute else []
+    for r in carried:
+        r["carried"] = True
+    if verdict == "changes" and not carried:
         changes_n += 1
         if changes_n >= DEADLOCK_LIMIT:
             state["changes_count"] = changes_n
@@ -2840,6 +2871,8 @@ def cmd_handoff(root, cfg, args):
     if args.accept_new_failures and full_gone:         # W61:同一个声明,只在真有不再跑的用例时生效
         body += "\n不再跑的用例(已声明): %s\n  %s" % (args.accept_new_failures,
                                                     "\n  ".join(full_gone))
+    if carried:
+        body += "\n代办(不计打回): %s" % "、".join(r["id"] for r in carried)
     if args.no_decision and no_decision_read:
         body += "\n未留决策(已声明): %s" % args.no_decision
     if args.doc_reason and touched_docs:
@@ -2940,6 +2973,147 @@ def cmd_handoff(root, cfg, args):
 # --------------------------------------------------------------------------
 # inbox
 # --------------------------------------------------------------------------
+
+# --------------------------------------------------------------------------
+# 代办通道(W65)
+# --------------------------------------------------------------------------
+# "知道该改成什么,但没权限":把一处落在对方路径里的机械改动交给对方,自己不碰。
+# request 不交出回合、不计数;dev 带着开着的代办异议时那次异议不计数,被请求方 decline 被带过的就补计 ——
+# 免计数要双方都认可是机械改动。fulfill 是记账,不是执行:脚本不代 agent 改它自己路径下的文件。
+
+def open_requests(state, to=None, by=None):
+    """还开着的代办,可按收件方或发起方筛。"""
+    return [r for r in (state.get("requests") or [])
+            if r.get("status") == "open" and (to is None or r.get("to") == to)
+            and (by is None or r.get("by") == by)]
+
+
+def _request_turn(root, cfg, what):
+    """三条代办命令共用的开头:先查篡改,再确认是你的回合。返回 (me, state)。"""
+    me, _ = resolve_role(root)
+    if state_is_tampered(root):
+        restored = restore_state(root)
+        die("你修改了 %s。协议状态由脚本维护,手工修改是违规的。\n%s本次 %s 已拒绝。"
+            % (STATE_REL, "已还原为上次提交的版本。" if restored else "无法自动还原,请交给人类处理。", what))
+    state = load_state(root)
+    owner = PHASE_OWNER[state["phase"]]
+    if me != owner:
+        die("代办只能在自己的回合里处理:现在是 %s 的 %s 回合,不是你(%s)的。" % (owner, state["phase"], me))
+    return me, state
+
+
+def _commit_state(root, subject, body):
+    """只提交状态文件(窄提交):工作区里没提交的改动、别人事先暂存的东西都不带走。"""
+    git("add", "--", STATE_REL, cwd=root)
+    git("commit", "-q", "-m", subject, "-m", body, "--", STATE_REL, cwd=root)
+
+
+def _find_request(state, rid, me, what):
+    """按 ID 找开着的代办,并确认你是被请求方。"""
+    for r in state.get("requests") or []:
+        if r.get("id") == rid:
+            if r.get("to") != me:
+                die("代办 %s 是发给 %s 的,只有它能 %s。" % (rid, r.get("to"), what))
+            if r.get("status") != "open":
+                die("代办 %s 已经是 %s 了。" % (rid, r.get("status")))
+            return r
+    die("本工作项里没有代办 %s。status 会列出发给你的代办。" % rid)
+
+
+def _changed_since(root, base, paths):
+    """`base` 到工作区之间,这些路径里有改动的(已跟踪的差异 + 未跟踪的文件)。"""
+    diff = git("diff", "--name-only", "-z", base, "--", *paths, cwd=root, check=False) or ""
+    out = set(p for p in diff.split("\0") if p)
+    others = git("ls-files", "--others", "--exclude-standard", "-z", "--", *paths, cwd=root, check=False) or ""
+    return out | set(p for p in others.split("\0") if p)
+
+
+def cmd_request(root, cfg, args):
+    me, state = _request_turn(root, cfg, "request")
+    phase = state["phase"]
+    if phase not in ("spec", "impl"):
+        die("代办只在 spec / impl 回合里发。%s 阶段%s" % (
+            phase, "还没有工作项。" if phase == "idle" else "只读:有问题用 handoff changes 打回。"))
+    what, reason = (args.what or "").strip(), (args.reason or "").strip()
+    if not what or not reason:
+        die("代办要写清两件事:改什么(含具体的值),以及 --reason 为什么你改不了。\n"
+            "--reason 回答的是路径归属,不是\"对方错在哪\" —— 分歧走 handoff changes。")
+    other = [r for r in ROLES if r != me][0]
+    paths = [p.strip()[2:] if p.strip().startswith("./") else p.strip() for p in args.path]
+    human, mine = [], []
+    for path in paths:
+        if matches_any(path, cfg["frozen_paths"]):
+            human.append((path, "在冻结路径下"))
+        elif matches_any(path, cfg["roles"][me]):
+            mine.append(path)
+        elif not matches_any(path, cfg["roles"][other]):
+            human.append((path, "不属于任何角色"))
+    if mine:
+        die("这些路径归你自己,直接改就行,不需要代办:%s" % " ".join(mine))
+    if human:
+        die("这些路径两个角色都改不了,只能交给人类:\n%s\n\n"
+            "把要改的内容写成一份可以直接执行的 diff 交给人类。"
+            % "\n".join("  %s(%s)" % (p, why) for p, why in human))
+    reqs = list(state.get("requests") or [])
+    rid = "R%d" % (len(reqs) + 1)
+    reqs.append({"id": rid, "item": state["item"], "by": me, "to": other, "paths": paths,
+                 "what": what, "reason": reason,
+                 "base": (git("rev-parse", "HEAD", cwd=root, check=False) or "").strip(),
+                 "status": "open", "carried": False})
+    state["requests"] = reqs
+    save_state(root, state)
+    _commit_state(root, "chore(pair): 代办 %s → %s:%s" % (rid, other, what.splitlines()[0][:60]),
+                  "改什么: %s\n为什么我改不了: %s\n路径: %s\nrole=%s item=%s"
+                  % (what, reason, " ".join(paths), me, state["item"]))
+    print("[结对协议] 已记下代办 %s → %s(%s)。回合仍是你的。" % (rid, other, " ".join(paths)))
+    if me == "dev" and phase == "impl":
+        print("  被它挡着交不了接时,照常写异议并 handoff changes:带着开着的代办,这次异议不计入打回次数;")
+        print("  对方 decline 的话补计一次。")
+    return 0
+
+
+def cmd_fulfill(root, cfg, args):
+    me, state = _request_turn(root, cfg, "fulfill")
+    r = _find_request(state, args.id, me, "fulfill")
+    if not _changed_since(root, r["base"], r["paths"]):
+        die("代办 %s 请求的路径(%s)自它发出以来没有任何改动。\n"
+            "fulfill 是记账,不是执行:先自己把它改好,再 fulfill。" % (r["id"], " ".join(r["paths"])))
+    r["status"] = "fulfilled"
+    note = " ".join(args.note or []).strip()
+    save_state(root, state)
+    _commit_state(root, "chore(pair): 办完代办 %s" % r["id"],
+                  "代办: %s\n说明: %s\nrole=%s item=%s" % (r["what"], note or "—", me, state["item"]))
+    print("[结对协议] 代办 %s 已记为办完。改动留在工作区,随你这一回合的交接提交。" % r["id"])
+    return 0
+
+
+def cmd_decline(root, cfg, args):
+    me, state = _request_turn(root, cfg, "decline")
+    r = _find_request(state, args.id, me, "decline")
+    reason = " ".join(args.reason or []).strip()
+    if not reason:
+        die("decline 要写理由:为什么不该由你改,或者为什么这不是机械改动。")
+    r["status"] = "declined"
+    body = "代办: %s\n理由: %s\nrole=%s item=%s" % (r["what"], reason, me, state["item"])
+    if r.get("carried"):
+        # 被异议带过的代办被拒:那次异议当时没计数,现在补上。到上限照死锁闸原样处理。
+        state["changes_count"] = state["changes_count"] + 1
+        body += "\n补计打回: 这条代办被异议带过,计数补到 %d" % state["changes_count"]
+        if state["changes_count"] >= DEADLOCK_LIMIT:
+            stuck = "%s x%d" % (state["item"] or "?", state["changes_count"])
+            if stuck not in state["deadlock_hits"]:
+                state["deadlock_hits"].append(stuck)
+            save_state(root, state)
+            _commit_state(root, "chore(pair): 拒绝代办 %s,工作项 %s 打回 %d 次,触发死锁闸"
+                          % (r["id"], state["item"] or "?", state["changes_count"]), body)
+            die("代办 %s 已拒绝,补计之后同一工作项已被打回 %d 次。协议要求此时停止自动轮转。\n"
+                "请把双方分歧写清楚,交给人类裁决。不要继续来回。" % (r["id"], state["changes_count"]))
+    save_state(root, state)
+    _commit_state(root, "chore(pair): 拒绝代办 %s" % r["id"], body)
+    print("[结对协议] 代办 %s 已拒绝%s。对方若仍认为要改,走正常的打回流程。"
+          % (r["id"], "(被异议带过,打回计数补加 1)" if r.get("carried") else ""))
+    return 0
+
 
 def cmd_inbox(root, cfg, args):
     n = args.count
@@ -3134,6 +3308,7 @@ def cmd_report(root, cfg, args):
     state = load_state(root)
 
     reviews = changes = disputes = 0
+    requests_n = declined_n = 0         # W65:代办次数与被拒数
     claimed = deadlocks = no_decision = contract_changes = 0
     idle_rounds = unjudged = 0          # W14:空转的 impl 回合 / 没有判定行的 impl 回合
     finished = 0                        # W20:区间里把工作项推进到完成的交接
@@ -3147,6 +3322,10 @@ def cmd_report(root, cfg, args):
                 changes += 1
         elif prefix == "dispute":
             disputes += 1
+        if subject.startswith("chore(pair): 代办 "):
+            requests_n += 1
+        elif subject.startswith("chore(pair): 拒绝代办 "):
+            declined_n += 1
         if subject.startswith("chore(pair): 认领工作项"):
             claimed += 1
         if DEADLOCK_SUBJECT_RE.match(subject):
@@ -3205,6 +3384,9 @@ def cmd_report(root, cfg, args):
     row("死锁工作项占比", _fmt_rate(deadlocks, claimed),
         _flag("死锁工作项占比", dl_rate, claimed >= MIN_SAMPLE))
     row("测试异议", "%d 次" % disputes, "—")
+    # W65:被拒率高说明代办正在被当成打回用 —— 那是误用的信号。
+    row("代办", "%d 次" % requests_n, "—")
+    row("代办被拒率", _fmt_rate(declined_n, requests_n), "—")
     row("决策/完成项", "%d / %d" % (decisions, done),
         "!! 记忆层空转" if done >= MIN_SAMPLE and not decisions else "—")
     # 两条声明比率的分母跟着起点走(W20):分子只数区间里的声明,分母若仍读状态里的
@@ -4286,6 +4468,17 @@ def main(argv=None):
                        help="只统计这个提交之后的交接(<rev>..HEAD)")
     p_in = sub.add_parser("inbox", help="对方上一回合做了什么")
     p_in.add_argument("count", nargs="?", type=int, default=1)
+    p_rq = sub.add_parser("request", help="请对方在它的路径里做一处机械改动(不交出回合,不计数)")
+    p_rq.add_argument("what", metavar="改什么", help="改什么,含具体的值")
+    p_rq.add_argument("--path", action="append", required=True, metavar="路径",
+                      help="要改的路径(必须归对方角色),可给多次")
+    p_rq.add_argument("--reason", required=True, metavar="理由", help="为什么你改不了(路径归属,不是对方错在哪)")
+    p_ff = sub.add_parser("fulfill", help="记下发给你的代办已经办完(记账,不是执行)")
+    p_ff.add_argument("id", metavar="R<n>")
+    p_ff.add_argument("note", nargs="*", metavar="说明")
+    p_dc = sub.add_parser("decline", help="拒绝发给你的代办")
+    p_dc.add_argument("id", metavar="R<n>")
+    p_dc.add_argument("reason", nargs="*", metavar="理由")
 
     args = ap.parse_args(argv)
     root = repo_root()
@@ -4297,6 +4490,9 @@ def main(argv=None):
         "claim": cmd_claim,
         "handoff": cmd_handoff,
         "inbox": cmd_inbox,
+        "request": cmd_request,
+        "fulfill": cmd_fulfill,
+        "decline": cmd_decline,
         "report": cmd_report,
         "whose-turn": cmd_whose_turn,
     }[args.cmd](root, cfg, args)

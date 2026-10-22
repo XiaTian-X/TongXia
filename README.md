@@ -108,7 +108,7 @@ CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交�
 |---|---|
 | [设计理念](docs/design-philosophy.md) | 九条第一性原理,以及每条的代价 |
 | [架构](docs/architecture.md) | 三层结构、回合数据流、**强制力分布表** |
-| [协议规格](docs/protocol-spec.md) | 状态机、16 条不变量、配置与状态 schema |
+| [协议规格](docs/protocol-spec.md) | 状态机、17 条不变量、配置与状态 schema |
 | [命令参考](docs/command-reference.md) | 全部命令的参数、前置条件、退出码 |
 | [同类工作调研](docs/prior-art.md) | the-pair / TDD Guard / AgentCoder / Adversarial Review / Spec Kit / BMAD …… |
 | [决策记录](docs/design-decisions.md) | 24 条 ADR,多数写了否掉的方案(偏差登记在开头) |

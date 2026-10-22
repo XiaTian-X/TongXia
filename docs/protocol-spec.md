@@ -113,7 +113,7 @@
 
 `handoff` 按以下顺序校验。任何一条不过即拒绝提交,**不得**绕过。
 
-<!-- pair-enforcements: turn-ownership project-done state-untampered verdict-valid transition-valid write-boundary test-deletion new-tests review-naming dispute-evidence review-evidence archaeology-sha document-shape memory-gate red-green deadlock -->
+<!-- pair-enforcements: turn-ownership project-done state-untampered verdict-valid transition-valid request-closed write-boundary test-deletion new-tests review-naming dispute-evidence review-evidence archaeology-sha document-shape memory-gate red-green deadlock -->
 
 | # | 不变量 | 触发条件 |
 |---|---|---|
@@ -122,17 +122,18 @@
 | 3 | 状态未被篡改 | `.pair/state.json` 在工作区里未被改动。改动即还原为上次提交的版本并拒绝 |
 | 4 | 裁决合法 | 评审阶段必须给 `approve`/`changes` 且理由非空;`approve` 只能出现在评审阶段 |
 | 5 | 流程合法 | `(阶段, 裁决)` 在该类型的转移表里 |
-| 6 | 写权限边界 | 每个改动文件必须命中当前阶段的可写路径,不在 `frozen_paths` 下,且(配了 `scope` 时)落在 `scope` 内 —— 评审目录与记忆层对 `scope` 豁免。**评审目录顶层已提交的 `.md` 只能追加**:相对 HEAD 有删除行(含删除、改名)即拒绝,不分阶段、不分角色;`verify-setup` 对它那份结论同样判,且拒绝早于写状态 |
-| 7 | 测试删除 | 删除 tester 路径下的文件必须带 `--allow-deletion "理由"`。改名按旧路径删除 + 新路径新增判 |
-| 8 | 新增测试 | `cover` 的 spec 回合必须有非删除的测试文件改动 |
-| 9 | **评审目录命名** | 顶层 `.md` 的名字要对上 PLAN 里某个工作项,或是固定名 |
-| 10 | 异议举证 | `impl` 阶段的 `changes` 必须在 `shared_paths` 下写了文件 |
-| 11 | **评审证据** | `approve` 必须带 `--checked` 与 `--uncovered`;`changes` 的理由或本回合的评审文件里必须有一处 `路径:行号`,且路径真实存在 |
-| 12 | **考古 sha** | `依据: 考古观察@<sha>` 的 sha 必须是真实 commit |
-| 13 | **文档形状** | 异议必须存在且三小节;`contract-change-<ID>.md` 四小节;`baseline.md` 两小节 |
-| 14 | 记忆层门禁 | 见 §6 |
-| 15 | 红绿 | 按类型的 `expect`。**提异议那一回合全豁免**;**打回之后紧接着的 spec 回合只豁免 RED**(cover 的 GREEN 仍然强制),并另外要求本回合真的改动了 tester 路径下的文件 |
-| 16 | 死锁闸 | 同一工作项 `changes_count` 达到 3 时停止轮转 |
+| 6 | **代办已收口** | 发给执行者、还开着的代办必须先 `fulfill` 或 `decline`;会完成工作项的交接不能有任何开着的代办(§5.5) |
+| 7 | 写权限边界 | 每个改动文件必须命中当前阶段的可写路径,不在 `frozen_paths` 下,且(配了 `scope` 时)落在 `scope` 内 —— 评审目录与记忆层对 `scope` 豁免。**评审目录顶层已提交的 `.md` 只能追加**:相对 HEAD 有删除行(含删除、改名)即拒绝,不分阶段、不分角色;`verify-setup` 对它那份结论同样判,且拒绝早于写状态 |
+| 8 | 测试删除 | 删除 tester 路径下的文件必须带 `--allow-deletion "理由"`。改名按旧路径删除 + 新路径新增判 |
+| 9 | 新增测试 | `cover` 的 spec 回合必须有非删除的测试文件改动 |
+| 10 | **评审目录命名** | 顶层 `.md` 的名字要对上 PLAN 里某个工作项,或是固定名 |
+| 11 | 异议举证 | `impl` 阶段的 `changes` 必须在 `shared_paths` 下写了文件 |
+| 12 | **评审证据** | `approve` 必须带 `--checked` 与 `--uncovered`;`changes` 的理由或本回合的评审文件里必须有一处 `路径:行号`,且路径真实存在 |
+| 13 | **考古 sha** | `依据: 考古观察@<sha>` 的 sha 必须是真实 commit |
+| 14 | **文档形状** | 异议必须存在且三小节;`contract-change-<ID>.md` 四小节;`baseline.md` 两小节 |
+| 15 | 记忆层门禁 | 见 §6 |
+| 16 | 红绿 | 按类型的 `expect`。**提异议那一回合全豁免**;**打回之后紧接着的 spec 回合只豁免 RED**(cover 的 GREEN 仍然强制),并另外要求本回合真的改动了 tester 路径下的文件 |
+| 17 | 死锁闸 | 同一工作项 `changes_count` 达到 3 时停止轮转 |
 
 ### 4.1 路径归属判定
 
@@ -216,6 +217,27 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 回合退回 tester 的 spec 阶段。该路径**豁免红绿不变量** —— dev 正是因为测试
 写错、弄不绿才打回的,拿 GREEN 卡它等于逼它照错误断言写实现。
 但边界仍然生效:只能写 `docs/reviews/`。
+
+**带着代办异议不计数**(§5.5):dev 手上有自己发给 tester、还开着的代办时,这次异议不计入 `changes_count`,
+那些代办记为被带过(`carried`);tester `decline` 其中一条就补计一次。
+
+### 5.5 代办通道(request / fulfill / decline)
+
+"知道该改成什么,但没权限"时,把一处落在对方路径里的机械改动交给对方(第三十六轮 W65)。
+
+```
+pair.py request --path <路径> [--path …] "<改什么,含具体值>" --reason "<为什么我改不了>"
+pair.py fulfill R<n> ["说明"]
+pair.py decline R<n> "<理由>"
+```
+
+- 三条都只在自己的回合执行,开头先查状态篡改;都只提交状态文件(窄提交),工作区里没提交的改动不动。
+- `request` 只在 spec / impl 用。每个路径必须归对方角色;归自己的直接改;冻结或孤儿路径拒绝,交给人类(附可直接执行的 diff)。
+  内容与理由不得为空。记进 `requests`,不改阶段、归属与 `changes_count`。提交信息 `chore(pair): 代办 R<n> …`,正文含内容、理由与路径。
+- `fulfill` 只能由被请求方执行;请求的路径里至少一个自 `base` 起有改动(含工作区),否则拒绝。它是记账,不是执行。
+- `decline` 只能由被请求方执行,理由不得为空。被异议带过的代办被拒,`changes_count` 补加 1,到上限照死锁闸处理(§4.3)。
+- 收口见 §4 第 6 条;`claim` 清空 `requests`。`status` 列出发给自己、还开着的代办,`report` 有代办次数与被拒率。
+- **不得用来表达分歧。** `--reason` 回答"为什么我改不了"(路径归属),不回答"为什么你错了";分歧走 `handoff changes`。
 
 ### 5.4 verify-setup
 
@@ -409,6 +431,7 @@ dev **不得**改或删测试,一条都不行。测试写错时的**唯一**出�
 | `last_full_failed` | bool | 最近一次工作项完成时,全量套件(`full_test_cmd`)是否红。PLAN 全部完成之后 `status` / `whose-turn` / `handoff` 的完成提示读它:为真时不说"请向人类报告项目完成",改说项目算不算结束由人类决定。没配 `full_test_cmd` 记为 `false`;老状态没有这个键按 `false` |
 | `full_failures` | string[]\|null | 上一次全量里红着的用例 ID(排序列表,W59)。`verify-setup` 跑全量且读得出 `full_test_report` 时写入,每次工作项完成时更新;完成时新增的红 = 这一次红着的 − 它。不知道时为 `null`(没配报告、报告读不出、老状态),那时完成照旧只报告 |
 | `item_base` | string\|null | 认领那一刻的 HEAD(W60)。`affected_test_cmd` 的路径从它算起;老状态没有它时门禁用 `test_cmd` |
+| `requests` | object[] | 本工作项的代办(W65,§5.5)。每条 `{id, item, by, to, paths, what, reason, base, status, carried}`,`status` 为 open / fulfilled / declined;`claim` 时清空;老状态没有它 = 没有代办 |
 
 **全量跑过的用例不在状态里**,在协议产物 `.pair/full-baseline.json`(W61):`{"executed": [...]}`,排序、一行一条,
 上一次全量报告里所有不带 `skipped` 的用例 ID。不进状态文件,是因为大项目几万条用例会让每次提交的状态文件膨胀。

@@ -43,6 +43,7 @@ python3 .agents/skills/pair-protocol/scripts/pair.py status
 | `pair.py claim <ID>` | 从 PLAN 认领一个工作项(只有 tester 能领) |
 | `pair.py handoff "说明"` | 每回合结尾。校验 → 提交 → 翻转回合 |
 | `pair.py inbox [N]` | 看对方上一回合做了什么,含它写给你的散文 |
+| `pair.py request` / `fulfill` / `decline` | 代办:请对方在它的路径里做一处机械改动(不交出回合、不计数),或办结、拒绝发给你的代办。**不得用来表达分歧**,见 [references/rules.md](references/rules.md) |
 | `pair.py verify-setup` | **开工前一次性**的只读校验,见下 |
 
 全部以 `python3 .agents/skills/pair-protocol/scripts/pair.py` 为前缀。
@@ -128,7 +129,7 @@ PLAN 里的工作项全部完成后,协议停止轮转并报告项目结束。�
 详细说明和判例见 [references/rules.md](references/rules.md)。
 
 1. **不许碰对方的目录。** 认为对方写错了 → 写进 `docs/reviews/`,
-   用 `handoff changes` 打回,由对方自己改。
+   用 `handoff changes` 打回,由对方自己改。不是对方写错、只是改动落在对方路径里 → `request` 交给对方。
 2. **dev 不许改或删测试。** 一条都不行。测试是规格,不是障碍。
    认为测试写错了,走异议流程:把理由写进 `docs/reviews/`,然后
    `handoff changes "..."`,回合退回 tester。**不要照着错误的断言写实现。**
