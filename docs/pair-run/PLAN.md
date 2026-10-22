@@ -851,7 +851,7 @@
     ③都在 tester 路径,由 tester 写用例、dev 评审;`mutation_check.py` 只变异 `pair.py`,两处改为隔离副本探针、写进评审
   - 对应契约:`docs/pair-run/CONTRACT.md` → 仓库根两个文件的内容校验
 
-- [ ] **W65** [feature] — `request` / `fulfill` / `decline`:跨边界的机械改动不走一次计数的打回
+- [x] **W65** [feature] — `request` / `fulfill` / `decline`:跨边界的机械改动不走一次计数的打回
   - **来源**:路线图 P1-13(两轮真实运行的卡住统计),含第三十六轮立项前补上的缺口
   - 验收标准:①`request --path … "<内容>" --reason "<为什么我改不了>"` 只在自己回合的 spec/impl 用,路径必须归对方角色(冻结与孤儿拒绝、交人类),
     记进状态、窄提交状态文件、正文含内容与理由,不改阶段、归属与 `changes_count`;②`fulfill` 只能被请求方执行,请求的路径自 `base` 起要有改动;

@@ -30,3 +30,12 @@
 ## 未覆盖(不阻断)
 
 - `fulfill` 只看"请求的路径自 `base` 起有改动",不看改得对不对:契约就是这么定的(记账,不是执行),对不对由后面的红绿与评审判。
+
+## 第二轮(tester 按打回补用例之后)
+
+裁决: approve
+
+- ① `test_补计撞上死锁闸_report_既数死锁也数拒绝`:同一场景跑 `report`,"死锁工作项占比"与"代办被拒率"都要是 1/1。
+- ② `TestFrozenPathOwnedByOther`:类级配置让 `docs` 归 tester,`docs/CONTRACT.md` 既冻结又归对方,request 被拒、文案含"人类";对照组 `docs/guide.md` 归对方且不冻结,放行。
+- 我在项目内 `.pair/scratch/` 的副本里同时拆掉两处(冻结判断、report 认死锁闸里的拒绝),各红对应的那一条;副本已删。原样 33 条全绿。
+- 两个变异点已登记(锚点各只一处)。只动 tests,走 W17 捷径回 review-test,合规。
