@@ -3094,7 +3094,8 @@ def cmd_decline(root, cfg, args):
     if not reason:
         die("decline 要写理由:为什么不该由你改,或者为什么这不是机械改动。")
     r["status"] = "declined"
-    body = "代办: %s\n理由: %s\nrole=%s item=%s" % (r["what"], reason, me, state["item"])
+    # 第一行是 report 认拒绝的依据之一:撞上死锁闸时主题必须是死锁闸原样(report 靠它数死锁),拒绝只能记在正文里。
+    body = "拒绝代办: %s\n代办: %s\n理由: %s\nrole=%s item=%s" % (r["id"], r["what"], reason, me, state["item"])
     if r.get("carried"):
         # 被异议带过的代办被拒:那次异议当时没计数,现在补上。到上限照死锁闸原样处理。
         state["changes_count"] = state["changes_count"] + 1
@@ -3104,8 +3105,8 @@ def cmd_decline(root, cfg, args):
             if stuck not in state["deadlock_hits"]:
                 state["deadlock_hits"].append(stuck)
             save_state(root, state)
-            _commit_state(root, "chore(pair): 拒绝代办 %s,工作项 %s 打回 %d 次,触发死锁闸"
-                          % (r["id"], state["item"] or "?", state["changes_count"]), body)
+            _commit_state(root, "chore(pair): 工作项 %s 打回 %d 次,触发死锁闸"
+                          % (state["item"] or "?", state["changes_count"]), body)
             die("代办 %s 已拒绝,补计之后同一工作项已被打回 %d 次。协议要求此时停止自动轮转。\n"
                 "请把双方分歧写清楚,交给人类裁决。不要继续来回。" % (r["id"], state["changes_count"]))
     save_state(root, state)
@@ -3237,6 +3238,8 @@ NO_DECISION_LINE_RE = re.compile(r"^未留决策\(已声明\): ", re.M)
 CONTRACT_CHANGE_LINE_RE = re.compile(r"^契约变更\(已声明\): ", re.M)
 # 主题的后半句是执行者写的自由文本,只认 handoff 触发死锁闸时生成的那个完整主题。
 DEADLOCK_SUBJECT_RE = re.compile(r"^chore\(pair\): 工作项 \S+ 打回 \d+ 次,触发死锁闸$")
+# W65:decline 补计撞上死锁闸时,主题是死锁闸原样,拒绝记在正文第一行 —— 两边都要数到。
+DECLINE_LINE_RE = re.compile(r"^拒绝代办: R\d+$", re.M)
 
 
 def _handoff_log(root, since=None):
@@ -3324,7 +3327,8 @@ def cmd_report(root, cfg, args):
             disputes += 1
         if subject.startswith("chore(pair): 代办 "):
             requests_n += 1
-        elif subject.startswith("chore(pair): 拒绝代办 "):
+        elif subject.startswith("chore(pair): 拒绝代办 ") or (
+                DEADLOCK_SUBJECT_RE.match(subject) and DECLINE_LINE_RE.search(body)):
             declined_n += 1
         if subject.startswith("chore(pair): 认领工作项"):
             claimed += 1
