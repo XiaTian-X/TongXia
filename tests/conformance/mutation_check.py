@@ -1175,6 +1175,35 @@ MUTATIONS = [
     ('读得出就比_不提示红用例没有列出',
      'reds_unlisted=full_failed_cases is None and not full_green))',
      'reds_unlisted=False))'),
+
+    # W65 代办通道(review-impl 登记;report 认"死锁闸里的拒绝代办"那一处等补用例时再登记)。
+    ('代办_带着代办的异议照样计数',
+     '    if verdict == "changes" and not carried:\n',
+     '    if verdict == "changes":\n'),
+
+    ('代办_decline_不补计',
+     '    if r.get("carried"):\n',
+     '    if False:\n'),
+
+    ('代办_不校验被请求方',
+     '            if r.get("to") != me:\n',
+     '            if False:\n'),
+
+    ('代办_fulfill_不校验改动',
+     '    if not _changed_since(root, r["base"], r["paths"]):\n',
+     '    if False:\n'),
+
+    ('代办_交接不查发给自己的',
+     '    if waiting:\n        die("拒绝交接',
+     '    if False:\n        die("拒绝交接'),
+
+    ('代办_完成时不查开着的',
+     '    if target == "DONE" and open_requests(state):\n',
+     '    if False:\n'),
+
+    ('代办_不查回合',
+     '    if me != owner:\n        die("代办只能',
+     '    if False:\n        die("代办只能'),
 ]
 
 # unittest 的失败行有两种形态:

@@ -30,3 +30,18 @@
 ## 没覆盖的
 
 - 锚点等你改完再登记(候选我看过,`if verdict == "changes" and not carried:`、`if r.get("carried"):`、`if r.get("to") != me:`、`if not _changed_since(...)`、`if waiting:` 各只一处)。
+
+---
+
+# W65 — review-impl 第二次(tester)
+
+结论:**通过**。
+
+- decline 补计撞上死锁闸:主题改成死锁闸原样(`chore(pair): 工作项 W1 打回 3 次,触发死锁闸`),正文第一行 `拒绝代办: R1`;`report` 的被拒数另认
+  "死锁闸主题 + 正文有那一行"。复现上次那一格:"死锁工作项占比" 100% (1/1)、"代办" 1 次、"代办被拒率" 100% (1/1)。
+- 登记七个变异点(锚点各只出现一次),`--only` 全部被抓到:带代办的异议照样计数、decline 不补计、不校验被请求方、fulfill 不校验改动、
+  交接不查发给自己的、完成时不查开着的、不查回合。基线全绿。
+
+## 没覆盖的
+
+- `report` 认"死锁闸里的拒绝代办"那一处还没有用例:请在 review-test 以缺用例打回,我照 W17 捷径补,并同时登记它的变异点(`DECLINE_LINE_RE.search(body)` 那一行)。

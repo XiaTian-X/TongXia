@@ -1,5 +1,5 @@
 {
-  "baseline": "a67f6c0c98732273",
+  "baseline": "94b5d9aa0bba25e5",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -174,6 +174,27 @@
     ],
     "从没校验过当成存量升级": [
       "test_v1_reverify_wording.TestNeverVerified.test_claim_被拒的理由说新建_不说存量升级"
+    ],
+    "代办_decline_不补计": [
+      "test_v1_requests.TestDecline.test_补计到上限触发死锁闸"
+    ],
+    "代办_fulfill_不校验改动": [
+      "test_v1_requests.TestFulfill.test_请求的路径没有改动被拒"
+    ],
+    "代办_不查回合": [
+      "test_v1_requests.TestOwnership.test_被请求方不在自己的回合也被拒"
+    ],
+    "代办_不校验被请求方": [
+      "test_v1_requests.TestOwnership.test_发起方_decline_被拒"
+    ],
+    "代办_交接不查发给自己的": [
+      "test_v1_requests.TestFulfill.test_发给自己的代办开着时交接被拒"
+    ],
+    "代办_完成时不查开着的": [
+      "test_v1_requests.TestLifecycle.test_完成时有开着的代办被拒"
+    ],
+    "代办_带着代办的异议照样计数": [
+      "test_v1_requests.TestCarriedDispute.test_带着开着的代办异议_不计数_代办标为被带过_正文列出"
     ],
     "依据从不写": [
       "test_v1_effective.TestBasisOnlyWhenRewrite.test_有改写时_basis_照样留痕"
