@@ -774,3 +774,8 @@
 - 理由: `force-include` 只断言"有映射、目标非空"时,目标改错一个字母(`skill` → `skills`)全套照绿,而装好的包里 `find_bundled_skill()` 找不到协议,`pair init` 分发不出去 —— 校验的是"写了",不是"写对了"。补的用例按 `pyproject.toml` 搭出装好之后的布局(包目录取自 `packages`,入口模块取自 `[project.scripts]`),问 CLI 自己找不找得到;两边任一边改名都红。根 `.gitignore` 改成整行比,子串比较会让 `.pair/whoami-old` 满足 `.pair/whoami`。
 - 已否决: 在用例里写死 `pair_bootstrap/skill` —— CLI 换位置时用例与代码一起改错也照绿;用 `tomllib` 解析 —— 3.11 起才有,CI 有 3.9;真的构建 wheel —— 要 hatchling,不在本机验证范围。
 - 影响路径: `tests/conformance/test_v1_repo_root_files.py`, `pyproject.toml`, `.gitignore`, `cli/pair_bootstrap/__init__.py`
+## W65 — 新路径撞上既有闸门时,沿用那道闸门的原样形状,附加信息放进正文
+
+- 理由: decline 补计到上限要"照死锁闸原样处理"。第一版的提交主题写成"拒绝代办 R1,工作项 … 触发死锁闸",状态、留痕、`whose-turn` 都对,唯独 `report` 认死锁靠行首锚定的完整主题(第十二轮 ⑤ 修过的口径),这一次死锁没被数到 —— 死锁工作项占比 0/1。改成主题用死锁闸原样那一句,拒绝记在正文第一行 `拒绝代办: R<n>`,`report` 的被拒数另认"死锁闸主题 + 这一行"。同一个提交既是死锁又是拒绝,两个指标都要数到。
+- 已否决: 放宽 `DEADLOCK_SUBJECT_RE` 去认新主题 —— 认死锁的口径多一种形状,就多一个被人手写主题误中的入口;拒绝代办撞上死锁时提交两次 —— 一次协议事件拆成两个提交,中间那个状态是"已拒绝但还没停",不该落地。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_requests.py`, `docs/command-reference.md`
