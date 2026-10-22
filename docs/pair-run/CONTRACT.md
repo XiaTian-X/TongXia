@@ -2184,3 +2184,49 @@ CI 矩阵有 3.9,只认前一种时那里每个失败都对不上 ID、报告全
 ⑤报告是坏的 XML → 照旧不拦。变异点:三处任一仍要求一致。
 
 **不做** 不放宽新增的红(报告"无红"在崩溃时最不可信,正是 ⑰ 的原意);不改 W58 的门禁降级;不改 `run.py`(它写的是收集到的用例,分片崩溃时报告不缺用例 —— 本仓库享受不到这一项,协议行为由 harness 的假命令验证)。
+
+## 仓库根两个文件的内容校验
+
+- 依据: 人类定稿
+
+**背景** 第三轮孤儿划归把 `pyproject.toml` 与仓库根 `.gitignore` 划给了 dev,两者此前靠"谁都改不了"才没坏,内容至今零测试覆盖(路线图 P1-14)。
+`force-include` 那一行决定协议目录进不进 wheel,`pair init` 分发的就是它;根 `.gitignore` 少了 `__pycache__/`,`.pyc` 就会进 git、落到对方路径下。
+
+**行为** 两条内容校验:①`pyproject.toml` 的 `[tool.hatch.build.targets.wheel.force-include]` 把 `.agents/skills/pair-protocol` 映射进包;
+②`pair.py` 的 `GITIGNORE_LINES` 每一行都在仓库根的 `.gitignore` 里(同 `test_v1_shipped.py` 查样板项目那条,只换目标文件)。
+
+**分工** 用例在 tester 路径,由 tester 写,dev 在 review-test 评审(cover)。两项今天都满足,用例一开始就绿。
+
+**判据** 各一条用例;在隔离副本里删掉 `force-include` 那一行、删掉根 `.gitignore` 的一行,对应用例各自变红(写进评审;`mutation_check.py` 只变异 `pair.py`,不登记)。
+
+**不做** 不真的构建 wheel(需要 hatchling,不在本机验证范围内);不校验 `pyproject.toml` 的其他字段。
+
+## 代办通道
+
+- 依据: 人类定稿
+
+**背景** 两轮真实运行的卡住统计里,有几次卡住的形状是"知道该改成什么,但没权限":用一次完整的异议往返传一个值,还消耗打回额度(路线图 P1-13)。
+原设计让 request 不交出回合,可主要场景是 dev 在 impl 被 tester 路径里的东西挡住、测试红着交不了接,那时只能异议、照样计数。人类裁决补上这个缺口。
+
+**行为**
+- `request --path <路径> [--path …] "<改什么,含具体值>" --reason "<为什么我改不了>"`:只在自己的回合、spec 或 impl 阶段;评审阶段与 idle 拒绝。
+  每个路径必须归对方角色(不在自己的 `roles` 里、在对方的里);冻结路径或孤儿路径拒绝,文案让交给人类并附可直接执行的 diff。内容与理由不得为空。
+  记进状态 `requests`(每条含 `id`(R1、R2……本工作项内递增)、`item`、`by`、`to`、`paths`、`what`、`reason`、`base`(当时的 HEAD)、`status`(open)、`carried`(false)),
+  只提交状态文件,提交信息 `chore(pair): 代办 R<n> …`,正文含内容、路径与理由;工作区里没提交的改动原样留着。不改阶段、归属与 `changes_count`。
+- `fulfill R<n> ["说明"]`:只有被请求方、在自己的回合执行;请求的路径里至少一个自 `base` 起有改动(含工作区),否则拒绝。它是记账,不是执行。
+  状态标 fulfilled,只提交状态文件。
+- `decline R<n> "<理由>"`:只有被请求方、在自己的回合执行;理由不得为空。状态标 declined,只提交状态文件,提交信息 `chore(pair): 拒绝代办 R<n> …`。
+  这条代办被异议带过(`carried`)时,`changes_count` 补加 1;补加后到死锁上限,照死锁闸原样处理。
+- dev 在 impl 用 `handoff changes` 异议、而自己发给 tester 的代办还有开着的:这次异议不计入 `changes_count`,那些代办标 `carried`,正文写一行列出它们。异议文件照旧必须写。
+- 交接时,发给自己、还开着的代办必须先 fulfill 或 decline,否则拒绝交接;工作项完成时不能有任何开着的代办,否则拒绝完成。`claim` 时清空 `requests`。
+- 三条命令开头都做状态篡改检查。`status` 列出发给自己、还开着的代办。`report` 加两行:代办次数、被拒率(按提交信息数)。
+- `rules.md` 写明:request 不得用于表达分歧,`--reason` 回答"为什么我改不了"而不是"为什么你错了";被请求方随时可以 decline。
+- 登记 `ENFORCEMENTS`(`request-shape`、`fulfill-owner`、`request-closed`);"发给自己的代办还开着"进 `HANDOFF_INVARIANTS` 并同步 `protocol-spec.md` §4;
+  §8 状态表加 `requests`;`command-reference.md`、`architecture.md`、`troubleshooting.md`、`SKILL.md` 命令清单跟上;路线图 P1-13、P1-14 标 ✅。
+
+**判据** 用例:request 不改阶段、归属与计数;路径属于自己、孤儿、冻结时拒绝;评审阶段与不是自己的回合拒绝;内容与理由进提交正文;工作区未提交的改动不受影响;
+fulfill 由非被请求方执行被拒、路径没改动被拒、成功后为 fulfilled;带开着的代办异议计数不变、代办 carried;tester fulfill 后 GREEN 交接进 impl;
+decline 被带过的计数加 1、没被带过的不变、补加到上限触发死锁闸;发给自己的代办开着时交接被拒;有开着的代办时完成被拒;`claim` 清空;`report` 两行数对。
+变异点:带代办的异议照样计数、decline 不补计、fulfill 不校验归属、fulfill 不校验改动、交接不查开着的代办。
+
+**不做** 不做 patch 应用器(脚本不代 agent 改文件);代办不跨工作项;异议文件不因带了代办而豁免;不在评审阶段开放;不让 request 交出回合。

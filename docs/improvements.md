@@ -804,6 +804,12 @@ pair.py fulfill <id>
 连续 `request` 表达本该是打回的分歧。缓解:`report` 统计 request 频次与
 被拒率 —— **被拒率高说明它正在被当成打回用**,那是误用的信号。
 
+**缺口与裁决(2026-10-22,第三十六轮立项前核对):** 上面的设计让 request 不改变阶段、不交出回合,
+可它要解决的主要场景是 dev 在 impl 被 tester 路径里的东西挡住 —— 测试红着交不了接,唯一的出路是异议,
+而异议照样计入打回额度,request 在这里帮不上任何忙。人类裁决补上:dev 带着自己发给 tester、还开着的代办去异议时,
+这次异议不计入 `changes_count`,代办标记为"被异议带过";tester 若 decline 其中一条,补计一次(到上限照样撞死锁闸)。
+所以只有对方也认可是机械改动时才免计数。另加收口:交接时发给自己的代办必须先 fulfill 或 decline,完成时不能有开着的代办。
+
 **验收方式:** 按 `contributing.md` 的五步走。用例覆盖:`request` 不改变
 phase 与 owner、不计入 `changes_count`;`fulfill` 只能由路径归属方执行;
 非归属方 `fulfill` 被拒;request 内容进提交正文;`report` 出现 request

@@ -764,3 +764,8 @@
 - 理由: W58 ⑰ 把对不上的报告当作读不出,原意是半途崩溃时报告里的"没有红"不可信。W61 照搬这个条件去读跑过的集合,结果正好放过最该拦的那种回归 —— 套件半途崩溃时报告缺的那一片就是没跑到的用例。三处(完成时的消失判定、`verify-setup` 写基线、⑱)改成报告解析得出就读跑过的集合;新增的红仍要求一致。对不上而又有消失时拒绝文案说明红用例没有列出,否则只看到"不再跑"一段,人会以为红是假的。只有增量写报告的运行器在崩溃时留得下可读的报告;整份写在最后的(pytest、jest-junit)崩溃时没有报告,照旧不拦。
 - 已否决: 连新增的红一起放宽 —— 报告"无红"在崩溃时最不可信,正是 ⑰ 要防的;只改完成时一处 —— ⑱ 会在被拒之后照走捷径,`verify-setup` 与完成时的判据不一致。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_executed_any_report.py`, `docs/protocol-spec.md`, `docs/troubleshooting.md`
+## SETUP — 第三十六轮做 P1-14 与 P1-13,P1-13 的缺口经人类裁决补上,规划经自审后人类批准(2026-10-22)
+
+- 理由: 路线图分轮计划第五轮那一组只剩这两条,小而独立、不依赖 discuss。P1-14 是两条便宜的内容校验,补上划归之后零覆盖的两个高影响文件。P1-13 立项前核对时发现原设计帮不上它自己的主要场景:dev 在 impl 被 tester 路径挡住,测试红着交不了接,只能异议、照样计数。补法是让"带着开着的代办的异议"不计数,而被请求方 decline 就补计 —— 免计数要双方都认可是机械改动,不给单方面躲死锁闸留口子。规划时自审补上的:交接时发给自己的代办必须先处理、完成时不能有开着的代办(否则代办挂着没人管);fulfill 要求请求的路径真有改动(否则只是记账);三条命令都只窄提交状态文件并先查篡改(协议自己改状态不能被自己判成篡改,也不能带走别人事先暂存的东西);评审阶段不开放(评审只读,有问题走 changes)。
+- 已否决: 按原设计只记账、不碰计数 —— dev 被挡时省不下任何东西;让 request 交出回合、建一个只做代办的子回合 —— 要给状态机加一层归属,比"不计数的异议"大得多,而省下的回合数一样;把异议文件也豁免 —— 落到纸面是异议的前提,代办内容不能替代"和契约的哪一条矛盾"。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/improvements.md`, `pyproject.toml`, `.gitignore`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`

@@ -839,3 +839,23 @@
     ②新增的红照旧按 W58 ⑰(一致才算),W58 的门禁降级不变;③报告与退出码对不上而又有消失的用例时,拒绝文案说明红用例这一次没有列出、不再跑的按报告里出现的判;
     ④报告读不出(不存在、坏的 XML)照旧不拦;⑤`protocol-spec.md`、`troubleshooting.md` 跟上,路线图 55 标 ✅
   - 对应契约:`docs/pair-run/CONTRACT.md` → 跑过的集合读得出就比
+
+### 第三十六轮:仓库根两个文件的内容校验,以及代办通道
+
+> 人类要求继续按路线图推进:分轮计划里第五轮那一组只剩 P1-14 与 P1-13。P1-13 原设计的缺口(dev 被测试挡住时帮不上)经人类裁决补上;
+> 规划经 dev 自审后人类批准(2026-10-22),授权 dev 代笔立项。
+
+- [ ] **W64** [cover] — `pyproject.toml` 与仓库根 `.gitignore` 的内容校验
+  - **来源**:路线图 P1-14(第三轮孤儿划归审查)。两个文件划归 dev 之后内容零测试覆盖
+  - 验收标准:①`pyproject.toml` 的 wheel `force-include` 把 `.agents/skills/pair-protocol` 打进包;②`GITIGNORE_LINES` 的每一行都在仓库根的 `.gitignore` 里;
+    ③都在 tester 路径,由 tester 写用例、dev 评审;`mutation_check.py` 只变异 `pair.py`,两处改为隔离副本探针、写进评审
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 仓库根两个文件的内容校验
+
+- [ ] **W65** [feature] — `request` / `fulfill` / `decline`:跨边界的机械改动不走一次计数的打回
+  - **来源**:路线图 P1-13(两轮真实运行的卡住统计),含第三十六轮立项前补上的缺口
+  - 验收标准:①`request --path … "<内容>" --reason "<为什么我改不了>"` 只在自己回合的 spec/impl 用,路径必须归对方角色(冻结与孤儿拒绝、交人类),
+    记进状态、窄提交状态文件、正文含内容与理由,不改阶段、归属与 `changes_count`;②`fulfill` 只能被请求方执行,请求的路径自 `base` 起要有改动;
+    `decline` 只能被请求方执行;③dev 带着发给 tester、还开着的代办在 impl 异议时不计数,代办记为被带过,decline 被带过的补计一次(到上限撞死锁闸);
+    ④交接时发给自己的代办不能开着,完成时不能有开着的代办,`claim` 清空;⑤`status` 列出发给自己的代办,`report` 加代办次数与被拒率;
+    ⑥`rules.md` 写明不得用于表达分歧;`ENFORCEMENTS`、`HANDOFF_INVARIANTS`、`protocol-spec.md` §4 与 §8、`command-reference.md`、`architecture.md`、`troubleshooting.md` 跟上
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 代办通道
