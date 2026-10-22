@@ -2251,6 +2251,11 @@ decline 被带过的计数加 1、没被带过的不变、补加到上限触发�
   `rules.md` 一节"超出本工作项的方向问题写进提案";路线图 P0-5 分轮表 D1 标 ✅,P0-7 的 `artifact_paths` 评估点写结论(不另设)。
 - 本仓库 `tests/conformance/test_docs_consistency.py` 里扫"被跟踪的 `.md` 减去记忆层与评审目录"的检查,一并减去 `proposal_paths`(提案和评审一样是历史记录)。
 
+**补充**(W66 的 spec 回合带声明补,开工前审查 ⑳)"重叠"的定义:**有一个文件会同时命中两边**。两边的每个模式各取代表路径 ——
+不含通配符的取模式本身与 `<模式>/<某名>.md`(目录前缀语义),含通配符的把每段通配符换成一个具体名字 —— 任一边的代表路径命中另一边的模式就算重叠。
+例:`proposal_paths: ["docs/proposals"]` 与 `roles.tester: ["docs"]`(前缀)、与 `ignore_paths: ["docs/proposals/*.md"]`(glob)、与 `frozen_paths: ["docs/proposals/定稿.md"]`(单个文件)都算重叠;
+与 `roles.dev: ["docs/*.md"]` 不算(`*` 不跨 `/`)。
+
 **判据** 用例:两个角色在 spec、impl、review-impl、review-test 都能写提案并交接;已提交的提案改一行被拒、删除被拒、追加放行;impl 的 `changes` 只写了提案被异议举证拒;
 打回理由没有位置引用、只写了提案被拒;提案名不对应工作项不被命名检查拒;只改提案不要求 `--doc-reason`;配了 `scope` 时提案豁免;只改提案门禁不重跑;
 `inbox` 显示提案原文、正文有 `提案:` 一行;`verify-setup` 五种重叠各判失败;默认 `[]` 时那个目录照旧受角色约束;`init` 写出 `docs/proposals`。

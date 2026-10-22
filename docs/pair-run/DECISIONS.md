@@ -784,3 +784,8 @@
 - 理由: 分轮计划里小而独立的条目已做完,下一组是 P0-5。路线图写明 D1 能独立做、不碰阶段机,而且立刻还债:"超出本工作项范围"的方向问题此前没有落点。提案是陈述,不是主张,所以四个工作阶段两个角色都能写;它又不能冒充评审或异议,所以异议举证、位置引用、评审命名、规范性文档四处显式不认它。规划时自审补上的:默认不启用(默认目录会与老项目的角色路径重叠,一上来就让 verify-setup 判失败),只有 init 给新项目写;已提交的提案只能追加(一方改不掉对方的,D3 的签字将来追加在同一份文件里);scope、W57 指纹、W60 路径与评审目录同样豁免;inbox 把它当写给对方的话;本仓库自己的文档检查要减去它。P0-7 留下的 `artifact_paths` 评估点在这里结论:不另设,提案与副产物不是一类。
 - 已否决: 并进 `shared_paths` —— 写一份提案就满足了异议举证,防护被静默削掉;默认开 `docs/proposals` —— 老项目重叠判失败;D1 与 D2 同一轮 —— D2 要改状态机(挂起与恢复),该等路径类别落地后单独规划。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `INSTALL.md`, `docs/improvements.md`, `.pair/config.json`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W66 — 配置检查说"重叠"时,按"有没有一个文件同时命中两边"判
+
+- 理由: 「提案目录」要求 `verify-setup` 在 `proposal_paths` 与 `roles`、`shared_paths`、`frozen_paths`、记忆层、`ignore_paths` 重叠时判失败,却没说两组路径模式怎样算重叠。字符串相等、互为前缀、有文件同时命中三种读法对同一份配置结论不同:`docs/proposals` 对 `docs`(前缀)、对 `docs/proposals/*.md`(glob)、对 `docs/proposals/定稿.md`(单个文件)。spec 回合带声明补「补充」:两边各取代表路径(不含通配符的取模式本身与 `<模式>/<某名>.md`,含通配符的把通配符换成具体名字),任一边的代表路径命中另一边的模式就算重叠;本仓库 dev 的 `docs/*.md`、`*.md` 不命中 `docs/proposals/` 下的文件(`*` 不跨 `/`),启用不会撞。写用例时还踩到一处:拿 `docs` 下的目录试"与角色重叠",别的检查(评审目录、记忆层、冻结的规划文件也在 `docs` 下)会先拒,判不出这一条 —— 改用别的键都不碰的 `plans/`,并配一条"去掉重叠就通过"的对照。
+- 已否决: 只比字符串 —— 前缀与 glob 的重叠全漏;遍历仓库里的真实文件判 —— 提案目录开工时多半是空的,判不出来。
+- 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_proposals.py`, `tests/conformance/test_docs_consistency.py`, `.agents/skills/pair-protocol/scripts/pair.py`

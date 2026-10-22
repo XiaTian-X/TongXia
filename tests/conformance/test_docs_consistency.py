@@ -237,7 +237,8 @@ def symbol_ref_scope(root=REPO):
                          stdout=subprocess.PIPE, check=True).stdout.decode("utf-8")
     pair = _load_pair()
     cfg = json.loads((Path(root) / ".pair" / "config.json").read_text(encoding="utf-8"))
-    excluded = list(cfg.get("shared_paths", [])) + list(cfg.get("ignore_paths", []))
+    # W66:提案与评审一样是历史记录,不是规范性文档。
+    excluded = list(cfg.get("shared_paths", [])) + list(cfg.get("ignore_paths", [])) + list(cfg.get("proposal_paths", []))
     if cfg.get("memory", True):
         excluded += [p for p in (cfg.get("notes_dir"), cfg.get("decisions_file")) if p]
     return [Path(root) / p for p in out.split("\0")
@@ -1050,6 +1051,27 @@ class TestAdrDeviationReading(unittest.TestCase):
         """ADR-0100 不算点名了 ADR-010。"""
         body = self.FULL.replace("**代价** d\n\n", "")
         self.assertEqual([n for n, _ in adr_unregistered(self.doc("见 ADR-0100。", ("ADR-010", body)))], ["ADR-010"])
+
+
+class TestScopeExcludesProposals(unittest.TestCase):
+    """W66 ⑧:规范性文档的范围减去 `proposal_paths`(提案和评审一样是历史记录)。在一个临时仓库里配出来看。"""
+
+    def test_提案不在规范性文档的范围里(self):
+        import shutil
+        import tempfile
+        d = Path(tempfile.mkdtemp(prefix="docs-scope-")).resolve()
+        self.addCleanup(shutil.rmtree, d, True)
+        (d / ".pair").mkdir()
+        (d / ".pair" / "config.json").write_text(json.dumps({"shared_paths": ["docs/reviews"], "proposal_paths": ["docs/proposals"]}), encoding="utf-8")
+        for rel in ("docs/guide.md", "docs/proposals/方向.md", "docs/reviews/W1-review-impl.md"):
+            (d / rel).parent.mkdir(parents=True, exist_ok=True)
+            (d / rel).write_text("# x\n", encoding="utf-8")
+        for args in (("init", "-q"), ("add", "-A"), ("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "x")):
+            subprocess.run(("git",) + args, cwd=str(d), check=True, stdout=subprocess.DEVNULL)
+        scope = {str(p.relative_to(d)) for p in symbol_ref_scope(d)}
+        self.assertIn("docs/guide.md", scope, "前提:普通文档在范围里")
+        self.assertNotIn("docs/proposals/方向.md", scope)
+        self.assertNotIn("docs/reviews/W1-review-impl.md", scope)
 
 if __name__ == "__main__":
     unittest.main()
