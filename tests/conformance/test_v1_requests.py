@@ -137,6 +137,22 @@ class TestRequestRefused(RequestBase):
         self.assertEqual(self.requests(), [])
 
 
+class TestFrozenPathOwnedByOther(RequestBase):
+    """冻结路径同时落在对方 `roles` 里:对方在写权限边界上照样改不了它 —— 要交人类,不能收成一条代办。
+    (`docs/CONTRACT.md` 在默认配置里同时是孤儿,只靠孤儿那一支也会被拒;这里让它归 tester,冻结判断才是唯一拦它的。)"""
+
+    config = {"roles": {"tester": ["tests", "docs"], "dev": ["src"]}}
+
+    def test_冻结且归对方的路径被拒_交人类(self):
+        self.repo.advance_to("impl")
+        self.assertRefused(self.request("docs/CONTRACT.md"), "人类")
+        self.assertEqual(self.requests(), [])
+
+    def test_对照组_归对方且不冻结的照常放行(self):
+        self.repo.advance_to("impl")
+        self.assertAccepted(self.request("docs/guide.md", what="补一句说明", why="docs 归 tester"))
+
+
 class TestCarriedDispute(RequestBase):
 
     def test_带着开着的代办异议_不计数_代办标为被带过_正文列出(self):
@@ -249,14 +265,26 @@ class TestDecline(RequestBase):
         self.assertRefused(self.repo.run("decline", "R1", " ", role="tester"))
         self.assertEqual(self.requests()[0]["status"], "open")
 
-    def test_补计到上限触发死锁闸(self):
+    def decline_into_deadlock(self):
         self.repo.advance_to("impl")
         self.human_set_state(changes_count=2)
         self.repo.write("src/W1")
         self.assertAccepted(self.request("tests/W1"))
         self.assertAccepted(self.dispute())
         self.assertEqual(self.repo.state()["changes_count"], 2, "前提:带着代办的异议没计数")
-        r = self.repo.run("decline", "R1", "契约写的就是 41", role="tester")
+        return self.repo.run("decline", "R1", "契约写的就是 41", role="tester")
+
+    def test_补计撞上死锁闸_report_既数死锁也数拒绝(self):
+        """W65 review-impl 打回过:撞闸那一次的主题若不是死锁闸原样,report 数不到死锁;主题原样之后,拒绝要从正文认。"""
+        self.decline_into_deadlock()
+        out = self.repo.run("report", role="tester").out
+        deadlock = [l for l in out.splitlines() if "死锁工作项占比" in l]
+        declined = [l for l in out.splitlines() if "被拒" in l]
+        self.assertTrue(deadlock and "(1/1)" in deadlock[0], out)
+        self.assertTrue(declined and "(1/1)" in declined[0], out)
+
+    def test_补计到上限触发死锁闸(self):
+        r = self.decline_into_deadlock()
         self.assertRefused(r, "人类")
         st = self.repo.state()
         self.assertEqual(st["changes_count"], 3)

@@ -1204,6 +1204,15 @@ MUTATIONS = [
     ('代办_不查回合',
      '    if me != owner:\n        die("代办只能',
      '    if False:\n        die("代办只能'),
+
+    # W65 review-test 打回后补的两格(spec 回合登记)。
+    ('代办_report_不认死锁闸里的拒绝',
+     '                DEADLOCK_SUBJECT_RE.match(subject) and DECLINE_LINE_RE.search(body)):\n',
+     '                False):\n'),
+
+    ('代办_不拦冻结路径',
+     '        if matches_any(path, cfg["frozen_paths"]):\n            human.append((path, "在冻结路径下"))\n',
+     '        if False:\n            human.append((path, "在冻结路径下"))\n'),
 ]
 
 # unittest 的失败行有两种形态:
