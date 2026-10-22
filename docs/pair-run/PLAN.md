@@ -845,7 +845,7 @@
 > 人类要求继续按路线图推进:分轮计划里第五轮那一组只剩 P1-14 与 P1-13。P1-13 原设计的缺口(dev 被测试挡住时帮不上)经人类裁决补上;
 > 规划经 dev 自审后人类批准(2026-10-22),授权 dev 代笔立项。
 
-- [ ] **W64** [cover] — `pyproject.toml` 与仓库根 `.gitignore` 的内容校验
+- [x] **W64** [cover] — `pyproject.toml` 与仓库根 `.gitignore` 的内容校验
   - **来源**:路线图 P1-14(第三轮孤儿划归审查)。两个文件划归 dev 之后内容零测试覆盖
   - 验收标准:①`pyproject.toml` 的 wheel `force-include` 把 `.agents/skills/pair-protocol` 打进包;②`GITIGNORE_LINES` 的每一行都在仓库根的 `.gitignore` 里;
     ③都在 tester 路径,由 tester 写用例、dev 评审;`mutation_check.py` 只变异 `pair.py`,两处改为隔离副本探针、写进评审

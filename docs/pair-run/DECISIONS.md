@@ -769,3 +769,8 @@
 - 理由: 路线图分轮计划第五轮那一组只剩这两条,小而独立、不依赖 discuss。P1-14 是两条便宜的内容校验,补上划归之后零覆盖的两个高影响文件。P1-13 立项前核对时发现原设计帮不上它自己的主要场景:dev 在 impl 被 tester 路径挡住,测试红着交不了接,只能异议、照样计数。补法是让"带着开着的代办的异议"不计数,而被请求方 decline 就补计 —— 免计数要双方都认可是机械改动,不给单方面躲死锁闸留口子。规划时自审补上的:交接时发给自己的代办必须先处理、完成时不能有开着的代办(否则代办挂着没人管);fulfill 要求请求的路径真有改动(否则只是记账);三条命令都只窄提交状态文件并先查篡改(协议自己改状态不能被自己判成篡改,也不能带走别人事先暂存的东西);评审阶段不开放(评审只读,有问题走 changes)。
 - 已否决: 按原设计只记账、不碰计数 —— dev 被挡时省不下任何东西;让 request 交出回合、建一个只做代办的子回合 —— 要给状态机加一层归属,比"不计数的异议"大得多,而省下的回合数一样;把异议文件也豁免 —— 落到纸面是异议的前提,代办内容不能替代"和契约的哪一条矛盾"。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/improvements.md`, `pyproject.toml`, `.gitignore`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W64 — 配置文件的内容校验要从使用方推出期望值,不写死字面量
+
+- 理由: `force-include` 只断言"有映射、目标非空"时,目标改错一个字母(`skill` → `skills`)全套照绿,而装好的包里 `find_bundled_skill()` 找不到协议,`pair init` 分发不出去 —— 校验的是"写了",不是"写对了"。补的用例按 `pyproject.toml` 搭出装好之后的布局(包目录取自 `packages`,入口模块取自 `[project.scripts]`),问 CLI 自己找不找得到;两边任一边改名都红。根 `.gitignore` 改成整行比,子串比较会让 `.pair/whoami-old` 满足 `.pair/whoami`。
+- 已否决: 在用例里写死 `pair_bootstrap/skill` —— CLI 换位置时用例与代码一起改错也照绿;用 `tomllib` 解析 —— 3.11 起才有,CI 有 3.9;真的构建 wheel —— 要 hatchling,不在本机验证范围。
+- 影响路径: `tests/conformance/test_v1_repo_root_files.py`, `pyproject.toml`, `.gitignore`, `cli/pair_bootstrap/__init__.py`

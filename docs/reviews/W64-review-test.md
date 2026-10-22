@@ -29,3 +29,14 @@
 
 - TOML 的其他写法(单引号键、行内表)会误红:笔记已记,取舍成立。
 - 根 `.gitignore` 里多出来的行不校验:契约只要求"每一行都在"。
+
+## 第二轮(tester 按打回补用例之后)
+
+裁决: approve
+
+- 新补的 `TestWheelLayoutFindsSkill.test_CLI_在_force_include_的目标处找到协议`:
+  - 包目录取自 `packages`,入口模块取自 `[project.scripts]`,`SKILL.md` 只放到 `force-include` 的目标处。
+  - 在子进程里 `find_bundled_skill()` 要正好返回那个目标。没有写死字面量。
+  - 子进程的 cwd 是临时布局,`-c` 下 cwd 排在 `sys.path` 最前,不会误用装在别处的同名包。在包内找不到时,它往上找仓库,临时目录上面没有仓库,所以返回 None。
+- 我在项目内 `.pair/scratch/` 的副本里重跑同一个探针(目标多一个 s):这一条红。副本已删。原样 10 条全绿。
+- 只动 tests,走 W17 捷径回 review-test,合规。
