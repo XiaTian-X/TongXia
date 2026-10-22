@@ -42,7 +42,7 @@
 | `review-test` | dev | 审测试是否过拟合 |
 
 `review-impl` 与 `review-test` 是**评审阶段**,只读:本回合只能写
-`shared_paths`(默认 `docs/reviews`)与记忆层路径。夹带任何代码改动都会被拒绝。
+`shared_paths`(默认 `docs/reviews`)、记忆层路径与提案目录(`proposal_paths`,配了才有)。夹带任何代码改动都会被拒绝。
 
 `impl` 是**异议阶段**:dev 在此可以用 `handoff changes` 打回,详见 §5.3。
 
@@ -141,6 +141,8 @@
 以 `!` 开头的是负模式。
 
 `.pair/.last-test.log` 与 `ignore_paths` 命中的路径完全不参与边界检查。
+
+`proposal_paths`(W66)在除 idle 外的四个阶段对两个角色都可写;直接位于某个提案目录下的、已提交的 `.md` 只能追加,相对 HEAD 有删除行(含删除、改名)即拒绝,不分阶段、不分角色(与评审目录同一口径)。
 
 `review_append_paths` 里评审阶段执行者名下的路径单独判:文件必须已在 HEAD 里、相对 HEAD 没有删除行,否则拒绝;满足就放行,不再走越界判定。
 
@@ -266,6 +268,7 @@ pair.py decline R<n> "<理由>"
 | 记忆层路径不在 `roles` 之下 | 失败 |
 | 记忆层路径不在 `frozen_paths` 之下 | 失败 |
 | 记忆层路径不在 `shared_paths` 之下 | 失败 |
+| `proposal_paths` 不与 `roles`、`shared_paths`、`frozen_paths`、`ignore_paths`、记忆层重叠(有文件会同时命中两边即算) | 失败 |
 | `SKILL.md` 存在 | 失败 |
 | 各家入口文件齐备 | 警告 |
 | **契约歧义审查结论已提交且 ≥120 字** | 失败 |
@@ -360,6 +363,7 @@ pair.py decline R<n> "<理由>"
 | `roles.tester` | string[] | `["tests"]` | tester 可写路径/glob。**与 dev 不得重叠** |
 | `roles.dev` | string[] | `["src"]` | dev 可写路径/glob |
 | `shared_paths` | string[] | `["docs/reviews"]` | 双方任何阶段都能写。异议举证认这里 |
+| `proposal_paths` | string[] | `[]` | 提案目录(W66,P0-5 的 D1):除 idle 外四个阶段两个角色都能写;已提交的顶层 `.md` 只能追加。**不是** `shared_paths`:异议举证、打回的位置引用、评审命名、`--doc-reason` 都不认它;对 `scope` 豁免、不进 W57 指纹,`inbox` 摆出原文,交接正文写一行 `提案:`。默认不启用,`init` 给新项目写 `["docs/proposals"]` |
 | `frozen_paths` | string[] | `["docs/PLAN.md","docs/CONTRACT.md",".agents",".claude",".pair"]` | agent 一律不得修改 |
 | `ignore_paths` | string[] | `[]` | 完全不参与边界检查的构建副产物 |
 | `review_append_paths` | object | `{}` | `{角色: [路径]}`。评审阶段的执行者可以往自己名下**已提交**的这些文件**只追加**(没有删除行,中间插入也算);不是 `shared_paths`,其他阶段不可写 |

@@ -163,6 +163,7 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "full-vanished",         # 完成时全量里不再跑的用例(上一次跑过、这一次没跑或跳过)拒绝完成,除非带声明(W61)
     "request-shape",         # request 只在自己回合的 spec/impl 用,路径必须归对方,内容与理由非空(W65)
     "fulfill-owner",         # fulfill/decline 只能由被请求方在自己的回合执行;fulfill 要求请求的路径真有改动(W65)
+    "proposal-append-only",  # 已提交的提案只能追加,不分阶段与角色(W66)
 )
 
 
@@ -325,6 +326,8 @@ def load_config(root, required=True):
         die("%s 不是合法 JSON:%s" % (CONFIG_REL, e))
     cfg.setdefault("roles", {"tester": ["tests"], "dev": ["src"]})
     cfg.setdefault("shared_paths", ["docs/reviews"])
+    # W66:提案目录。默认不启用 —— 默认目录可能与老项目的角色路径重叠,一上来就让 verify-setup 判失败。
+    cfg.setdefault("proposal_paths", [])
     cfg.setdefault("frozen_paths", [])
     cfg.setdefault("ignore_paths", [])
     # 本轮结对能碰的范围。空 = 不限。存量项目最危险的不是结构不合适,
@@ -708,6 +711,10 @@ def writable_paths(cfg, phase):
     shared = list(cfg["shared_paths"])
     if memory_on(cfg):
         shared = shared + [cfg["notes_dir"], cfg["decisions_file"]]
+    # W66:提案是陈述,不是主张 —— 四个工作阶段两个角色都能写。它不进 shared_paths(异议举证、
+    # 评审命名、位置引用都认那个键),只并进这里返回的可写清单;idle 没有交接,不加。
+    if phase != "idle":
+        shared = shared + list(cfg.get("proposal_paths") or [])
     if phase in REVIEW_PHASES or phase == "idle":
         return shared
     return list(cfg["roles"][PHASE_OWNER[phase]]) + shared
@@ -771,6 +778,7 @@ def fingerprint_excluded(cfg):
     (harness 的 `.gitignore` 只有两行)。记忆层只在 memory 开着时算协议的东西,关着时是普通文件。"""
     out = [STATE_REL] + list(PROTOCOL_LOGS) + list(cfg.get("shared_paths") or [])
     out.append(FULL_BASELINE_REL)                       # W61:协议写的基线,每次完成都变
+    out += list(cfg.get("proposal_paths") or [])        # W66:提案和评审一样是散文,测试不该依赖它
     out += report_paths(cfg)                            # W58:报告是产物,每次运行都变
     if memory_on(cfg):
         out += [p for p in (cfg.get("notes_dir"), cfg.get("decisions_file")) if p]
@@ -2096,6 +2104,8 @@ def normative_docs(cfg, entries):
             continue
         if matches_any(path, cfg["shared_paths"]):
             continue
+        if matches_any(path, cfg.get("proposal_paths") or []):
+            continue                                    # W66:提案是历史记录,不是规范
         if memory_on(cfg) and (path_matches(path, cfg["notes_dir"])
                                or path_matches(path, cfg["decisions_file"])):
             continue
@@ -2178,6 +2188,18 @@ def review_rewrite_violation(root, cfg, path):
     if not has_rewrite(root, path):
         return None
     return "评审记录只能追加:这份文件已经提交过,不能改或删它已有的行"
+
+
+def proposal_rewrite(root, cfg, path):
+    """改写了一份已提交的提案没有(W66)。范围是提案目录的**顶层 `.md`**,判据与评审记录相同:相对 HEAD 有删除行。
+    一方改不掉对方的提案;D3 的签字将来也是追加在同一份文件里。"""
+    name = PurePosixPath(path).name
+    if name.startswith(".") or not name.endswith(".md"):    # 顺序与评审那一处相反:那一行是变异锚点
+        return False
+    parent = str(PurePosixPath(path).parent)
+    if not any(parent == str(PurePosixPath(pp)) for pp in cfg.get("proposal_paths") or []):
+        return False
+    return blob_sha(root, path) is not None and has_rewrite(root, path)
 
 
 def review_rewrite_hint(cfg, state, phase):
@@ -2514,7 +2536,7 @@ def cmd_handoff(root, cfg, args):
     # --- 写权限边界校验 ---------------------------------------------------
     allowed = writable_paths(cfg, phase)
     appendable = review_append_paths(cfg, phase)
-    exempt_from_scope = list(cfg["shared_paths"])
+    exempt_from_scope = list(cfg["shared_paths"]) + list(cfg.get("proposal_paths") or [])
     if memory_on(cfg):
         exempt_from_scope += [cfg["notes_dir"], cfg["decisions_file"]]
     # 冻结豁免:**只认 `plan_file` 与 `contract_file` 这两个配置键**,
@@ -2560,6 +2582,9 @@ def cmd_handoff(root, cfg, args):
         rewrite = review_rewrite_violation(root, cfg, path)
         if rewrite:
             violations.append((path, rewrite + "。" + review_rewrite_hint(cfg, state, phase)))
+        if proposal_rewrite(root, cfg, path):
+            violations.append((path, "提案只能追加:这份提案已经提交过,不能改或删它已有的行。"
+                                     "要回应或修订,在文件末尾追加一段;不同意对方的提案也追加写明"))
 
     # 孤儿要单独说。开工前的警告和真正撞上的时刻隔着几十个回合,而撞上的那个
     # 文件多半是人类刚改的 —— 让 agent"撤销这些改动"就会撤销掉不是它写的东西。
@@ -2873,6 +2898,10 @@ def cmd_handoff(root, cfg, args):
                                                     "\n  ".join(full_gone))
     if carried:
         body += "\n代办(不计打回): %s" % "、".join(r["id"] for r in carried)
+    proposals = sorted(p for xy, p in entries
+                       if "D" not in xy and matches_any(p, cfg.get("proposal_paths") or []))
+    if proposals:                                       # W66:对方在 inbox 里必然看到
+        body += "\n提案: %s" % " ".join(proposals)
     if args.no_decision and no_decision_read:
         body += "\n未留决策(已声明): %s" % args.no_decision
     if args.doc_reason and touched_docs:
@@ -3133,7 +3162,7 @@ def cmd_inbox(root, cfg, args):
     # 上一回合写给你的散文。只列文件名是不够的 —— 没人会主动去 cat 它,
     # 而对方看不到你的对话,这些文件就是它唯一能对你说话的地方。
     print("=== 对方这一回合写给你的 =========================")
-    prose_paths = list(cfg["shared_paths"])
+    prose_paths = list(cfg["shared_paths"]) + list(cfg.get("proposal_paths") or [])
     if memory_on(cfg):
         prose_paths += [cfg["notes_dir"], cfg["decisions_file"]]
     changed = [p for p in ((git("show", "--name-only", "--format=", "HEAD",
@@ -3785,6 +3814,7 @@ def cmd_init(root, cfg, args):
         "roles": roles,
         "full_test_cmd": None,
         "shared_paths": ["docs/reviews"],
+        "proposal_paths": ["docs/proposals"],
         "frozen_paths": ["docs/PLAN.md", "docs/CONTRACT.md",
                          ".agents", ".claude", ".pair"],
         "ignore_paths": [],
@@ -3983,6 +4013,38 @@ def staged_paths(root, paths):
     """
     out = git("diff", "--cached", "--name-only", "-z", "--", *paths, cwd=root)
     return [p for p in out.split("\0") if p]
+
+
+def _representatives(pattern):
+    """模式的代表路径(W66 ⑳):不含通配符的取它本身与 `<它>/x.md`(目录前缀语义);
+    含通配符的把每段通配换成一个具体名字。负模式不参与。"""
+    if pattern.startswith("!"):
+        return []
+    if not re.search(r"[*?\[]", pattern):
+        return [pattern.rstrip("/"), pattern.rstrip("/") + "/x.md"]
+    rep = re.sub(r"\[!?([^\]])[^\]]*\]", r"\1", pattern)
+    return [re.sub(r"\*\*|\*|\?", "x", rep)]
+
+
+def proposal_overlaps(cfg):
+    """`proposal_paths` 与别的路径类别重叠的那些:[(键名, 那一边的模式)]。
+    重叠 = 有一个文件会同时命中两边:任一边的代表路径命中另一边的模式(W66 spec 回合带声明补 ⑳)。"""
+    props = list(cfg.get("proposal_paths") or [])
+    if not props:
+        return []
+    others = [("roles.%s" % r, list(cfg["roles"][r])) for r in ROLES]
+    others += [("shared_paths", list(cfg["shared_paths"])), ("frozen_paths", list(cfg["frozen_paths"])),
+               ("ignore_paths", list(cfg["ignore_paths"]))]
+    if memory_on(cfg):
+        others += [("notes_dir", [cfg["notes_dir"]]), ("decisions_file", [cfg["decisions_file"]])]
+    out = []
+    for key, pats in others:
+        hit = [p for p in pats
+               if any(matches_any(r, props) for r in _representatives(p))
+               or any(matches_any(r, [p]) for pp in props for r in _representatives(pp))]
+        if hit:
+            out.append((key, hit))
+    return out
 
 
 def cmd_verify_setup(root, cfg, args):
@@ -4199,6 +4261,13 @@ def cmd_verify_setup(root, cfg, args):
             bad("记忆层路径落在 shared_paths 之下。这会让"
                 "\n      「异议必须写下来」那条检查被随手写的笔记满足,"
                 "\n      等于静默削掉一条现有防护。请把它们配成互不包含的路径。")
+
+    # --- 提案目录不与任何别的路径类别重叠(W66)----------------------------------
+    for key, pats in proposal_overlaps(cfg):
+        bad("proposal_paths 与 %s 重叠(%s):有文件会同时命中两边。\n"
+            "      提案目录必须是独立的一类 —— 落进角色路径就成了单方的,落进 shared_paths 会冒充异议与评审,\n"
+            "      落进冻结路径或 ignore_paths 就不受只追加保护。请把它们配成互不包含的路径。"
+            % (key, " ".join(pats)))
 
     # --- 入口文件与技能 ---------------------------------------------------
     if not (root / ".agents/skills/pair-protocol/SKILL.md").exists():
