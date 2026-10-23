@@ -158,10 +158,28 @@ class TestFingerprintExcludesProposals(PairTestCase):
 
 class TestInbox(ProposalBase):
 
-    def test_对方的_inbox_摆出提案原文(self):
+    """断言收窄到"对方这一回合写给你的"那一段(到下一个 `===` 为止):`inbox` 开头的 diff 本来就印出提案原文,
+    在整段输出里找会被它满足 —— W66 review-impl 的变异点 `提案_inbox_不摆出` 因此存活过。"""
+
+    def prose_section(self, out):
+        self.assertIn("对方这一回合写给你的", out, "前提:inbox 有散文那一段")
+        return out.split("对方这一回合写给你的", 1)[1].split("\n", 1)[1].split("\n===", 1)[0]
+
+    def test_对方的_inbox_摆出提案原文_ASCII_文件名(self):
+        self.assertAccepted(self.repo.run("claim", "W1", role="tester"))
+        self.repo.write("tests/W1")
+        self.repo.write("docs/proposals/cache-split.md", PROPOSAL_TEXT)
+        self.assertAccepted(self.repo.run("handoff", "写了 W1 的失败用例", role="tester"))
+        prose = self.prose_section(self.repo.run("inbox", role="dev").out)
+        self.assertIn("建议另开一个工作项", prose, "提案原文要摆在散文那一段里:\n" + prose)
+
+    def test_对方的_inbox_摆出提案原文_中文文件名(self):
+        """`inbox` 列本回合改动用的是不带 `-z` 的 `git show --name-only`:中文路径被 `core.quotepath` 转义成
+        `"docs/proposals/\\346…"`,对不上提案目录,散文那一段说"没有动过散文文件"(W66 第二次 spec 回合实测)。
+        评审文件用中文名时同样如此。"""
         self.commit_proposal_as_tester()
-        out = self.repo.run("inbox", role="dev").out
-        self.assertIn("建议另开一个工作项", out)
+        prose = self.prose_section(self.repo.run("inbox", role="dev").out)
+        self.assertIn("建议另开一个工作项", prose, "提案原文要摆在散文那一段里:\n" + prose)
 
 
 class TestDefaultOff(PairTestCase):
