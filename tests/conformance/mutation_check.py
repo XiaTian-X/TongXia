@@ -1250,6 +1250,13 @@ MUTATIONS = [
     ('提案_init_不写提案目录',
      '        "proposal_paths": ["docs/proposals"],\n',
      ''),
+
+    # W66 第二次 impl:inbox 列改动要带 -z(review-impl 登记)。
+    ('提案_inbox_列改动不带_z',
+     '    changed = [p for p in ((git("show", "--name-only", "-z", "--format=", "HEAD",\n'
+     '                                cwd=root, check=False) or "").split("\\0"))\n',
+     '    changed = [p for p in ((git("show", "--name-only", "--format=", "HEAD",\n'
+     '                                cwd=root, check=False) or "").split("\\n"))\n'),
 ]
 
 # unittest 的失败行有两种形态:

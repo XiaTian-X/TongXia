@@ -1,5 +1,5 @@
 {
-  "baseline": "d98e51c463e935d2",
+  "baseline": "b58ef9a62d693221",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -624,6 +624,12 @@
     ],
     "提交路径不看索引": [
       "test_v1_setup_commit.TestOnlyTheAddedBatchIsCommitted.test_结论有改动时_预先暂存的实现不进这次提交_仍留在索引里"
+    ],
+    "提案_inbox_不摆出": [
+      "test_v1_proposals.TestInbox.test_对方的_inbox_摆出提案原文_ASCII_文件名"
+    ],
+    "提案_inbox_列改动不带_z": [
+      "test_v1_proposals.TestInbox.test_对方的_inbox_摆出提案原文_中文文件名"
     ],
     "提案_init_不写提案目录": [
       "test_v1_proposals.TestInitWritesProposals.test_init_给新项目写_docs_proposals"
