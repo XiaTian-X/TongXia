@@ -809,3 +809,8 @@
 - 理由: discuss 让工作项原样挂起、原样恢复。"原样"靠挂起那一刻记下的现场(原阶段、`last_actor`、`after_rebound`、`rebound_from`)保证,恢复时只认它,不认恢复那一刻状态里的值 —— 否则讨论期间任何一处改动都会让恢复后 W17 捷径判错。讨论回合在 `cmd_handoff` 开头、回合归属那一行之前就分出去,走自己的一支:只写散文、必须追加那份提案、不判红绿、不计数、不碰打回标记。进入时工作区只能有散文,半成品代码会让对方的讨论回合判越界。D3、D4 之前它独立成立靠三件:两方都发过言才能恢复,每个工作项一次,结论要改 PLAN 或契约仍找人类。进入与恢复都会提交状态文件,所以开头先查篡改(㉑)。
 - 已否决: 讨论回合复用 handoff 的主干 —— 转移表、红绿与打回标记都对讨论没有意义,还会改写恢复要用的值;恢复时按当前状态推断原阶段 —— 讨论中途人类改过状态就推错,快照才是权威;进入时自动暂存半成品代码 —— 协议不替 agent 管工作区。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_discuss.py`, `docs/protocol-spec.md`, `.agents/skills/pair-protocol/references/rules.md`
+## SETUP — 第三十九轮做 P0-5 的 D3(签字与人类批准),规划经自审后人类批准(2026-10-23)
+
+- 理由: 人类选择做 D3。讨论定下的结论要改冻结文件时,把"人类读提案、手工改、手工提交"换成可校验的流程:提案里写出确切的 diff,两个角色对这段 diff 的哈希签字,人类一条命令核对后原样应用。协议认不出人类,和人类直接提交冻结文件是同一个信任级别 —— 所以批准命令要显式的 `PAIR_ROLE=human`,规则写明 agent 不得运行,脚本只把关内容。规划时自审补上的:签字绑 diff 的哈希(提案只能追加,修订就是新块,旧签字自然作废);签字必须由本人的回合提交(否则一方能替另一方签);签字要已提交(对方没看到的不算);diff 只认 PLAN 与契约两个文件;先 `git apply --check` 再应用(不留半改的冻结文件);`status` 列出待批准的提案(人类读状态就知道该批什么);契约变了走现有机制(两方校验失效、完成时留决策),不另加规则。
+- 已否决: 签字签整份提案而不是 diff 的哈希 —— 追加一句闲话就让签字失效,又说不清签的是哪个改动;让 agent 跑批准 —— 冻结文件的最后一道是人类;批准时让脚本按自然语言去改 PLAN —— 脚本不执行自然语言;签字只看行文本、不看提交者的回合 —— 一方能替另一方签。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `.agents/skills/pair-protocol/SKILL.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `INSTALL.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`

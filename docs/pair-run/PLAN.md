@@ -892,3 +892,18 @@
     ⑤登记 `ENFORCEMENTS`(`discuss-open`、`discuss-prose-only`、`discuss-resume`、`discuss-once`);`protocol-spec.md` 阶段表、§5 与 §8,`command-reference.md`、
     `architecture.md`、`rules.md`、`SKILL.md`、`troubleshooting.md` 跟上,路线图 D2 标 ✅
   - 对应契约:`docs/pair-run/CONTRACT.md` → discuss 阶段:挂起与恢复
+
+### 第三十九轮:提案的签字与人类批准(P0-5 的 D3)
+
+> 人类选择做 D3(D1 提案目录、D2 discuss 挂起与恢复已落地)。讨论定下的结论要改 PLAN 或契约时,不再由人类读提案、手工改冻结文件:
+> 提案里写出确切的 diff,两个角色各自签字,人类一条命令核对后原样应用。规划经 dev 自审后人类批准(2026-10-23),授权 dev 代笔立项。
+
+- [ ] **W68** [feature] — 提案里的提议改动、`sign`、`ratify`:双方签字、人类一条命令批准、提升为 PLAN/契约改动
+  - **来源**:路线图 P0-5 的 D3(分轮计划「P0-5 必须拆成四步」)
+  - 验收标准:①提案里最后一个 diff 围栏块是当前的提议改动(相对仓库根的 unified diff);②`sign <提案>` 只在自己回合、非 idle 阶段用,提案在提案目录下且有 diff 块,
+    追加 `签字: <角色> sha256:<最后一个 diff 块的哈希前 16 位>`,同一角色对同一哈希重复签拒绝;③`ratify <提案>` 只在 `PAIR_ROLE=human` 时可用,依次校验:
+    提案在提案目录下、已提交且工作区无改动;有 diff 块;两个角色对最后一个 diff 块的哈希都有已提交的签字;每行签字由该角色的回合提交(引入它的提交正文有 `role=<该角色>`);
+    diff 只碰 `plan_file` 与 `contract_file` 且它们无未提交改动;`git apply --check` 通过 —— 任一不过拒绝且什么都不改;通过则应用、提案追加 `批准:` 一行、窄提交;
+    ④`status` 列出待人类批准的提案与命令;⑤登记 `ENFORCEMENTS`(`proposal-sign`、`ratify-signed`);`protocol-spec.md`、`command-reference.md`、`architecture.md`、
+    `rules.md`(agent 永远不跑 `ratify`)、`SKILL.md`、`INSTALL.md` 跟上,路线图 D3 标 ✅
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 提案的签字与人类批准
