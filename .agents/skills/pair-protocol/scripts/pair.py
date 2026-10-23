@@ -3165,8 +3165,10 @@ def cmd_inbox(root, cfg, args):
     prose_paths = list(cfg["shared_paths"]) + list(cfg.get("proposal_paths") or [])
     if memory_on(cfg):
         prose_paths += [cfg["notes_dir"], cfg["decisions_file"]]
-    changed = [p for p in ((git("show", "--name-only", "--format=", "HEAD",
-                                cwd=root, check=False) or "").split("\n"))
+    # `-z`:不带它时 git 按 core.quotepath 把非 ASCII 路径转义成 "docs/proposals/\346…",
+    # 对不上任何散文目录 —— 中文名的提案与评审都会被说成"没有动过散文文件"(W66 第二次 spec 回合实测)。
+    changed = [p for p in ((git("show", "--name-only", "-z", "--format=", "HEAD",
+                                cwd=root, check=False) or "").split("\0"))
                if p.strip() and matches_any(p.strip(), prose_paths)]
     changed = [p.strip() for p in changed]
     if not changed:
