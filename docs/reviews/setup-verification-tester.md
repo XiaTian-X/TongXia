@@ -765,3 +765,22 @@ tester 的修正回合必须动测试;门禁(`test_cmd`)多半是绿的 —— �
 - 写权限:四个工作阶段两个角色都能写,评审阶段原本只开 `shared_paths`,提案要另开;不并进 `shared_paths` 的理由(异议举证、命名、位置引用都认它)成立。
 - 只能追加:与评审目录同一口径,只管顶层 `.md`、相对 HEAD 有删除行即拒。
 - 本仓库文档检查(⑧,我的):`symbol_ref_scope` 再减去 `.pair/config.json` 的 `proposal_paths`;本仓库启用它是 W66 完成之后的事,用例用 `cfg.get` 读,没配时为空。
+
+## 补记(第三十八轮 W67 立项之后重跑)
+
+上次校验之后契约变了两处:「提案目录」里我在 W66 的 spec 回合补的「补充」(⑳,W66 已完成);新加「discuss 阶段:挂起与恢复」(dev 代笔)。**一处缺陷(㉑)。**
+
+### ㉑ 「discuss 阶段」:进入与 resume 都提交状态文件,却只有讨论回合写了"先查状态篡改"
+
+`discuss`(进入)与 `resume`(退出)都会改状态、只提交状态文件与散文改动;契约只在"讨论回合"那一条写了"先查状态篡改"。
+agent 先手改 `.pair/state.json`(比如把 `changes_count` 改回 0、或往 `discussed` 里删掉自己),再执行 `discuss` 或 `resume` —— 脚本照常读状态、改几个键、
+`save_state` 写回、提交:手改的那部分**随协议自己的提交落地**,篡改检测从此看不见它(`state_is_tampered` 比的是工作区与 HEAD)。第三十六轮 W65 的三条代办命令正是为此"开头都先查篡改"。
+**修法方向**:`discuss` 与 `resume` 开头同样先查状态篡改(还原并拒绝,同 `claim` 与代办命令)。可断言:手改状态文件后 `discuss` / `resume` 被拒、状态文件被还原、没有新提交。
+**在 W67 的 spec 回合带声明补。**
+
+### 核过、成立的
+
+- 归属:`phase_owner` 在 discuss 返回 `discuss.turn`;直接查 `PHASE_OWNER` 的还有 W65 的 `_request_turn`(`fulfill`/`decline` 用它)—— discuss 阶段查表会 `KeyError`,
+  契约"不得抛异常"覆盖到它;我加一条 `fulfill` 在 discuss 阶段被干净地拒绝(不出 Traceback)。
+- 挂起现场四个键与 W17 捷径:`rebound_shortcut` 读 `rebound_from` 与 `reviewed_contract`,讨论回合不碰前者、恢复时还原 —— "打回之后挂起再恢复"那一格可以把 W17 的判断走一遍。
+- `report`:讨论提交的正文没有 `role=… phase=…` 那一行,`PROTOCOL_LINE_RE` 认不出,不算交接;主题前缀是 `discuss`,不是 `dispute`,不进"测试异议"。
