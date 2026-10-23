@@ -77,7 +77,7 @@
   "contract_sha": null,
   "setup_verified_contract": {
     "tester": "ee0a6d4d2a1f7c6c9a15da6692e805f57b0834de",
-    "dev": "fe0126db93e620ae3b066f7dab9ef48ba7f3fc10"
+    "dev": "234cf0ad999aafa6993fe0a910e955be5c64c7ca"
   },
   "after_rebound": false,
   "rebound_from": null,
@@ -85,5 +85,7 @@
   "last_full_failed": false,
   "full_failures": [],
   "item_base": "acad4b5f91d3cdb2a173d48bc4a2e5adc01b1045",
-  "requests": []
+  "requests": [],
+  "discuss": null,
+  "discussed": []
 }
