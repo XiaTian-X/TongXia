@@ -804,3 +804,8 @@
 - 理由: 「discuss 阶段」的进入(`discuss`)与退出(`resume`)都改状态、并把状态文件随自己的提交落地,契约却只在"讨论回合"写了先查篡改。agent 先手改 `.pair/state.json`(把 `changes_count` 改回 0、从 `discussed` 里删掉自己)再执行这两条命令,手改的部分就被协议自己的提交"洗白",`state_is_tampered` 比的是工作区与 HEAD,从此看不见。spec 回合带声明补:两条命令开头都先查、还原并拒绝。这是第三十六轮 W65 三条代办命令同一个口径,今后任何新命令只要会提交状态文件,都照此办。另:契约要求"恢复不还原 `after_rebound`"这个变异点有用例红,而讨论回合按契约不碰它 —— 只用命令走不出差别,两种实现等价;用例改让人类在讨论中途直接改状态并提交,恢复仍应回到挂起时的现场(挂起快照是权威),变异点由此可判。
 - 已否决: 只在讨论回合查 —— 进入与退出是另外两个提交状态的入口;靠下一次 `handoff` 发现 —— 那时篡改已经在 HEAD 里了,比的是工作区与 HEAD,发现不了。
 - 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_discuss.py`, `.agents/skills/pair-protocol/scripts/pair.py`
+## W67 — 挂起要存现场、恢复只认现场;讨论回合不走 handoff 的主干
+
+- 理由: discuss 让工作项原样挂起、原样恢复。"原样"靠挂起那一刻记下的现场(原阶段、`last_actor`、`after_rebound`、`rebound_from`)保证,恢复时只认它,不认恢复那一刻状态里的值 —— 否则讨论期间任何一处改动都会让恢复后 W17 捷径判错。讨论回合在 `cmd_handoff` 开头、回合归属那一行之前就分出去,走自己的一支:只写散文、必须追加那份提案、不判红绿、不计数、不碰打回标记。进入时工作区只能有散文,半成品代码会让对方的讨论回合判越界。D3、D4 之前它独立成立靠三件:两方都发过言才能恢复,每个工作项一次,结论要改 PLAN 或契约仍找人类。进入与恢复都会提交状态文件,所以开头先查篡改(㉑)。
+- 已否决: 讨论回合复用 handoff 的主干 —— 转移表、红绿与打回标记都对讨论没有意义,还会改写恢复要用的值;恢复时按当前状态推断原阶段 —— 讨论中途人类改过状态就推错,快照才是权威;进入时自动暂存半成品代码 —— 协议不替 agent 管工作区。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_discuss.py`, `docs/protocol-spec.md`, `.agents/skills/pair-protocol/references/rules.md`

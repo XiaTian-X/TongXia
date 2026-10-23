@@ -42,6 +42,9 @@ PHASE_OWNER = {
     "review-test": "dev",
 }
 REVIEW_PHASES = ("review-impl", "review-test")
+# W67:讨论阶段。归属不固定(两方轮流),所以不在 PHASE_OWNER 里 —— 归属一律经 phase_owner 取。
+DISCUSS = "discuss"
+WORK_PHASES = ("spec", "impl", "review-impl", "review-test")
 
 # 允许用 `handoff changes` 提出异议、但不是评审回合的阶段。
 # dev 在 impl 阶段发现测试与契约矛盾时用它打回,由 tester 修测试。
@@ -164,6 +167,10 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "request-shape",         # request 只在自己回合的 spec/impl 用,路径必须归对方,内容与理由非空(W65)
     "fulfill-owner",         # fulfill/decline 只能由被请求方在自己的回合执行;fulfill 要求请求的路径真有改动(W65)
     "proposal-append-only",  # 已提交的提案只能追加,不分阶段与角色(W66)
+    "discuss-open",          # 进 discuss:自己回合、有工作项、提案本回合有发言、工作区只有散文(W67)
+    "discuss-prose-only",    # 讨论回合只写散文,且必须在那份提案里追加(W67)
+    "discuss-resume",        # 两个角色都发过言才能恢复;恢复取挂起时的现场(W67)
+    "discuss-once",          # 同一工作项只能进一次 discuss(W67;D4 再做成可配额度)
 )
 
 
@@ -274,6 +281,10 @@ DEFAULT_STATE = {
     # W65:本工作项的代办(request)。每条 {id, item, by, to, paths, what, reason, base, status, carried};
     # 认领时清空,历史在 git 里。老状态没有这个键 = 没有代办。
     "requests": [],
+    # W67:讨论阶段的现场 {proposal, why, opened_by, turn, spoke, suspended};不在讨论时为 None。
+    "discuss": None,
+    # W67:进过 discuss 的工作项 ID。同一工作项只能进一次(D4 再做成可配额度);claim 不清。
+    "discussed": [],
 }
 
 # `- [ ] **W1** [bug] — 标题`,类型可省略(缺省 feature)
@@ -364,7 +375,7 @@ def load_state(root):
         die("%s 不是合法 JSON:%s\n状态文件已损坏,需要人类修复。" % (STATE_REL, e))
     merged = dict(DEFAULT_STATE)
     merged.update(st)
-    if merged["phase"] not in PHASE_OWNER:
+    if merged["phase"] not in PHASE_OWNER and merged["phase"] != DISCUSS:
         die("%s 里的 phase='%s' 非法。状态文件已损坏,需要人类修复。"
             % (STATE_REL, merged["phase"]))
     # v0 状态迁移:没有 item 却停在 spec,视为 idle
@@ -715,6 +726,8 @@ def writable_paths(cfg, phase):
     # 评审命名、位置引用都认那个键),只并进这里返回的可写清单;idle 没有交接,不加。
     if phase != "idle":
         shared = shared + list(cfg.get("proposal_paths") or [])
+    if phase == DISCUSS:                                # W67:讨论只写散文
+        return shared
     if phase in REVIEW_PHASES or phase == "idle":
         return shared
     return list(cfg["roles"][PHASE_OWNER[phase]]) + shared
@@ -743,7 +756,9 @@ def writable_display(cfg, phase, role=None):
     **只改显示。** 写权限边界在 `handoff` 里另算,一直是对的;这里借 `writable_paths`
     的 idle 分支取"任何阶段都能写的那部分",不另起一套,免得显示与判定漂开。
     """
-    if role is not None and role != PHASE_OWNER[phase]:
+    if role is not None and role != PHASE_OWNER.get(phase):
+        if phase == DISCUSS:
+            return " ".join(writable_paths(cfg, DISCUSS))
         return " ".join(writable_paths(cfg, "idle"))
     parts = list(writable_paths(cfg, phase))
     parts += ["%s(只追加)" % p for p in review_append_paths(cfg, phase)]
@@ -1280,6 +1295,8 @@ def phase_owner(root, cfg, state):
     另判一遍是拆掉也没有用例能红的防护。
     """
     phase = state["phase"]
+    if phase == DISCUSS:                                # W67:讨论阶段两方轮流,回合记在现场里
+        return (state.get("discuss") or {}).get("turn") or "tester"
     if phase == "idle" and cfg["require_setup_verification"]:
         if (stale_verification(root, cfg, state, "tester") is None
                 and stale_verification(root, cfg, state, "dev")):
@@ -1812,6 +1829,14 @@ def cmd_status(root, cfg, args):
         print("协议状态文件由脚本维护,任何人手工修改都是违规的。")
         print("下次 handoff 会拒绝交接并还原它。")
 
+    if phase == DISCUSS and state.get("discuss"):     # W67
+        d = state["discuss"]
+        print()
+        print(">>> 讨论中(discuss),工作项 %s 挂起在 %s 阶段。<<<" % (state["item"], d["suspended"]["phase"]))
+        print("  提案: %s" % d["proposal"])
+        print("  为什么: %s" % d["why"])
+        print("  发起方: %s   发过言: %s   轮到: %s" % (d["opened_by"], "、".join(d["spoke"]), d["turn"]))
+
     waiting = open_requests(state, to=me)               # W65:发给你、还开着的代办
     if waiting:
         print()
@@ -1884,6 +1909,8 @@ def cmd_status(root, cfg, args):
                                worktree_sha(root, cfg["contract_file"])) or "changed"
         print(IDLE_REVERIFY_BRIEF % {"prog": PROG_HINT, "why": IDLE_REVERIFY_WHY[gap],
                                      "how": reverify_how("dev", gap)})
+    elif phase == DISCUSS:
+        print(DISCUSS_BRIEF % {"prog": PROG_HINT, "proposal": (state.get("discuss") or {}).get("proposal")})
     else:
         print(PHASE_BRIEF[phase] % _brief_vars(cfg, state, phase))
     if phase != "idle":
@@ -2436,6 +2463,8 @@ def cmd_handoff(root, cfg, args):
     me, _ = resolve_role(root)
     state = load_state(root)
     phase = state["phase"]
+    if phase == DISCUSS:                                # W67:讨论回合走自己的一支,不碰流程转移与红绿
+        return discuss_handoff(root, cfg, args, me, state)
     owner = PHASE_OWNER[phase]
     item = state["item"]
     flow = flow_of(state["item_type"])
@@ -3025,7 +3054,8 @@ def _request_turn(root, cfg, what):
         die("你修改了 %s。协议状态由脚本维护,手工修改是违规的。\n%s本次 %s 已拒绝。"
             % (STATE_REL, "已还原为上次提交的版本。" if restored else "无法自动还原,请交给人类处理。", what))
     state = load_state(root)
-    owner = PHASE_OWNER[state["phase"]]
+    # discuss 不在 PHASE_OWNER 里(W67):查不到时走 phase_owner,其余阶段与原来一字不差。
+    owner = PHASE_OWNER.get(state["phase"]) or phase_owner(root, cfg, state)
     if me != owner:
         die("代办只能在自己的回合里处理:现在是 %s 的 %s 回合,不是你(%s)的。" % (owner, state["phase"], me))
     return me, state
@@ -3142,6 +3172,191 @@ def cmd_decline(root, cfg, args):
     _commit_state(root, "chore(pair): 拒绝代办 %s" % r["id"], body)
     print("[结对协议] 代办 %s 已拒绝%s。对方若仍认为要改,走正常的打回流程。"
           % (r["id"], "(被异议带过,打回计数补加 1)" if r.get("carried") else ""))
+    return 0
+
+
+# --------------------------------------------------------------------------
+# discuss 阶段(W67,P0-5 的 D2)
+# --------------------------------------------------------------------------
+# 做的过程中暴露的方向问题,当场讨论清楚:工作项原样挂起、原样恢复。D3(签字、人类批准、提升为 PLAN/契约改动)
+# 与 D4(可配额度、report 频次)之前,它自己要能成立:双方都发过言才能恢复;每个工作项最多进一次;结论要改 PLAN 或契约仍找人类。
+
+DISCUSS_BRIEF = """  你在讨论回合(discuss)。工作项挂起着,本回合只写散文:
+
+  1. 在提案 %(proposal)s 末尾追加你的看法(已提交的内容只能追加,不能改)。
+  2. 交给对方:  python3 %(prog)s handoff "一句话说明"
+     或者,两方都发过言之后结束讨论、原样恢复工作项:
+                python3 %(prog)s resume "结论"
+
+  讨论期间不能改代码、测试、PLAN 或契约。结论要改 PLAN 或契约的,写进提案交给人类。"""
+
+
+def prose_paths_of(cfg):
+    """散文路径:提案、评审目录、记忆层(memory 开着时)。"""
+    out = list(cfg.get("proposal_paths") or []) + list(cfg["shared_paths"])
+    if memory_on(cfg):
+        out += [cfg["notes_dir"], cfg["decisions_file"]]
+    return out
+
+
+def _turn_entries(root, cfg):
+    """本回合的改动,去掉协议日志、ignore_paths、配置的报告与可忽略的系统文件(与 handoff 同口径)。"""
+    entries = changed_entries(root)
+    left_os = os_files_left(entries, cfg)
+    reports = report_paths(cfg)
+    return [(xy, p) for xy, p in entries
+            if p not in left_os and p not in reports and p not in PROTOCOL_LOGS
+            and not matches_any(p, cfg["ignore_paths"])]
+
+
+def _appended(root, path):
+    """本回合在这个文件里写了新内容没有:未跟踪的新文件,或相对 HEAD 有新增行。"""
+    if not (root / path).is_file():
+        return False
+    if blob_sha(root, path) is None:
+        return True
+    diff = git("diff", "-U0", "HEAD", "--", path, cwd=root, check=False) or ""
+    return any(l.startswith("+") and not l.startswith("+++") for l in diff.splitlines())
+
+
+def _discuss_tamper_guard(root, what):
+    if state_is_tampered(root):
+        restored = restore_state(root)
+        die("你修改了 %s。协议状态由脚本维护,手工修改是违规的。\n%s本次 %s 已拒绝。"
+            % (STATE_REL, "已还原为上次提交的版本。" if restored else "无法自动还原,请交给人类处理。", what))
+
+
+def _prose_only(root, cfg, entries):
+    """讨论相关的提交只能带散文;已提交的提案与评审只能追加。返回违规说明列表。"""
+    prose = prose_paths_of(cfg)
+    bad = []
+    for xy, path in entries:
+        if not matches_any(path, prose):
+            bad.append("%s(讨论期间只能写提案、评审与笔记)" % path)
+        elif proposal_rewrite(root, cfg, path) or review_rewrite_violation(root, cfg, path):
+            bad.append("%s(已提交的内容只能追加)" % path)
+    return bad
+
+
+def _commit_prose(root, entries, subject, body):
+    paths = sorted(set([STATE_REL] + [p for _, p in entries]))
+    git("add", "-A", "--", *paths, cwd=root)
+    git("commit", "-q", "-m", subject, "-m", body, "--", *paths, cwd=root)
+
+
+def cmd_discuss(root, cfg, args):
+    me, _ = resolve_role(root)
+    _discuss_tamper_guard(root, "discuss")
+    state = load_state(root)
+    phase = state["phase"]
+    if phase not in WORK_PHASES or not state["item"]:
+        die("discuss 只在有工作项进行时用(当前 %s)。没有工作项可挂起时,方向问题写进提案交给人类。" % phase)
+    turn = phase_owner(root, cfg, state)
+    if me != turn:
+        die("discuss 只能在自己的回合发起:现在是 %s 的 %s 回合,不是你(%s)的。" % (turn, phase, me))
+    why = (args.why or "").strip()
+    if not why:
+        die("discuss 要写为什么:哪个方向问题,不先讨论清楚会怎样。")
+    if not cfg.get("proposal_paths"):
+        die("没有配 proposal_paths,讨论没有地方落到纸面。请人类在 %s 里配上(新项目默认 docs/proposals)。" % CONFIG_REL)
+    proposal = args.proposal.strip()
+    if not matches_any(proposal, cfg["proposal_paths"]):
+        die("%s 不在提案目录(%s)下。讨论要写在一份提案里。" % (proposal, " ".join(cfg["proposal_paths"])))
+    if state["item"] in (state.get("discussed") or []):
+        die("工作项 %s 已经进过一次 discuss,同一工作项只能进一次。\n"
+            "还有没谈完的方向问题,写进提案交给人类排期。" % state["item"])
+    if not _appended(root, proposal):
+        die("本回合没有在 %s 里写下开场陈述。先把问题写进提案,再 discuss。" % proposal)
+    entries = _turn_entries(root, cfg)
+    stray = [p for _, p in entries if not matches_any(p, prose_paths_of(cfg))]
+    if stray:
+        die("工作区里有散文以外的改动,不能挂起工作项:\n  %s\n\n"
+            "讨论期间对方的回合会把它们判成越界,恢复时也回不到挂起前的样子。\n"
+            "先把本回合的这些改动正常交接,或者撤销它们,再 discuss。" % "\n  ".join(stray))
+    # 散文以外的上面已经拦了(带说明),这里只剩"已提交的只能追加"。
+    rewritten = [p for _, p in entries if proposal_rewrite(root, cfg, p) or review_rewrite_violation(root, cfg, p)]
+    if rewritten:
+        die("拒绝 discuss —— 已提交的内容只能追加:%s" % " ".join(rewritten))
+    other = [r for r in ROLES if r != me][0]
+    state["discuss"] = {"proposal": proposal, "why": why, "opened_by": me, "turn": other, "spoke": [me],
+                        "suspended": {"phase": phase, "last_actor": state["last_actor"],
+                                      "after_rebound": state["after_rebound"],
+                                      "rebound_from": state["rebound_from"]}}
+    state["phase"] = DISCUSS
+    save_state(root, state)
+    _commit_prose(root, entries, "discuss: %s" % why.splitlines()[0][:80],
+                  "discuss=open role=%s item=%s 挂起于 %s\n提案: %s\n为什么: %s"
+                  % (me, state["item"], phase, proposal, why))
+    print("[结对协议] 进入讨论:工作项 %s 挂起在 %s 阶段,轮到 %s。" % (state["item"], phase, other))
+    print("现在请告诉人类:轮到 %s 了(讨论回合)。然后停止工作。" % other)
+    return 0
+
+
+def discuss_handoff(root, cfg, args, me, state):
+    """讨论回合的交接:只写散文、必须追加提案;不判红绿、不计数、不碰 after_rebound / rebound_from。"""
+    d = state.get("discuss") or {}
+    turn = phase_owner(root, cfg, state)
+    if me != turn:
+        die("现在是 %s 的讨论回合,不是你(%s)的。不要提交。" % (turn, me))
+    _discuss_tamper_guard(root, "交接")
+    message = " ".join(args.words).strip()
+    if not message:
+        die("请附一句话说明:python3 %s handoff \"你这回合说了什么\"" % PROG_HINT)
+    if not _appended(root, d["proposal"]):
+        die("讨论回合必须在 %s 末尾追加你的发言。没话说就 resume(两方都发过言之后)。" % d["proposal"])
+    entries = _turn_entries(root, cfg)
+    bad = _prose_only(root, cfg, entries)
+    if bad:
+        die("拒绝交接 —— %s" % ";".join(bad))
+    other = [r for r in ROLES if r != me][0]
+    d["spoke"] = sorted(set(d["spoke"]) | {me}, key=ROLES.index)
+    d["turn"] = other
+    state["discuss"] = d
+    save_state(root, state)
+    _commit_prose(root, entries, "discuss: %s" % message.splitlines()[0][:80],
+                  "discuss=reply role=%s item=%s\n提案: %s" % (me, state["item"], d["proposal"]))
+    print("[结对协议] 已交接(讨论回合),轮到 %s。" % other)
+    print("现在请告诉人类:轮到 %s 了(讨论回合)。然后停止工作。" % other)
+    return 0
+
+
+def cmd_resume(root, cfg, args):
+    me, _ = resolve_role(root)
+    _discuss_tamper_guard(root, "resume")
+    state = load_state(root)
+    if state["phase"] != DISCUSS or not state.get("discuss"):
+        die("现在不在讨论阶段,没有可恢复的工作项。")
+    d = state["discuss"]
+    turn = phase_owner(root, cfg, state)
+    if me != turn:
+        die("现在是 %s 的讨论回合,不是你(%s)的。resume 只能在自己的讨论回合用。" % (turn, me))
+    conclusion = " ".join(args.conclusion or []).strip()
+    if not conclusion:
+        die("resume 要写结论:讨论定下了什么,恢复之后照什么做。")
+    spoke = set(d["spoke"])
+    if _appended(root, d["proposal"]):
+        spoke.add(me)
+    if spoke != set(ROLES):
+        die("只有 %s 发过言,单方不能结束讨论。对方在提案里回应之后才能 resume。" % "、".join(sorted(spoke)))
+    entries = _turn_entries(root, cfg)
+    bad = _prose_only(root, cfg, entries)
+    if bad:
+        die("拒绝 resume —— %s" % ";".join(bad))
+    sus = d["suspended"]
+    state["phase"] = sus["phase"]
+    state["last_actor"] = sus["last_actor"]
+    state["after_rebound"] = sus["after_rebound"]
+    state["rebound_from"] = sus["rebound_from"]
+    state["discuss"] = None
+    state["discussed"] = list(state.get("discussed") or []) + [state["item"]]
+    save_state(root, state)
+    _commit_prose(root, entries, "discuss(resume): %s" % conclusion.splitlines()[0][:80],
+                  "discuss=resume role=%s item=%s 恢复到 %s\n提案: %s\n结论: %s"
+                  % (me, state["item"], sus["phase"], d["proposal"], conclusion))
+    back = phase_owner(root, cfg, state)
+    print("[结对协议] 讨论结束,工作项 %s 恢复到 %s 阶段,轮到 %s。" % (state["item"], sus["phase"], back))
+    print("结论要改 PLAN 或契约的,写进提案交给人类。")
+    print("现在请告诉人类:轮到 %s 了。然后停止工作。" % back)
     return 0
 
 
@@ -4551,6 +4766,11 @@ def main(argv=None):
     p_ff = sub.add_parser("fulfill", help="记下发给你的代办已经办完(记账,不是执行)")
     p_ff.add_argument("id", metavar="R<n>")
     p_ff.add_argument("note", nargs="*", metavar="说明")
+    p_ds = sub.add_parser("discuss", help="挂起当前工作项,进入讨论阶段(要先在提案里写开场陈述)")
+    p_ds.add_argument("why", metavar="为什么")
+    p_ds.add_argument("--proposal", required=True, metavar="路径", help="提案目录下的那份提案")
+    p_rs = sub.add_parser("resume", help="结束讨论,原样恢复挂起的工作项(两方都发过言之后)")
+    p_rs.add_argument("conclusion", nargs="*", metavar="结论")
     p_dc = sub.add_parser("decline", help="拒绝发给你的代办")
     p_dc.add_argument("id", metavar="R<n>")
     p_dc.add_argument("reason", nargs="*", metavar="理由")
@@ -4568,6 +4788,8 @@ def main(argv=None):
         "request": cmd_request,
         "fulfill": cmd_fulfill,
         "decline": cmd_decline,
+        "discuss": cmd_discuss,
+        "resume": cmd_resume,
         "report": cmd_report,
         "whose-turn": cmd_whose_turn,
     }[args.cmd](root, cfg, args)
