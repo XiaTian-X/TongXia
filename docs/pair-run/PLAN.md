@@ -875,3 +875,20 @@
     ⑦登记 `ENFORCEMENTS`(`proposal-append-only`);`protocol-spec.md`、`command-reference.md`、`architecture.md`、`INSTALL.md`、`rules.md` 跟上;
     路线图 D1 标 ✅、P0-7 的 `artifact_paths` 评估点写结论;⑧本仓库 `test_docs_consistency` 扫文档的那几条一并减去 `proposal_paths`(tester)
   - 对应契约:`docs/pair-run/CONTRACT.md` → 提案目录
+
+### 第三十八轮:discuss 阶段的挂起与恢复(P0-5 的 D2)
+
+> 人类选择继续做 D2(D1 提案目录已在第三十七轮落地)。D2 要能独立成立:退出只有"恢复原状"一种且双方都发过言,
+> 每个工作项最多进一次(D4 再做成可配额度),提升为 PLAN/契约改动留给 D3。规划经 dev 自审后人类批准(2026-10-23),授权 dev 代笔立项。
+
+- [ ] **W67** [feature] — `discuss` / 讨论回合 / `resume`:随时把方向问题当场讨论清楚,工作项原样挂起、原样恢复
+  - **来源**:路线图 P0-5 的 D2(分轮计划「P0-5 必须拆成四步」)
+  - 验收标准:①`discuss --proposal <路径> "<为什么>"` 只在自己回合、有工作项进行时(四个工作阶段)用;要配 `proposal_paths`、提案在提案目录下且本回合新写或追加;
+    工作区只能有散文改动(提案、评审目录、记忆层),否则拒绝并点名;同一工作项第二次进入拒绝;挂起现场(原阶段、`last_actor`、`after_rebound`、`rebound_from`)记进状态,
+    `phase` 改为 `discuss`、轮到对方,`item`、`changes_count`、代办不动;②discuss 阶段用 `handoff "<说明>"` 交接:回合归 `discuss.turn`,本回合必须在那份提案里追加,
+    只能写散文,已提交的提案与评审只能追加,不判红绿、不计数、不碰 `after_rebound` 与 `rebound_from`,记下发言方并翻转回合;
+    ③`resume "<结论>"` 只在自己的 discuss 回合用,两个角色都发过言(本回合追加了提案算本回合这一方)才行,原样恢复挂起现场,结论进正文,本工作项记为进过 discuss;
+    ④归属一律走 `phase_owner`(`status`、`whose-turn`、`handoff`),直接查 `PHASE_OWNER` 的各处在 discuss 阶段不抛异常;讨论回合不被 `report` 算成交接;
+    ⑤登记 `ENFORCEMENTS`(`discuss-open`、`discuss-prose-only`、`discuss-resume`、`discuss-once`);`protocol-spec.md` 阶段表、§5 与 §8,`command-reference.md`、
+    `architecture.md`、`rules.md`、`SKILL.md`、`troubleshooting.md` 跟上,路线图 D2 标 ✅
+  - 对应契约:`docs/pair-run/CONTRACT.md` → discuss 阶段:挂起与恢复

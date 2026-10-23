@@ -794,3 +794,8 @@
 - 理由: "inbox 摆出提案原文"第一版在整段输出里找,而 inbox 开头的 diff 本来就印出提案,拆掉散文那一段对提案的支持照样绿。收窄到"对方这一回合写给你的"那一段之后,中文文件名那条立刻挑出一个早就存在的缺陷:`cmd_inbox` 用不带 `-z` 的 `git show --name-only` 列改动,`core.quotepath` 把非 ASCII 路径转义成带引号的八进制,对不上任何散文目录 —— 中文名的提案与评审一直被说成"没有动过散文文件"。本仓库评审文件用工作项 ID 命名,所以此前没人撞上。提案目录本身是 P0-5 的 D1:一个新的路径类别,四个工作阶段两方可写、只能追加,异议举证、位置引用、评审命名、`--doc-reason` 都不认它;重叠按"有文件同时命中两边"判。
 - 已否决: 只修 inbox 的断言不修实现 —— 那条中文用例红着就是证据;靠 `core.quotepath=false` 全局配置绕开 —— 协议不改用户的 git 配置,`-z` 是 git 自己给的稳定格式。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_proposals.py`, `docs/protocol-spec.md`
+## SETUP — 第三十八轮做 P0-5 的 D2(discuss 的挂起与恢复),规划经自审后人类批准(2026-10-23)
+
+- 理由: 人类选择继续做 D2。D3、D4 之前它要能独立成立,所以补三件最小的东西:退出只有"恢复原状"一种,且两个角色都在提案里发过言(单方退出等于想停就停);每个工作项最多进一次(否则 D2 单独落地就是一个不受限的逃生口,D4 再把它做成可配额度);讨论结论要改 PLAN 或契约仍找人类(D3 才做提升)。规划时自审补上的:进入时工作区只能有散文改动 —— 半成品代码留在工作区,对方的讨论回合会被写权限边界判越界,恢复时也回不到挂起前的样子;讨论回合走 `handoff` 的单独一支,不碰 `after_rebound`、`rebound_from`,挂起时保存、恢复时还原,否则恢复后 W17 捷径会判错;`PHASE_OWNER` 里没有 discuss,直接查表的各处要改走 `phase_owner` 或给出拒绝文案;讨论回合不被 `report` 算成交接,频次留给 D4。
+- 已否决: 进入时自动 `git stash` 未提交的代码 —— stash 是本地状态,恢复时可能冲突,协议不替 agent 管工作区;讨论回合走完整的 `handoff` 校验 —— 红绿与流程转移对讨论没有意义,而且会改写 `after_rebound`;不设上限、等 D4 —— 中间几轮是不受限的逃生口;一方即可退出 —— 退化成"想停就停";idle 时也能进 —— 没有工作项可挂起,方向问题写提案交人类。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `.agents/skills/pair-protocol/SKILL.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`

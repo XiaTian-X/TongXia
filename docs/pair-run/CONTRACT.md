@@ -2262,3 +2262,39 @@ decline 被带过的计数加 1、没被带过的不变、补加到上限触发�
 变异点:提案算作异议举证、评审阶段不可写、不查只能追加、不查重叠、提案要 `--doc-reason`、提案进指纹。
 
 **不做** 不做 discuss 阶段、挂起与恢复、签字与批准(D2、D3);`report` 不统计提案(D4);提案没有必含小节(形状留给 D3);不另设 `artifact_paths`(副产物仍走 `ignore_paths`);不给老项目默认开启。
+
+## discuss 阶段:挂起与恢复
+
+- 依据: 人类定稿
+
+**背景** 方向问题往往是做的过程中暴露的(路线图 P0-5)。第三十七轮 W66 给了它一个落点 —— 提案目录,但两个 agent 仍没有地方当场把它讨论清楚,
+只能写下来等人类排期。这是 P0-5 拆分里的 D2:讨论阶段的进入与退出、工作项挂起与恢复。D3(签字、人类批准、提升为 PLAN/契约改动)与 D4(可配额度、`report` 频次)之前,
+D2 要能独立成立。
+
+**行为**
+- **进入** `discuss --proposal <路径> "<为什么>"`:只在自己的回合、`phase` 为 spec / impl / review-impl / review-test 时可用;idle 拒绝。
+  要配了 `proposal_paths`;`--proposal` 命中 `proposal_paths`,且本回合在它里面新写或追加了内容(相对 HEAD 有新增行或是未跟踪的新文件);"为什么"不得为空。
+  工作区里只能有散文改动 —— 命中 `proposal_paths`、`shared_paths`、记忆层(memory 开着时)的路径;其余改动(含未跟踪文件,不含协议日志与 `ignore_paths`)存在时拒绝,点名文件。
+  同一工作项已经进过一次 discuss 时拒绝,文案指向"写提案交人类"。
+  通过时:`state["discuss"]` 记下 `{proposal, why, opened_by, turn, spoke, suspended}`,其中 `suspended` 是原 `phase`、`last_actor`、`after_rebound`、`rebound_from`;
+  `spoke` 起始为 `[发起方]`,`turn` 为对方;`phase` 改为 `discuss`;只提交状态文件与本回合的散文改动,提交主题 `discuss: <为什么>`。`item`、`item_type`、`changes_count`、`requests` 不动。
+- **讨论回合** discuss 阶段的 `handoff "<说明>"`:执行者必须是 `discuss.turn`;先查状态篡改;本回合必须在 `discuss.proposal` 里追加了内容;
+  改动只能落在散文路径(同上);已提交的提案与评审只能追加(第三十七轮 W66、第十一轮 W18 的口径);不判红绿、不计入 `changes_count`、不改 `after_rebound` 与 `rebound_from`。
+  通过时把执行者记进 `spoke`(不重复),`turn` 改为对方,提交主题 `discuss: <说明>`。
+- **退出** `resume "<结论>"`:只在 discuss 阶段、执行者是 `discuss.turn` 时可用;结论不得为空。本回合在提案里追加了内容时先把执行者记进 `spoke`;
+  `spoke` 不含两个角色时拒绝(单方不能退出)。改动同样只能落在散文路径、已提交的只能追加。通过时把 `suspended` 原样写回 `phase`、`last_actor`、`after_rebound`、`rebound_from`,
+  `discuss` 置为 null,当前工作项 ID 记进 `discussed`;提交主题 `discuss(resume): <结论>`。
+- **归属** `phase_owner` 在 discuss 阶段返回 `discuss.turn`;`status`、`whose-turn`、`handoff` 都经它判归属。其余直接查 `PHASE_OWNER` 的地方在 discuss 阶段不得抛异常
+  (`request` 照旧因阶段不对被拒,`claim` 照旧因有工作项被拒)。`writable_paths` 把 discuss 当只读阶段。`status` 在 discuss 阶段给一段讨论简报:提案路径、理由、谁发过言、怎么交接与恢复。
+- **report** 讨论相关的提交正文不含 `role=… phase=… -> …` 那一行,不被算成交接。
+- **状态** `DEFAULT_STATE` 加 `discuss`(null)与 `discussed`([],进过 discuss 的工作项 ID;`claim` 不清)。
+- 登记 `ENFORCEMENTS`(`discuss-open`、`discuss-prose-only`、`discuss-resume`、`discuss-once`);`protocol-spec.md` 阶段表、§5 新一节、§8 状态表;
+  `command-reference.md`、`architecture.md`、`rules.md`(什么时候进 discuss、什么时候写提案交人类)、`SKILL.md` 命令表、`troubleshooting.md` 跟上;路线图 D2 标 ✅。
+
+**判据** 用例:四个阶段各能进,进入后 `phase` 为 discuss、`whose-turn` 是对方、`item` 与 `changes_count` 不变;没配 `proposal_paths`、提案不在提案目录、本回合没写提案、
+"为什么"为空、idle、不是自己回合各被拒;工作区有代码改动被拒且点名;同一工作项第二次进入被拒;讨论回合只写散文且追加提案可交接、回合翻转;没追加提案被拒、写代码被拒、
+改写已提交的提案被拒;讨论回合不计数;只有发起方发过言时 resume 被拒,对方发言后任一方可 resume;恢复后 `phase`、归属、`after_rebound`、`rebound_from` 与挂起前一致
+(含一条打回之后挂起的场景);恢复后能照常交接并完成工作项;`status` 与 `whose-turn` 在 discuss 阶段给出对的回合;`report` 不把讨论回合算成交接;`request` 在 discuss 阶段被拒。
+变异点:进入不查工作区、讨论回合不要求追加提案、讨论回合可写代码、单方可 resume、恢复不还原 `after_rebound`、每项一次不查。
+
+**不做** 签字、人类批准、提升为 PLAN/契约改动(D3);可配额度与 `report` 频次(D4);idle 时进 discuss;讨论中改代码或测试;自动暂存未提交的改动。
