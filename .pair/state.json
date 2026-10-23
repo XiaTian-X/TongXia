@@ -76,7 +76,7 @@
   "contract_sha": "ee0a6d4d2a1f7c6c9a15da6692e805f57b0834de",
   "setup_verified_contract": {
     "tester": "ee0a6d4d2a1f7c6c9a15da6692e805f57b0834de",
-    "dev": "ee0a6d4d2a1f7c6c9a15da6692e805f57b0834de"
+    "dev": "fe0126db93e620ae3b066f7dab9ef48ba7f3fc10"
   },
   "after_rebound": false,
   "rebound_from": null,
