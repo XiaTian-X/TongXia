@@ -2291,6 +2291,10 @@ D2 要能独立成立。
 - 登记 `ENFORCEMENTS`(`discuss-open`、`discuss-prose-only`、`discuss-resume`、`discuss-once`);`protocol-spec.md` 阶段表、§5 新一节、§8 状态表;
   `command-reference.md`、`architecture.md`、`rules.md`(什么时候进 discuss、什么时候写提案交人类)、`SKILL.md` 命令表、`troubleshooting.md` 跟上;路线图 D2 标 ✅。
 
+**补充**(W67 的 spec 回合带声明补,开工前审查 ㉑)`discuss`(进入)与 `resume` 开头同样**先查状态篡改**(还原并拒绝,同 `claim` 与代办命令):
+两者都改状态并提交它,不先查的话,agent 手改的那部分(比如把 `changes_count` 改回 0、从 `discussed` 里删掉自己)就随协议自己的提交落地,篡改检测从此看不见。
+判据再加:手改状态文件后 `discuss` / `resume` 被拒、状态文件被还原、没有新提交。
+
 **判据** 用例:四个阶段各能进,进入后 `phase` 为 discuss、`whose-turn` 是对方、`item` 与 `changes_count` 不变;没配 `proposal_paths`、提案不在提案目录、本回合没写提案、
 "为什么"为空、idle、不是自己回合各被拒;工作区有代码改动被拒且点名;同一工作项第二次进入被拒;讨论回合只写散文且追加提案可交接、回合翻转;没追加提案被拒、写代码被拒、
 改写已提交的提案被拒;讨论回合不计数;只有发起方发过言时 resume 被拒,对方发言后任一方可 resume;恢复后 `phase`、归属、`after_rebound`、`rebound_from` 与挂起前一致

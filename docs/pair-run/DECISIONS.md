@@ -799,3 +799,8 @@
 - 理由: 人类选择继续做 D2。D3、D4 之前它要能独立成立,所以补三件最小的东西:退出只有"恢复原状"一种,且两个角色都在提案里发过言(单方退出等于想停就停);每个工作项最多进一次(否则 D2 单独落地就是一个不受限的逃生口,D4 再把它做成可配额度);讨论结论要改 PLAN 或契约仍找人类(D3 才做提升)。规划时自审补上的:进入时工作区只能有散文改动 —— 半成品代码留在工作区,对方的讨论回合会被写权限边界判越界,恢复时也回不到挂起前的样子;讨论回合走 `handoff` 的单独一支,不碰 `after_rebound`、`rebound_from`,挂起时保存、恢复时还原,否则恢复后 W17 捷径会判错;`PHASE_OWNER` 里没有 discuss,直接查表的各处要改走 `phase_owner` 或给出拒绝文案;讨论回合不被 `report` 算成交接,频次留给 D4。
 - 已否决: 进入时自动 `git stash` 未提交的代码 —— stash 是本地状态,恢复时可能冲突,协议不替 agent 管工作区;讨论回合走完整的 `handoff` 校验 —— 红绿与流程转移对讨论没有意义,而且会改写 `after_rebound`;不设上限、等 D4 —— 中间几轮是不受限的逃生口;一方即可退出 —— 退化成"想停就停";idle 时也能进 —— 没有工作项可挂起,方向问题写提案交人类。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `.agents/skills/pair-protocol/SKILL.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W67 — 会提交状态文件的命令,开头一律先查状态篡改
+
+- 理由: 「discuss 阶段」的进入(`discuss`)与退出(`resume`)都改状态、并把状态文件随自己的提交落地,契约却只在"讨论回合"写了先查篡改。agent 先手改 `.pair/state.json`(把 `changes_count` 改回 0、从 `discussed` 里删掉自己)再执行这两条命令,手改的部分就被协议自己的提交"洗白",`state_is_tampered` 比的是工作区与 HEAD,从此看不见。spec 回合带声明补:两条命令开头都先查、还原并拒绝。这是第三十六轮 W65 三条代办命令同一个口径,今后任何新命令只要会提交状态文件,都照此办。另:契约要求"恢复不还原 `after_rebound`"这个变异点有用例红,而讨论回合按契约不碰它 —— 只用命令走不出差别,两种实现等价;用例改让人类在讨论中途直接改状态并提交,恢复仍应回到挂起时的现场(挂起快照是权威),变异点由此可判。
+- 已否决: 只在讨论回合查 —— 进入与退出是另外两个提交状态的入口;靠下一次 `handoff` 发现 —— 那时篡改已经在 HEAD 里了,比的是工作区与 HEAD,发现不了。
+- 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_discuss.py`, `.agents/skills/pair-protocol/scripts/pair.py`
