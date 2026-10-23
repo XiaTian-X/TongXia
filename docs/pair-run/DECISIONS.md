@@ -789,3 +789,8 @@
 - 理由: 「提案目录」要求 `verify-setup` 在 `proposal_paths` 与 `roles`、`shared_paths`、`frozen_paths`、记忆层、`ignore_paths` 重叠时判失败,却没说两组路径模式怎样算重叠。字符串相等、互为前缀、有文件同时命中三种读法对同一份配置结论不同:`docs/proposals` 对 `docs`(前缀)、对 `docs/proposals/*.md`(glob)、对 `docs/proposals/定稿.md`(单个文件)。spec 回合带声明补「补充」:两边各取代表路径(不含通配符的取模式本身与 `<模式>/<某名>.md`,含通配符的把通配符换成具体名字),任一边的代表路径命中另一边的模式就算重叠;本仓库 dev 的 `docs/*.md`、`*.md` 不命中 `docs/proposals/` 下的文件(`*` 不跨 `/`),启用不会撞。写用例时还踩到一处:拿 `docs` 下的目录试"与角色重叠",别的检查(评审目录、记忆层、冻结的规划文件也在 `docs` 下)会先拒,判不出这一条 —— 改用别的键都不碰的 `plans/`,并配一条"去掉重叠就通过"的对照。
 - 已否决: 只比字符串 —— 前缀与 glob 的重叠全漏;遍历仓库里的真实文件判 —— 提案目录开工时多半是空的,判不出来。
 - 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_proposals.py`, `tests/conformance/test_docs_consistency.py`, `.agents/skills/pair-protocol/scripts/pair.py`
+## W66 — 断言要落在行为该出现的那一段输出里;列路径一律带 `-z`
+
+- 理由: "inbox 摆出提案原文"第一版在整段输出里找,而 inbox 开头的 diff 本来就印出提案,拆掉散文那一段对提案的支持照样绿。收窄到"对方这一回合写给你的"那一段之后,中文文件名那条立刻挑出一个早就存在的缺陷:`cmd_inbox` 用不带 `-z` 的 `git show --name-only` 列改动,`core.quotepath` 把非 ASCII 路径转义成带引号的八进制,对不上任何散文目录 —— 中文名的提案与评审一直被说成"没有动过散文文件"。本仓库评审文件用工作项 ID 命名,所以此前没人撞上。提案目录本身是 P0-5 的 D1:一个新的路径类别,四个工作阶段两方可写、只能追加,异议举证、位置引用、评审命名、`--doc-reason` 都不认它;重叠按"有文件同时命中两边"判。
+- 已否决: 只修 inbox 的断言不修实现 —— 那条中文用例红着就是证据;靠 `core.quotepath=false` 全局配置绕开 —— 协议不改用户的 git 配置,`-z` 是 git 自己给的稳定格式。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_proposals.py`, `docs/protocol-spec.md`

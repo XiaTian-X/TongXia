@@ -866,7 +866,7 @@
 > 本轮只做 D1;D2 要改状态机,等路径类别落地后单独规划。规划经 dev 自审后人类批准(2026-10-22),授权 dev 代笔立项。
 > W66 完成后,在空闲时由 dev 以人类授权给本仓库 `.pair/config.json` 加 `proposal_paths`。
 
-- [ ] **W66** [feature] — `proposal_paths`:双方任何阶段都能写的提案目录,不冒充评审或异议
+- [x] **W66** [feature] — `proposal_paths`:双方任何阶段都能写的提案目录,不冒充评审或异议
   - **来源**:路线图 P0-5 的 D1(分轮计划「P0-5 必须拆成四步」),同时了结 P0-7 留下的 `artifact_paths` 评估点
   - 验收标准:①新配置键 `proposal_paths`,默认 `[]`,`init` 给新项目写 `["docs/proposals"]`;②除 idle 外四个阶段两个角色都可写,不并进 `shared_paths`;
     ③已提交的提案顶层 `.md` 只能追加(相对 HEAD 有删除行即拒绝,不分阶段与角色);④异议举证、打回的位置引用、评审目录命名、规范性文档(`--doc-reason`)四处不认它;
