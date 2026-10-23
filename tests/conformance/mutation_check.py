@@ -1257,6 +1257,43 @@ MUTATIONS = [
      '                                cwd=root, check=False) or "").split("\\0"))\n',
      '    changed = [p for p in ((git("show", "--name-only", "--format=", "HEAD",\n'
      '                                cwd=root, check=False) or "").split("\\n"))\n'),
+
+    # W67 discuss 阶段(review-impl 登记)。
+    ('讨论_进入不查工作区',
+     '    if stray:\n        die("工作区里有散文以外的改动',
+     '    if False:\n        die("工作区里有散文以外的改动'),
+
+    ('讨论_回合不要求追加提案',
+     '    if not _appended(root, d["proposal"]):\n        die("讨论回合必须在',
+     '    if False:\n        die("讨论回合必须在'),
+
+    ('讨论_回合可写代码',
+     '    if bad:\n        die("拒绝交接 —— %s" % ";".join(bad))',
+     '    if False:\n        die("拒绝交接 —— %s" % ";".join(bad))'),
+
+    ('讨论_单方可_resume',
+     '    if spoke != set(ROLES):\n',
+     '    if False:\n'),
+
+    ('讨论_恢复不还原_after_rebound',
+     '    state["after_rebound"] = sus["after_rebound"]\n',
+     '    pass\n'),
+
+    ('讨论_每项一次不查',
+     '    if state["item"] in (state.get("discussed") or []):\n',
+     '    if False:\n'),
+
+    ('讨论_discuss_不查篡改',
+     '    _discuss_tamper_guard(root, "discuss")\n',
+     '    pass\n'),
+
+    ('讨论_resume_不查篡改',
+     '    _discuss_tamper_guard(root, "resume")\n',
+     '    pass\n'),
+
+    ('讨论_归属不看讨论现场',
+     '        return (state.get("discuss") or {}).get("turn") or "tester"\n',
+     '        return "tester"\n'),
 ]
 
 # unittest 的失败行有两种形态:

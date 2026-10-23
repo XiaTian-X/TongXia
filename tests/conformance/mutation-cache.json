@@ -1,5 +1,5 @@
 {
-  "baseline": "b58ef9a62d693221",
+  "baseline": "94caa61ddf1c5170",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -771,6 +771,33 @@
     ],
     "认领时不记 item_base": [
       "test_v1_affected_tests.TestFallsBackToGate.test_路径正好_200_条仍走选择器"
+    ],
+    "讨论_discuss_不查篡改": [
+      "test_v1_discuss.TestTamper.test_手改状态之后_discuss_被拒_状态还原_没有新提交"
+    ],
+    "讨论_resume_不查篡改": [
+      "test_v1_discuss.TestTamper.test_手改状态之后_resume_被拒_状态还原_没有新提交"
+    ],
+    "讨论_单方可_resume": [
+      "test_v1_discuss.TestResume.test_只有发起方发过言时_resume_被拒"
+    ],
+    "讨论_回合不要求追加提案": [
+      "test_v1_discuss.TestDiscussTurn.test_没追加提案被拒"
+    ],
+    "讨论_回合可写代码": [
+      "test_v1_discuss.TestDiscussTurn.test_写代码被拒"
+    ],
+    "讨论_归属不看讨论现场": [
+      "test_v1_discuss.TestDiscussTurn.test_不是讨论回合的一方交接被拒"
+    ],
+    "讨论_恢复不还原_after_rebound": [
+      "test_v1_discuss.TestResumeUsesSnapshot.test_挂起期间状态被人类改过_恢复仍回到挂起时的现场"
+    ],
+    "讨论_每项一次不查": [
+      "test_v1_discuss.TestResume.test_同一工作项第二次进入被拒"
+    ],
+    "讨论_进入不查工作区": [
+      "test_v1_discuss.TestEnterRefused.test_工作区有代码改动拒绝_点名文件"
     ],
     "记忆层关着也排除出指纹": [
       "test_v1_test_reuse.TestMemoryOff.test_记忆层关着时笔记目录照常进指纹"
