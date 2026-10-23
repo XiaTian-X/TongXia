@@ -1,8 +1,8 @@
 {
   "round": 64,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W67",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -73,7 +73,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "ee0a6d4d2a1f7c6c9a15da6692e805f57b0834de",
   "setup_verified_contract": {
     "tester": "ee0a6d4d2a1f7c6c9a15da6692e805f57b0834de",
     "dev": "ee0a6d4d2a1f7c6c9a15da6692e805f57b0834de"
@@ -83,6 +83,6 @@
   "reviewed_contract": "6bc1a0d8782c9fe3260677b156775296fd6a7f1b",
   "last_full_failed": false,
   "full_failures": [],
-  "item_base": "bc208a6c62a4a9b20ece90f6a86d8a8e19ab019c",
+  "item_base": "acad4b5f91d3cdb2a173d48bc4a2e5adc01b1045",
   "requests": []
 }
