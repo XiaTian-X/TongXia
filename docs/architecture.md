@@ -137,7 +137,7 @@ agent 被人类唤醒
 
 这是理解这个架构最重要的一张表:**哪些规则是脚本拦的,哪些只能靠留痕。**
 
-<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only -->
+<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-once -->
 
 | 规则 | 强制方式 | 失效条件 |
 |---|---|---|
@@ -175,6 +175,10 @@ agent 被人类唤醒
 | 代办只由被请求方办结 | 脚本拒绝(fulfill 要求请求的路径真有改动) | 改了一个无关的字节就 fulfill |
 | 代办收口 | 脚本拒绝(发给自己的开着不能交接;完成时不能有开着的) | 改代码 |
 | 提案只能追加 | 脚本拒绝(已提交的提案顶层 `.md` 有删除行即拒,不分阶段与角色) | 改代码 |
+| 进讨论的条件 | 脚本拒绝(自己回合、有工作项、提案本回合有发言、工作区只有散文、先查篡改) | 改代码 |
+| 讨论回合只写散文 | 脚本拒绝(必须追加那份提案;代码、测试、改写已提交的都拒) | 写一句空话凑数 |
+| 双方发言才能恢复 | 脚本拒绝;恢复取挂起时记下的现场 | 对方写一句「同意」 |
+| 每项只进一次讨论 | 脚本拒绝(D4 再做成可配额度) | 改代码 |
 | **代办不得表达分歧** | ❌ 只有 prose + 对方 decline(补计打回)+ `report` 被拒率 | 双方合谋把分歧当代办 |
 | **不许过拟合断言** | ❌ 只有 prose + 对方评审 | 双方都敷衍 |
 | **不许硬编码蒙混** | ❌ 只有 prose + 对方评审 | 双方都敷衍 |

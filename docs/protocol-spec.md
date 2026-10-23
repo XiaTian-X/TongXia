@@ -40,6 +40,7 @@
 | `impl` | dev | 最小实现至绿 |
 | `review-impl` | tester | 审实现是否作弊 |
 | `review-test` | dev | 审测试是否过拟合 |
+| `discuss` | 两方轮流(`discuss.turn`) | 讨论方向问题;工作项挂起,只写散文(§5.6,W67) |
 
 `review-impl` 与 `review-test` 是**评审阶段**,只读:本回合只能写
 `shared_paths`(默认 `docs/reviews`)、记忆层路径与提案目录(`proposal_paths`,配了才有)。夹带任何代码改动都会被拒绝。
@@ -241,6 +242,22 @@ pair.py decline R<n> "<理由>"
 - 收口见 §4 第 6 条;`claim` 清空 `requests`。`status` 列出发给自己、还开着的代办,`report` 有代办次数与被拒率。
 - **不得用来表达分歧。** `--reason` 回答"为什么我改不了"(路径归属),不回答"为什么你错了";分歧走 `handoff changes`。
 
+### 5.6 discuss 阶段:挂起与恢复(W67,P0-5 的 D2)
+
+做的过程中暴露的方向问题,当场讨论清楚:工作项原样挂起、原样恢复。
+
+```
+pair.py discuss --proposal docs/proposals/<主题>.md "<为什么>"   # 进入
+pair.py handoff "<说明>"                                          # 讨论回合交给对方
+pair.py resume "<结论>"                                           # 结束讨论,原样恢复
+```
+
+- **进入**:只在自己的回合、有工作项进行时(四个工作阶段)。要配 `proposal_paths`;提案在提案目录下,且本回合在里面新写或追加了内容;工作区只能有散文改动(提案、评审目录、记忆层),否则拒绝并点名;同一工作项只能进一次(D4 再做成可配额度)。挂起现场(原 `phase`、`last_actor`、`after_rebound`、`rebound_from`)记进 `discuss.suspended`,`phase` 改为 `discuss`,轮到对方;`item`、`changes_count`、代办不动。提交主题 `discuss: …`。
+- **讨论回合**:`handoff` 在 discuss 阶段走单独一支 —— 执行者必须是 `discuss.turn`,本回合必须在那份提案里追加,只能写散文,已提交的提案与评审只能追加;不判红绿、不计数、不碰 `after_rebound` 与 `rebound_from`。
+- **退出**:`resume` 只在自己的讨论回合用,两个角色都发过言(本回合追加了提案算本回合这一方)才行;把挂起现场原样写回,结论进正文,工作项记进 `discussed`。提交主题 `discuss(resume): …`。
+- `discuss` 与 `resume` 开头先查状态篡改(W67 spec 回合带声明补 ㉑)。讨论相关的提交正文不含交接那一行,`report` 不把它们算成交接。
+- **本轮不做**:签字、人类批准、提升为 PLAN/契约改动(D3);可配额度与 `report` 频次(D4)。讨论结论要改 PLAN 或契约的,写进提案交给人类。
+
 ### 5.4 verify-setup
 
 开工前只读校验,由**两个角色各跑一次**(`claim` 要求两份校验都作数)。检查项:
@@ -435,6 +452,8 @@ pair.py decline R<n> "<理由>"
 | `last_full_failed` | bool | 最近一次工作项完成时,全量套件(`full_test_cmd`)是否红。PLAN 全部完成之后 `status` / `whose-turn` / `handoff` 的完成提示读它:为真时不说"请向人类报告项目完成",改说项目算不算结束由人类决定。没配 `full_test_cmd` 记为 `false`;老状态没有这个键按 `false` |
 | `full_failures` | string[]\|null | 上一次全量里红着的用例 ID(排序列表,W59)。`verify-setup` 跑全量且读得出 `full_test_report` 时写入,每次工作项完成时更新;完成时新增的红 = 这一次红着的 − 它。不知道时为 `null`(没配报告、报告读不出、老状态),那时完成照旧只报告 |
 | `item_base` | string\|null | 认领那一刻的 HEAD(W60)。`affected_test_cmd` 的路径从它算起;老状态没有它时门禁用 `test_cmd` |
+| `discuss` | object\|null | 讨论阶段的现场(W67,§5.6):`{proposal, why, opened_by, turn, spoke, suspended}`;不在讨论时为 `null` |
+| `discussed` | string[] | 进过 discuss 的工作项 ID(同一工作项只能进一次);`claim` 不清 |
 | `requests` | object[] | 本工作项的代办(W65,§5.5)。每条 `{id, item, by, to, paths, what, reason, base, status, carried}`,`status` 为 open / fulfilled / declined;`claim` 时清空;老状态没有它 = 没有代办 |
 
 **全量跑过的用例不在状态里**,在协议产物 `.pair/full-baseline.json`(W61):`{"executed": [...]}`,排序、一行一条,
