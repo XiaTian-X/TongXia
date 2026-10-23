@@ -24,6 +24,9 @@
   "shared_paths": [
     "docs/reviews"
   ],
+  "proposal_paths": [
+    "docs/proposals"
+  ],
   "frozen_paths": [
     "docs/pair-run/PLAN.md",
     "docs/pair-run/CONTRACT.md",
