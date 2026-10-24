@@ -814,3 +814,8 @@
 - 理由: 人类选择做 D3。讨论定下的结论要改冻结文件时,把"人类读提案、手工改、手工提交"换成可校验的流程:提案里写出确切的 diff,两个角色对这段 diff 的哈希签字,人类一条命令核对后原样应用。协议认不出人类,和人类直接提交冻结文件是同一个信任级别 —— 所以批准命令要显式的 `PAIR_ROLE=human`,规则写明 agent 不得运行,脚本只把关内容。规划时自审补上的:签字绑 diff 的哈希(提案只能追加,修订就是新块,旧签字自然作废);签字必须由本人的回合提交(否则一方能替另一方签);签字要已提交(对方没看到的不算);diff 只认 PLAN 与契约两个文件;先 `git apply --check` 再应用(不留半改的冻结文件);`status` 列出待批准的提案(人类读状态就知道该批什么);契约变了走现有机制(两方校验失效、完成时留决策),不另加规则。
 - 已否决: 签字签整份提案而不是 diff 的哈希 —— 追加一句闲话就让签字失效,又说不清签的是哪个改动;让 agent 跑批准 —— 冻结文件的最后一道是人类;批准时让脚本按自然语言去改 PLAN —— 脚本不执行自然语言;签字只看行文本、不看提交者的回合 —— 一方能替另一方签。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `.agents/skills/pair-protocol/SKILL.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `INSTALL.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W68 — 从提交里认"是谁做的",只认协议自己写的那一行
+
+- 理由: 「提案的签字与人类批准」第 4 步要求签字由本人的回合提交,判据是"引入签字行的提交正文里有独立的 `role=<该角色>`"。可交接提交的正文不全是协议写的:`--checked`、`--uncovered`、`--doc-reason` 等理由原样进正文、可以带换行 —— tester 在 review-impl 往提案里写一行 dev 的签字,`--checked` 里另起一行写 `role=dev phase=…`,第 4 步照字面就放行,一方替另一方签字正是这一步要防的。spec 回合带声明补:角色只从正文**第一行**取(普通交接 `role=<r> phase=…`,讨论回合 `discuss=<…> role=<r> …`);同时写死哈希的输入(两行围栏之间的原文字节,不做规范化),免得 `sign` 与 `ratify` 各算各的。写这条用例时第一版把 tester 与 dev 两行签字放在同一次提交,结果 tester 那一行先被判错、拦住它的不是这一条 —— 探针证实之后改成 tester 先正当签、dev 那一行单独伪造。另:契约的变异点"应用之前不 `--check`"与正常行为等价 —— `git apply` 失败时本身原子地什么都不改,且批准行写在应用之后;登记它会恒存活,不登记,写进笔记。
+- 已否决: 按"正文里有这个词"判 —— 正文有 agent 写的字;按提交者的 git 身份判 —— 两个 agent 在同一目录、用同一份 git 身份提交。
+- 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_ratify.py`, `.agents/skills/pair-protocol/scripts/pair.py`
