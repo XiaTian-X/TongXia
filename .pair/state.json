@@ -1,8 +1,8 @@
 {
   "round": 65,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W68",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -74,7 +74,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "234cf0ad999aafa6993fe0a910e955be5c64c7ca",
   "setup_verified_contract": {
     "tester": "234cf0ad999aafa6993fe0a910e955be5c64c7ca",
     "dev": "234cf0ad999aafa6993fe0a910e955be5c64c7ca"
@@ -84,7 +84,7 @@
   "reviewed_contract": "fe0126db93e620ae3b066f7dab9ef48ba7f3fc10",
   "last_full_failed": false,
   "full_failures": [],
-  "item_base": "acad4b5f91d3cdb2a173d48bc4a2e5adc01b1045",
+  "item_base": "17ac96c8a6879e0d00c555813e8a58a5d19affb6",
   "requests": [],
   "discuss": null,
   "discussed": []
