@@ -1304,9 +1304,10 @@ MUTATIONS = [
      '    forged = [r for r in present if _introducing_role(root, path, "签字: %s sha256:%s" % (r, h)) != r]\n',
      '    forged = []\n'),
 
+    # 第一版写成 `first = body` 是等价变异(search 仍取第一个匹配,协议那一行永远在最前)。"任一行都认"的代表写法:取正文最后一个含 role= 的行。
     ('批准_角色从正文任意一行取',
      '    first = body.strip("\\n").split("\\n", 1)[0] if body.strip() else ""\n',
-     '    first = body\n'),
+     '    first = ([l for l in body.splitlines() if "role=" in l] or [""])[-1]\n'),
 
     ('批准_不查_diff_只碰_PLAN_与契约',
      '    if stray or not touched:\n',
