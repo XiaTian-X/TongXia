@@ -1,5 +1,5 @@
 {
-  "baseline": "94caa61ddf1c5170",
+  "baseline": "43a539ef162df62c",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -318,6 +318,24 @@
     ],
     "执行前不删旧报告": [
       "test_v1_junit_report.TestDegrades.test_上一次的报告还在而这一次没写_不读上一次的"
+    ],
+    "批准_status_不列待批准": [
+      "test_v1_ratify.TestRatifyPasses.test_status_列出待批准的提案_批准之后不再列"
+    ],
+    "批准_不查_PAIR_ROLE_human": [
+      "test_v1_ratify.TestRatifyRefused.test_PAIR_ROLE_不是_human"
+    ],
+    "批准_不查_diff_只碰_PLAN_与契约": [
+      "test_v1_ratify.TestRatifyRefusedDiff.test_diff_碰了别的文件"
+    ],
+    "批准_不查提案已提交": [
+      "test_v1_ratify.TestRatifyRefused.test_提案在工作区里有改动"
+    ],
+    "批准_不查签字哈希": [
+      "test_v1_ratify.TestRatifyRefused.test_签字之后又追加了新的_diff_块"
+    ],
+    "批准_不查签字由本人回合提交": [
+      "test_v1_ratify.TestRatifyRefusedSignatures.test_tester_的回合里写了_dev_的签字行"
     ],
     "承重文件的交付算成空转": [
       "test_v1_effective.TestReportSplitsRounds.test_只改了承重文件的_impl_回合不算开销"
@@ -714,6 +732,9 @@
     ],
     "第二次打回改成按工作项算": [
       "test_v1_validity.TestSameTurnGatesUnchanged.test_第二次打回_更早回合的决策不算"
+    ],
+    "签字_不拒重复签": [
+      "test_v1_ratify.TestSign.test_同一角色对同一哈希重复签被拒"
     ],
     "简报不提 scratch": [
       "test_v1_scratch_brief.TestWorkingPhasesMentionScratch.test_impl"

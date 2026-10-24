@@ -1294,6 +1294,39 @@ MUTATIONS = [
     ('讨论_归属不看讨论现场',
      '        return (state.get("discuss") or {}).get("turn") or "tester"\n',
      '        return "tester"\n'),
+
+    # W68 提案的签字与人类批准(review-impl 登记;"应用之前不 --check"与正常行为等价,不登记)。
+    ('批准_不查签字哈希',
+     '    block = blocks[-1]\n',
+     '    block = blocks[0]\n'),
+
+    ('批准_不查签字由本人回合提交',
+     '    forged = [r for r in present if _introducing_role(root, path, "签字: %s sha256:%s" % (r, h)) != r]\n',
+     '    forged = []\n'),
+
+    ('批准_角色从正文任意一行取',
+     '    first = body.strip("\\n").split("\\n", 1)[0] if body.strip() else ""\n',
+     '    first = body\n'),
+
+    ('批准_不查_diff_只碰_PLAN_与契约',
+     '    if stray or not touched:\n',
+     '    if False:\n'),
+
+    ('批准_不查_PAIR_ROLE_human',
+     '    if os.environ.get("PAIR_ROLE", "").strip() != "human":\n',
+     '    if False:\n'),
+
+    ('批准_不查提案已提交',
+     '    if blob_sha(root, path) is None or path in dirty:\n',
+     '    if False:\n'),
+
+    ('签字_不拒重复签',
+     '    if (me, h) in SIGN_RE.findall(text):\n',
+     '    if False:\n'),
+
+    ('批准_status_不列待批准',
+     '    ripe = pending_ratification(root, cfg)              # W68',
+     '    ripe = []              # W68'),
 ]
 
 # unittest 的失败行有两种形态:
