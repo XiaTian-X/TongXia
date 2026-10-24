@@ -824,3 +824,8 @@
 - 理由: 讨论的结论要改冻结文件时,提案里写出确切的 diff(最后一个 diff 围栏块),签字绑它的哈希(两行围栏之间的原文字节,不规范化) —— 提案只能追加,修订就是新块,旧签字自然作废。批准时核对每行签字是不是由签字人自己的回合提交:用 `git log -S` 找到引入那一行的最早提交,**只看正文第一行**的 `role=`(㉒)。理由类旗标原样进正文、可以带换行,按"正文里有这个词"判,一方能在自己的回合替对方签。协议认不出人类,`ratify` 要显式的 `PAIR_ROLE=human`,这和人类直接提交冻结文件同一个信任级别;脚本把关内容:签字齐且已提交、由本人回合提交、diff 只碰 PLAN 与契约、`git apply --check` 先过。伪造检查只看在场的签字,缺签由前一道单独拦 —— 两道重叠时,拆掉其中一道照样被拒,变异探针分不出来。
 - 已否决: 签整份提案 —— 追加一句闲话就让签字失效,又说不清签的是哪个改动;正文任意一行认 `role=` —— 旗标能伪造;让 agent 跑批准 —— 冻结文件的最后一道是人类;批准时让脚本按自然语言去改 —— 脚本不执行自然语言。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_ratify.py`, `tests/conformance/mutation_check.py`, `docs/protocol-spec.md`, `INSTALL.md`
+## SETUP — 第四十轮做 P0-5 的 D4(讨论额度与频次),规划经自审后人类批准(2026-10-24)
+
+- 理由: 人类选择做 D4,把 P0-5 收尾。额度做成配置键,默认 1 与 D2 已落地的行为一致;`discussed` 改为可重复计数,老状态每项最多 1 次,含义不变。撞上额度只拒绝这一次 discuss、不停止轮转:死锁闸停轮转是因为双方谈不拢,额度用完时工作项本身还能做 —— 撞额度就停,一方再提一次 discuss 就能让双方都停下,等于把逃生口反过来用。`report` 的讨论频次给判定而不只给数:从不讨论与讨论过多是两种相反的病,没有提示就没人看;样本不足时沿用 `MIN_SAMPLE` 只给数。讨论次数只认正文第一行 `discuss=open` 的提交,讨论回合与恢复不计。
+- 已否决: 撞额度就停轮转 —— 一方能借此让双方都停下;默认额度改成 2 —— 改变已落地行为,老项目静默多一次;只出一个数、不给判定 —— 两种病都没有提示。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `INSTALL.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
