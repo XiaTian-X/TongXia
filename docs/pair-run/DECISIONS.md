@@ -819,3 +819,8 @@
 - 理由: 「提案的签字与人类批准」第 4 步要求签字由本人的回合提交,判据是"引入签字行的提交正文里有独立的 `role=<该角色>`"。可交接提交的正文不全是协议写的:`--checked`、`--uncovered`、`--doc-reason` 等理由原样进正文、可以带换行 —— tester 在 review-impl 往提案里写一行 dev 的签字,`--checked` 里另起一行写 `role=dev phase=…`,第 4 步照字面就放行,一方替另一方签字正是这一步要防的。spec 回合带声明补:角色只从正文**第一行**取(普通交接 `role=<r> phase=…`,讨论回合 `discuss=<…> role=<r> …`);同时写死哈希的输入(两行围栏之间的原文字节,不做规范化),免得 `sign` 与 `ratify` 各算各的。写这条用例时第一版把 tester 与 dev 两行签字放在同一次提交,结果 tester 那一行先被判错、拦住它的不是这一条 —— 探针证实之后改成 tester 先正当签、dev 那一行单独伪造。另:契约的变异点"应用之前不 `--check`"与正常行为等价 —— `git apply` 失败时本身原子地什么都不改,且批准行写在应用之后;登记它会恒存活,不登记,写进笔记。
 - 已否决: 按"正文里有这个词"判 —— 正文有 agent 写的字;按提交者的 git 身份判 —— 两个 agent 在同一目录、用同一份 git 身份提交。
 - 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_ratify.py`, `.agents/skills/pair-protocol/scripts/pair.py`
+## W68 — 签字绑确切的 diff,签字者只认协议自己写的那一行;批准只把关内容
+
+- 理由: 讨论的结论要改冻结文件时,提案里写出确切的 diff(最后一个 diff 围栏块),签字绑它的哈希(两行围栏之间的原文字节,不规范化) —— 提案只能追加,修订就是新块,旧签字自然作废。批准时核对每行签字是不是由签字人自己的回合提交:用 `git log -S` 找到引入那一行的最早提交,**只看正文第一行**的 `role=`(㉒)。理由类旗标原样进正文、可以带换行,按"正文里有这个词"判,一方能在自己的回合替对方签。协议认不出人类,`ratify` 要显式的 `PAIR_ROLE=human`,这和人类直接提交冻结文件同一个信任级别;脚本把关内容:签字齐且已提交、由本人回合提交、diff 只碰 PLAN 与契约、`git apply --check` 先过。伪造检查只看在场的签字,缺签由前一道单独拦 —— 两道重叠时,拆掉其中一道照样被拒,变异探针分不出来。
+- 已否决: 签整份提案 —— 追加一句闲话就让签字失效,又说不清签的是哪个改动;正文任意一行认 `role=` —— 旗标能伪造;让 agent 跑批准 —— 冻结文件的最后一道是人类;批准时让脚本按自然语言去改 —— 脚本不执行自然语言。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_ratify.py`, `tests/conformance/mutation_check.py`, `docs/protocol-spec.md`, `INSTALL.md`

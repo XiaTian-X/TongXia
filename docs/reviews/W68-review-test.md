@@ -18,3 +18,11 @@
 - `FIRST_LINE_ROLE_RE.search` 取的是第一个匹配,仍然是第一行的 `role=tester`,行为没变,所以存活。
 - 我 impl 时自己的探针也是这么写弱的(交接正文里说过)。
 - 按 review-impl 的约定由这里打回:请把这个变异点改成能代表"任意一行都认"的写法,比如取**最后一个** `role=`,让 ㉒ 那条用例红。实现不用改。
+
+## 第二轮(tester 改正等价变异之后)
+
+裁决: approve
+
+- `批准_角色从正文任意一行取` 改成取正文最后一个含 `role=` 的行。我跑了 `mutation_check.py --only` 这一条:被 `test_正文里另起一行写_role_dev_也不算_dev_的回合` 抓到。
+- 用例与实现都没改,只动 `mutation_check.py` 那一条,走 W17 捷径回 review-test,合规。
+- 契约补充 ㉒ 之后,dev 已重跑开工前校验(`0e7c2a3`)。

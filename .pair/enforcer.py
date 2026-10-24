@@ -171,6 +171,8 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "discuss-prose-only",    # 讨论回合只写散文,且必须在那份提案里追加(W67)
     "discuss-resume",        # 两个角色都发过言才能恢复;恢复取挂起时的现场(W67)
     "discuss-once",          # 同一工作项只能进一次 discuss(W67;D4 再做成可配额度)
+    "proposal-sign",         # 签字:自己回合、非 idle、提案在提案目录且有 diff 块、不重复签(W68)
+    "ratify-signed",         # 批准:PAIR_ROLE=human、双方对最后一个 diff 已提交的签字由本人回合提交、只碰 PLAN 与契约、能干净应用(W68)
 )
 
 
@@ -1837,6 +1839,14 @@ def cmd_status(root, cfg, args):
         print("  为什么: %s" % d["why"])
         print("  发起方: %s   发过言: %s   轮到: %s" % (d["opened_by"], "、".join(d["spoke"]), d["turn"]))
 
+    ripe = pending_ratification(root, cfg)              # W68:等人类批准的提案
+    if ripe:
+        print()
+        print(">>> 待人类批准的提案(两方都签了最后一个 diff 块):<<<")
+        for rel in ripe:
+            print("  PAIR_ROLE=human python3 %s ratify %s" % (PROG_HINT, rel))
+        print("  这是人类的命令,agent 不要运行;告诉人类有提案等它批准。")
+
     waiting = open_requests(state, to=me)               # W65:发给你、还开着的代办
     if waiting:
         print()
@@ -3360,6 +3370,167 @@ def cmd_resume(root, cfg, args):
     return 0
 
 
+# --------------------------------------------------------------------------
+# 提案的签字与人类批准(W68,P0-5 的 D3)
+# --------------------------------------------------------------------------
+# 讨论定下的结论要改 PLAN 或契约:提案里写出确切的 diff,两个角色对这段 diff 的哈希签字,人类一条命令核对后原样应用。
+# 协议认不出人类(与人类直接提交冻结文件同一个信任级别),所以批准要显式的 PAIR_ROLE=human;脚本把关的是内容。
+
+SIGN_RE = re.compile(r"^签字: (tester|dev) sha256:([0-9a-f]{16})$", re.M)
+RATIFIED_RE = re.compile(r"^批准: 人类 sha256:([0-9a-f]{16})$", re.M)
+# W68 ㉒:角色只从提交正文的第一行取 —— 理由类旗标原样进正文、可以带换行,按"正文里有这个词"判一方就能替另一方签。
+FIRST_LINE_ROLE_RE = re.compile(r"(?:^|\s)role=(tester|dev)(?:\s|$)")
+
+
+def diff_blocks(text):
+    """提案里所有 ```diff 围栏块的块内文本(不含两行围栏,每行带换行符,原文字节不做规范化)。"""
+    blocks, cur = [], None
+    for line in text.splitlines(keepends=True):
+        bare = line.rstrip("\r\n")
+        if cur is None:
+            if bare == "```diff":
+                cur = []
+        elif bare == "```":
+            blocks.append("".join(cur))
+            cur = None
+        else:
+            cur.append(line)
+    return blocks
+
+
+def block_hash(block):
+    return hashlib.sha256(block.encode("utf-8")).hexdigest()[:16]
+
+
+def diff_paths(block):
+    """diff 块里出现的路径(去掉 a/ b/ 前缀,/dev/null 除外)。"""
+    out = set()
+    for line in block.splitlines():
+        m = re.match(r"^(?:---|\+\+\+) (?:[ab]/)?(.+?)\s*$", line)
+        if m and m.group(1) != "/dev/null":
+            out.add(m.group(1))
+        m = re.match(r"^diff --git a/(.+) b/(.+)$", line)
+        if m:
+            out.update(m.groups())
+        m = re.match(r"^(?:rename|copy) (?:from|to) (.+)$", line)
+        if m:
+            out.add(m.group(1))
+    return out
+
+
+def pending_ratification(root, cfg):
+    """待人类批准的提案:两个角色都签了最后一个 diff 块的哈希,且没有这个哈希的批准行。"""
+    out = []
+    for base in cfg.get("proposal_paths") or []:
+        d = root / base
+        files = sorted(d.rglob("*.md")) if d.is_dir() else ([d] if d.is_file() else [])
+        for f in files:
+            text = _read(f)
+            blocks = diff_blocks(text)
+            if not blocks:
+                continue
+            h = block_hash(blocks[-1])
+            signers = {r for r, sh in SIGN_RE.findall(text) if sh == h}
+            if signers == set(ROLES) and h not in RATIFIED_RE.findall(text):
+                out.append(str(f.relative_to(root)))
+    return out
+
+
+def cmd_sign(root, cfg, args):
+    me, _ = resolve_role(root)
+    state = load_state(root)
+    if state["phase"] == "idle":
+        die("idle 时提案不可写,签字要在有工作项进行时、自己的回合里做。")
+    turn = phase_owner(root, cfg, state)
+    if me != turn:
+        die("签字只能在自己的回合里做:现在轮到 %s,不是你(%s)。" % (turn, me))
+    path = args.proposal.strip()
+    if not matches_any(path, cfg.get("proposal_paths") or []):
+        die("%s 不在提案目录(%s)下。" % (path, " ".join(cfg.get("proposal_paths") or []) or "没有配 proposal_paths"))
+    if not (root / path).is_file():
+        die("找不到提案 %s。" % path)
+    text = _read(root / path)
+    blocks = diff_blocks(text)
+    if not blocks:
+        die("%s 里没有 ```diff 围栏块 —— 签字签的是确切的改动,先把要改 PLAN/契约的 diff 写进提案。" % path)
+    h = block_hash(blocks[-1])
+    if (me, h) in SIGN_RE.findall(text):
+        die("你已经对这一版提议改动(sha256:%s)签过字了。" % h)
+    line = "签字: %s sha256:%s\n" % (me, h)
+    (root / path).write_text(text + ("" if text.endswith("\n") or not text else "\n") + line, encoding="utf-8")
+    print("[结对协议] 已签字:%s sha256:%s(最后一个 diff 块)。签字随你这一回合的交接提交。" % (me, h))
+    return 0
+
+
+def _introducing_role(root, path, line):
+    """引入这一行的最早那个提交,正文第一行里的角色(㉒);找不到返回 None。"""
+    shas = (git("log", "-S" + line, "--format=%H", "--", path, cwd=root, check=False) or "").split()
+    if not shas:
+        return None
+    body = git("show", "-s", "--format=%b", shas[-1], cwd=root, check=False) or ""
+    first = body.strip("\n").split("\n", 1)[0] if body.strip() else ""
+    m = FIRST_LINE_ROLE_RE.search(first)
+    return m.group(1) if m else None
+
+
+def cmd_ratify(root, cfg, args):
+    if os.environ.get("PAIR_ROLE", "").strip() != "human":
+        die("ratify 是人类的批准命令,要显式写 PAIR_ROLE=human 运行。\n"
+            "agent 不得运行它 —— 冻结文件的最后一道是人类。")
+    path = args.proposal.strip()
+    plan, contract = cfg["plan_file"], cfg["contract_file"]
+    if not matches_any(path, cfg.get("proposal_paths") or []):
+        die("%s 不在提案目录(%s)下。" % (path, " ".join(cfg.get("proposal_paths") or []) or "没有配 proposal_paths"))
+    dirty = {p for _, p in changed_entries(root)}
+    if blob_sha(root, path) is None or path in dirty:
+        die("%s 要已提交、工作区里没有改动 —— 批准的是两个角色都看到过的那一版。" % path)
+    text = git("show", "HEAD:%s" % path, cwd=root, check=False) or ""
+    blocks = diff_blocks(text)
+    if not blocks:
+        die("%s 里没有 ```diff 围栏块,没有可批准的改动。" % path)
+    block = blocks[-1]
+    h = block_hash(block)
+    if h in RATIFIED_RE.findall(text):
+        die("这一版提议改动(sha256:%s)已经批准过了。" % h)
+    present = [r for r in ROLES if (r, h) in SIGN_RE.findall(text)]
+    missing = [r for r in ROLES if r not in present]
+    if missing:
+        die("缺少对最后一个 diff 块(sha256:%s)的已提交签字:%s。\n"
+            "签字绑的是这一版 diff;签了之后又追加过新块,或签了还没交接,都不算。" % (h, "、".join(missing)))
+    forged = [r for r in present if _introducing_role(root, path, "签字: %s sha256:%s" % (r, h)) != r]
+    if forged:
+        die("这些签字不是由本人的回合提交的:%s。一方不能替另一方签字。" % "、".join(forged))
+    touched = diff_paths(block)
+    stray = sorted(touched - {plan, contract})
+    if stray or not touched:
+        die("提议改动只能改 %s 与 %s,这一版还碰了:%s" % (plan, contract, " ".join(stray) or "(没有可识别的路径)"))
+    busy = sorted({plan, contract} & dirty)
+    if busy:
+        die("%s 在工作区里有未提交的改动,先处理掉再批准。" % " ".join(busy))
+    data = block.encode("utf-8")
+    check = subprocess.run(["git", "apply", "--check", "-"], cwd=str(root), input=data,
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if check.returncode != 0:
+        die("这一版提议改动应用不上(上下文对不上当前文件):\n%s\n"
+            "请 agent 按当前文件重新写一个 diff 块追加进提案,双方重新签字。"
+            % check.stdout.decode("utf-8", "replace").strip())
+    applied = subprocess.run(["git", "apply", "-"], cwd=str(root), input=data,
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if applied.returncode != 0:
+        die("git apply 失败:%s" % applied.stdout.decode("utf-8", "replace").strip())
+    current = _read(root / path)
+    (root / path).write_text(current + ("" if current.endswith("\n") else "\n") + "批准: 人类 sha256:%s\n" % h,
+                             encoding="utf-8")
+    paths = sorted(touched | {path})
+    git("add", "--", *paths, cwd=root)
+    git("commit", "-q", "-m", "chore(pair): 人类批准提案 %s" % path,
+        "-m", "签字: tester、dev(sha256:%s)\n改动: %s" % (h, " ".join(sorted(touched))), "--", *paths, cwd=root)
+    print("[结对协议] 已批准并应用 %s(sha256:%s),改了 %s。" % (path, h, " ".join(sorted(touched))))
+    if contract in touched:
+        print("契约变了:两个角色的开工前校验都要重跑。")
+    return 0
+
+
 def cmd_inbox(root, cfg, args):
     n = args.count
     print("=== 最近 %d 次交接 ===============================" % n)
@@ -4771,6 +4942,10 @@ def main(argv=None):
     p_ds.add_argument("--proposal", required=True, metavar="路径", help="提案目录下的那份提案")
     p_rs = sub.add_parser("resume", help="结束讨论,原样恢复挂起的工作项(两方都发过言之后)")
     p_rs.add_argument("conclusion", nargs="*", metavar="结论")
+    p_sg = sub.add_parser("sign", help="对提案里最后一个 diff 块签字")
+    p_sg.add_argument("proposal", metavar="提案")
+    p_rf = sub.add_parser("ratify", help="人类批准提案:核对双方签字后应用 diff(PAIR_ROLE=human)")
+    p_rf.add_argument("proposal", metavar="提案")
     p_dc = sub.add_parser("decline", help="拒绝发给你的代办")
     p_dc.add_argument("id", metavar="R<n>")
     p_dc.add_argument("reason", nargs="*", metavar="理由")
@@ -4790,6 +4965,8 @@ def main(argv=None):
         "decline": cmd_decline,
         "discuss": cmd_discuss,
         "resume": cmd_resume,
+        "sign": cmd_sign,
+        "ratify": cmd_ratify,
         "report": cmd_report,
         "whose-turn": cmd_whose_turn,
     }[args.cmd](root, cfg, args)
