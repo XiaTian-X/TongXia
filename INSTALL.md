@@ -412,6 +412,17 @@ python3 .agents/skills/pair-protocol/scripts/drive.py --both "claude -p"
 `docs/notes/<工作项ID>.md`(自由区,没有格式要求),再来问。不写的话,
 你的回答只进了一方的上下文,下一个回合它自己都可能忘了,对方更是从来不知道。
 
+### 批准 agent 提出的 PLAN/契约改动
+
+两个 agent 讨论出要改 PLAN 或契约时,会把确切的 diff 写进提案、各自签字。`status` 里出现"待人类批准的提案"时,读一遍那份提案,同意就跑:
+
+```
+PAIR_ROLE=human python3 .pair/enforcer.py ratify docs/proposals/<主题>.md
+```
+
+它会核对双方签字、diff 只改 PLAN 与契约、能干净应用,然后原样应用并提交;任何一项不过都什么都不改。
+契约改了之后两个角色要各自重跑 `verify-setup`。**协议认不出谁是人类** —— 这条命令只该由你来跑。
+
 ### 开工顺序
 
 1. 让**两个角色各跑一次** `pair.py verify-setup --drafter self|other`(`claim` 要求两份都作数)。

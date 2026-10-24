@@ -137,7 +137,7 @@ agent 被人类唤醒
 
 这是理解这个架构最重要的一张表:**哪些规则是脚本拦的,哪些只能靠留痕。**
 
-<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-once -->
+<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-once proposal-sign ratify-signed -->
 
 | 规则 | 强制方式 | 失效条件 |
 |---|---|---|
@@ -179,6 +179,9 @@ agent 被人类唤醒
 | 讨论回合只写散文 | 脚本拒绝(必须追加那份提案;代码、测试、改写已提交的都拒) | 写一句空话凑数 |
 | 双方发言才能恢复 | 脚本拒绝;恢复取挂起时记下的现场 | 对方写一句「同意」 |
 | 每项只进一次讨论 | 脚本拒绝(D4 再做成可配额度) | 改代码 |
+| 签字的条件 | 脚本拒绝(自己回合、非 idle、提案有 diff 块、不重复签) | 改代码 |
+| 批准的内容校验 | 脚本拒绝(双方对最后一个 diff 的签字已提交、由本人回合提交、只碰 PLAN 与契约、能干净应用) | 一方在对方回合之外伪造对方的协议提交 |
+| **批准只由人类执行** | ❌ 只有约定 + `PAIR_ROLE=human` + 提交主题留痕 | agent 自己设 `PAIR_ROLE=human` |
 | **代办不得表达分歧** | ❌ 只有 prose + 对方 decline(补计打回)+ `report` 被拒率 | 双方合谋把分歧当代办 |
 | **不许过拟合断言** | ❌ 只有 prose + 对方评审 | 双方都敷衍 |
 | **不许硬编码蒙混** | ❌ 只有 prose + 对方评审 | 双方都敷衍 |

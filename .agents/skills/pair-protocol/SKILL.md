@@ -43,6 +43,7 @@ python3 .agents/skills/pair-protocol/scripts/pair.py status
 | `pair.py claim <ID>` | 从 PLAN 认领一个工作项(只有 tester 能领) |
 | `pair.py handoff "说明"` | 每回合结尾。校验 → 提交 → 翻转回合 |
 | `pair.py inbox [N]` | 看对方上一回合做了什么,含它写给你的散文 |
+| `pair.py sign` | 对提案里最后一个 diff 块签字(讨论的结论要改 PLAN/契约时)。两方都签了等人类批准;**`ratify` 是人类的命令,永远不要运行** |
 | `pair.py discuss` / `resume` | 方向问题当场讨论:挂起工作项进入讨论阶段,两方都在提案里发过言后原样恢复。每个工作项一次,见 [references/rules.md](references/rules.md) |
 | `pair.py request` / `fulfill` / `decline` | 代办:请对方在它的路径里做一处机械改动(不交出回合、不计数),或办结、拒绝发给你的代办。**不得用来表达分歧**,见 [references/rules.md](references/rules.md) |
 | `pair.py verify-setup` | **开工前一次性**的只读校验,见下 |
