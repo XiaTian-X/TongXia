@@ -1279,8 +1279,10 @@ MUTATIONS = [
      '    state["after_rebound"] = sus["after_rebound"]\n',
      '    pass\n'),
 
+    # W69 的 spec 回合重锚:额度做成可配置,原来那一行(`if state["item"] in (state.get("discussed") or []):`)必然被改写,
+    # 照先例由 tester 定下新字面,dev 照写 —— 本项三个额度变异点锚在同一行上。
     ('讨论_每项一次不查',
-     '    if state["item"] in (state.get("discussed") or []):\n',
+     '    if used >= cfg["discuss_limit"]:\n',
      '    if False:\n'),
 
     ('讨论_discuss_不查篡改',
@@ -1328,6 +1330,15 @@ MUTATIONS = [
     ('批准_status_不列待批准',
      '    ripe = pending_ratification(root, cfg)              # W68',
      '    ripe = []              # W68'),
+
+    # W69 讨论额度(spec 回合登记,锚在 tester 定下的那一行新字面上)。
+    ('讨论_额度写死为_1',
+     '    if used >= cfg["discuss_limit"]:\n',
+     '    if used >= 1:\n'),
+
+    ('讨论_额度判定用大于',
+     '    if used >= cfg["discuss_limit"]:\n',
+     '    if used > cfg["discuss_limit"]:\n'),
 ]
 
 # unittest 的失败行有两种形态:
