@@ -252,7 +252,7 @@ pair.py handoff "<说明>"                                          # 讨论回�
 pair.py resume "<结论>"                                           # 结束讨论,原样恢复
 ```
 
-- **进入**:只在自己的回合、有工作项进行时(四个工作阶段)。要配 `proposal_paths`;提案在提案目录下,且本回合在里面新写或追加了内容;工作区只能有散文改动(提案、评审目录、记忆层),否则拒绝并点名;同一工作项只能进一次(D4 再做成可配额度)。挂起现场(原 `phase`、`last_actor`、`after_rebound`、`rebound_from`)记进 `discuss.suspended`,`phase` 改为 `discuss`,轮到对方;`item`、`changes_count`、代办不动。提交主题 `discuss: …`。
+- **进入**:只在自己的回合、有工作项进行时(四个工作阶段)。要配 `proposal_paths`;提案在提案目录下,且本回合在里面新写或追加了内容;工作区只能有散文改动(提案、评审目录、记忆层),否则拒绝并点名;同一工作项进入的次数不超过 `discuss_limit`(W69;默认 1、0 = 不允许;撞额度只拒绝这一次,不停轮转)。挂起现场(原 `phase`、`last_actor`、`after_rebound`、`rebound_from`)记进 `discuss.suspended`,`phase` 改为 `discuss`,轮到对方;`item`、`changes_count`、代办不动。提交主题 `discuss: …`。
 - **讨论回合**:`handoff` 在 discuss 阶段走单独一支 —— 执行者必须是 `discuss.turn`,本回合必须在那份提案里追加,只能写散文,已提交的提案与评审只能追加;不判红绿、不计数、不碰 `after_rebound` 与 `rebound_from`。
 - **退出**:`resume` 只在自己的讨论回合用,两个角色都发过言(本回合追加了提案算本回合这一方)才行;把挂起现场原样写回,结论进正文,工作项记进 `discussed`。提交主题 `discuss(resume): …`。
 - `discuss` 与 `resume` 开头先查状态篡改(W67 spec 回合带声明补 ㉑)。讨论相关的提交正文不含交接那一行,`report` 不把它们算成交接。
@@ -396,6 +396,7 @@ PAIR_ROLE=human pair.py ratify docs/proposals/<主题>.md   # 人类:核对后�
 | `roles.tester` | string[] | `["tests"]` | tester 可写路径/glob。**与 dev 不得重叠** |
 | `roles.dev` | string[] | `["src"]` | dev 可写路径/glob |
 | `shared_paths` | string[] | `["docs/reviews"]` | 双方任何阶段都能写。异议举证认这里 |
+| `discuss_limit` | int | `1` | 每个工作项最多进几次 discuss(W69,P0-5 的 D4)。0 = 不允许。撞上额度只拒绝这一次 discuss,不停止轮转;`verify-setup` 要求非负整数 |
 | `proposal_paths` | string[] | `[]` | 提案目录(W66,P0-5 的 D1):除 idle 外四个阶段两个角色都能写;已提交的顶层 `.md` 只能追加。**不是** `shared_paths`:异议举证、打回的位置引用、评审命名、`--doc-reason` 都不认它;对 `scope` 豁免、不进 W57 指纹,`inbox` 摆出原文,交接正文写一行 `提案:`。默认不启用,`init` 给新项目写 `["docs/proposals"]` |
 | `frozen_paths` | string[] | `["docs/PLAN.md","docs/CONTRACT.md",".agents",".claude",".pair"]` | agent 一律不得修改 |
 | `ignore_paths` | string[] | `[]` | 完全不参与边界检查的构建副产物 |
@@ -469,7 +470,7 @@ PAIR_ROLE=human pair.py ratify docs/proposals/<主题>.md   # 人类:核对后�
 | `full_failures` | string[]\|null | 上一次全量里红着的用例 ID(排序列表,W59)。`verify-setup` 跑全量且读得出 `full_test_report` 时写入,每次工作项完成时更新;完成时新增的红 = 这一次红着的 − 它。不知道时为 `null`(没配报告、报告读不出、老状态),那时完成照旧只报告 |
 | `item_base` | string\|null | 认领那一刻的 HEAD(W60)。`affected_test_cmd` 的路径从它算起;老状态没有它时门禁用 `test_cmd` |
 | `discuss` | object\|null | 讨论阶段的现场(W67,§5.6):`{proposal, why, opened_by, turn, spoke, suspended}`;不在讨论时为 `null` |
-| `discussed` | string[] | 进过 discuss 的工作项 ID(同一工作项只能进一次);`claim` 不清 |
+| `discussed` | string[] | 每次 `resume` 记一次工作项 ID(可重复,W69)。进入时按当前工作项的出现次数与 `discuss_limit` 比;`claim` 不清 |
 | `requests` | object[] | 本工作项的代办(W65,§5.5)。每条 `{id, item, by, to, paths, what, reason, base, status, carried}`,`status` 为 open / fulfilled / declined;`claim` 时清空;老状态没有它 = 没有代办 |
 
 **全量跑过的用例不在状态里**,在协议产物 `.pair/full-baseline.json`(W61):`{"executed": [...]}`,排序、一行一条,

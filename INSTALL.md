@@ -317,7 +317,7 @@ vitest 用 `npx vitest related {paths} --run`;pytest-testmon 这类自己判断�
 
 **可选:提案目录**(`proposal_paths`,`init` 给新项目写 `["docs/proposals"]`,存量项目默认不开)。
 做的过程中发现「超出本工作项范围」的方向问题,任何一方、任何工作阶段都能写进去,交给人类排期;已提交的只能追加。
-它不算评审也不算异议。开之前同样有一条硬约束,`verify-setup` 会替你查:**不能与 `roles`、`shared_paths`、`frozen_paths`、
+它不算评审也不算异议。配了提案目录,两个 agent 还能用 `discuss` 挂起工作项当场讨论方向问题,每个工作项最多 `discuss_limit` 次(默认 1,0 = 不允许;`report` 会提示"从未讨论"与"偏高"两种相反的情况)。开之前同样有一条硬约束,`verify-setup` 会替你查:**不能与 `roles`、`shared_paths`、`frozen_paths`、
 `ignore_paths`、记忆层重叠** —— 落进角色路径就成了单方的,落进 `shared_paths` 会冒充异议。
 
 **存量项目可以先关掉**:`"memory": false`,四个强制时刻全部失效,`status`
