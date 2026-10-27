@@ -173,6 +173,7 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "discuss-quota",         # 同一工作项进 discuss 的次数不超过 discuss_limit(W67 起每项一次,W69 可配)
     "proposal-sign",         # 签字:自己回合、非 idle、提案在提案目录且有 diff 块、不重复签(W68)
     "ratify-signed",         # 批准:PAIR_ROLE=human、双方对最后一个 diff 已提交的签字由本人回合提交、只碰 PLAN 与契约、能干净应用(W68)
+    "contract-change-tier",  # --contract-change 只放行契约的纯追加;PLAN 的改动与契约的改写走提案签字与人类批准(W70)
 )
 
 
@@ -2579,6 +2580,20 @@ def cmd_handoff(root, cfg, args):
     # W37:提交前算好(提交之后就没有"相对 HEAD 的新增行"了),交接成功后再打印。
     combining = combining_in_new_lines(root, cfg, entries)
 
+    # --- 承重文件的修改分级(W70,P1-9 强版本)---------------------------------
+    # 契约的纯追加(本仓库几乎每轮都有的「补充」)照旧带声明落笔、对方当场重校验;PLAN 的任何改动是方向,
+    # 契约的改写是删掉或改掉已有条款 —— 这两类要人类把关,走提案的签字与 ratify(W68)。
+    if args.contract_change:
+        tiered = [p for _, p in entries
+                  if p == cfg["plan_file"] or (p == cfg["contract_file"] and has_rewrite(root, p))]
+        if tiered:
+            die("拒绝交接 —— 带 --contract-change 只能往契约里**追加**(只加不删)。这些改动要人类批准:\n  %s\n\n"
+                "PLAN 的任何改动是方向,契约的改写会删掉或改掉已有条款。正式通道:\n"
+                "  1. 撤回这些改动,把要改的内容写成一段 diff,追加进提案目录下的一份提案;\n"
+                "  2. 你和对方各在自己的回合 `sign` 那份提案;\n"
+                "  3. 告诉人类:PAIR_ROLE=human python3 %s ratify <提案>"
+                % ("\n  ".join(sorted(set(tiered))), PROG_HINT))
+
     # --- 写权限边界校验 ---------------------------------------------------
     allowed = writable_paths(cfg, phase)
     appendable = review_append_paths(cfg, phase)
@@ -2601,7 +2616,9 @@ def cmd_handoff(root, cfg, args):
         hit_frozen = next((f for f in cfg["frozen_paths"]
                            if path_matches(path, f)), None)
         if hit_frozen is not None:
-            violations.append((path, "冻结路径 %s 之下,agent 不得修改" % hit_frozen))
+            violations.append((path, "冻结路径 %s 之下,agent 不得修改" % hit_frozen + (
+                "。往契约里追加可以带 --contract-change;改写契约或改 PLAN 走提案的签字与人类 ratify"
+                if path in named_frozen else "")))
             continue
         # 只追加路径(W16):不进 allowed,在这里单独判,判完就不再走越界那一道。
         if matches_any(path, appendable):
