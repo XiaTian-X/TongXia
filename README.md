@@ -111,7 +111,7 @@ CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交�
 | [协议规格](docs/protocol-spec.md) | 状态机、17 条不变量、配置与状态 schema |
 | [命令参考](docs/command-reference.md) | 全部命令的参数、前置条件、退出码 |
 | [同类工作调研](docs/prior-art.md) | the-pair / TDD Guard / AgentCoder / Adversarial Review / Spec Kit / BMAD …… |
-| [决策记录](docs/design-decisions.md) | 24 条 ADR,多数写了否掉的方案(偏差登记在开头) |
+| [决策记录](docs/design-decisions.md) | 25 条 ADR,多数写了否掉的方案(偏差登记在开头) |
 | [改进提案](docs/improvements.md) | 从调研里提炼的路线图,以及明确不做的清单 |
 | [故障排查](docs/troubleshooting.md) | 报错怎么办,以及那些不报错但更危险的现象 |
 | [贡献指南](docs/contributing.md) | 单一真源纪律、新增防护的五步 |
