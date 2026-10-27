@@ -174,6 +174,8 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "proposal-sign",         # 签字:自己回合、非 idle、提案在提案目录且有 diff 块、不重复签(W68)
     "ratify-signed",         # 批准:PAIR_ROLE=human、双方对最后一个 diff 已提交的签字由本人回合提交、只碰 PLAN 与契约、能干净应用(W68)
     "contract-change-tier",  # --contract-change 只放行契约的纯追加;PLAN 的改动与契约的改写走提案签字与人类批准(W70)
+    "decision-overturn",     # 带 `推翻:` 的决策只在 resume 时写,引用要正好对上一条已有条目,不重复推翻(W71)
+    "discuss-decision-format",  # 讨论回合的三个入口与正常交接同一套决策校验(W71)
 )
 
 
@@ -1069,7 +1071,11 @@ def flow_of(item_type):
 DECISION_HEAD_RE = re.compile(
     r"^##[ \t]+(?P<id>\S+)[ \t]*[—–-]{1,2}[ \t]*(?P<title>.+?)[ \t]*$", re.M)
 _FIELD_LINE_RE = re.compile(
-    r"^\s*[-*]\s*(理由|已否决|影响路径)\s*[::]\s*(.*)$")
+    r"^\s*[-*]\s*(理由|已否决|影响路径|推翻)\s*[::]\s*(.*)$")
+# W71:可选字段,可以有多行。`推翻` 也在上面那条里 —— 不认它,它会被当成上一个字段的续行混进 `影响路径`。
+OVERTURN_LINE_RE = re.compile(r"^\s*[-*]\s*推翻\s*[::]\s*(.*?)\s*$", re.M)
+# 引用写成标题行去掉 `## ` 的样子,分隔符与标题行同一条宽容规则。
+OVERTURN_REF_RE = re.compile(r"^(?P<id>\S+)[ \t]*[—–-]{1,2}[ \t]*(?P<title>.+?)[ \t]*$")
 
 DECISION_FORMAT_HINT = """条目格式(四个字段缺一不可):
 
@@ -1078,6 +1084,7 @@ DECISION_FORMAT_HINT = """条目格式(四个字段缺一不可):
   - 理由: <为什么是这个结论,具体到会导致什么错误行为>
   - 已否决: <考虑过但放弃的方案和放弃原因 —— 这是本文件最值钱的字段>
   - 影响路径: `src/foo.py`, `tests/test_foo.py`
+  - 推翻: W3 — <旧条目的结论原文>   (可选,可多行;只在讨论结束 resume 时写)
 
 `影响路径` 是检索键:今后谁要动这些路径,status 会自动把这条结论摆到他面前。
 故意没有"分析"字段 —— 只共享事实和裁决,不共享推理过程。"""
@@ -1367,6 +1374,31 @@ def decision_paths(body):
             if t.strip().strip("`,,、")]
 
 
+def overturn_refs(body):
+    """条目里每一行 `推翻:` 的原文。"""
+    return [m.group(1) for m in OVERTURN_LINE_RE.finditer(body)]
+
+
+def parse_overturn_ref(raw):
+    """`推翻:` 的值 -> (id, 标题);认不出(比如只写了 ID)返回 None。可带前导 `## `,可用反引号包住。"""
+    text = re.sub(r"^#+[ \t]*", "", raw.strip().strip("`").strip())
+    m = OVERTURN_REF_RE.match(text)
+    return (m.group("id"), m.group("title")) if m else None
+
+
+def overturned_by(entries, skip=None):
+    """{被推翻条目的 (id, 标题): 推翻它的那一条的 (id, 标题)}。skip 是要略过的条目起点(判重复推翻时不算正在写的这条)。"""
+    out = {}
+    for eid, title, body, start, _ in entries:
+        if start == skip:
+            continue
+        for raw in overturn_refs(body):
+            key = parse_overturn_ref(raw)
+            if key:
+                out.setdefault(key, (eid, title))
+    return out
+
+
 def validate_decision(title, body):
     problems = []
     if not title:
@@ -1433,8 +1465,12 @@ def relevant_decisions(root, cfg, state, phase):
     """
     entries = parse_decisions(_read(root / cfg["decisions_file"]))
     subj = subject_paths(cfg, phase)
+    # W71:先跳过被推翻的再取最后几条 —— 被推翻的留在文件里,但不占注入预算。
+    dead = overturned_by(entries)
     picked = []
     for eid, title, body, _, _ in entries:
+        if (eid, title) in dead:
+            continue
         if eid == state["item"] or any(matches_any(p, subj)
                                        for p in decision_paths(body)):
             picked.append((eid, title, body))
@@ -1488,30 +1524,31 @@ def no_decision_is_read(root, cfg, state, target):
     return len(note) >= MIN_NOTE_PROMOTE_CHARS and not settled
 
 
-def check_memory(root, cfg, state, phase, verdict, target, args):
-    """记忆层门禁。返回拒绝理由;None 表示放行。"""
-    if not memory_on(cfg):
-        return None
-    item = state["item"]
+def decision_violation(root, cfg, at_resume):
+    """决策记录的写入校验:追加式、写了却不构成条目、格式与长度、`推翻:`(W71)。
+    正常交接与讨论回合的三个入口共用 —— 讨论回合以前不经过这里,能改写已有条目。
+    返回拒绝说明(不带"拒绝交接"之类的前缀,由调用方加);None 表示放行。"""
     dfile = cfg["decisions_file"]
 
     # --- 追加式:能往后加,不能改历史 -----------------------------------
     old = decisions_at_head(root, cfg)
     if old and not _read(root / dfile).startswith(old):
-        return ("拒绝交接 —— 你改动了 %s 里已经写下的内容。\n\n"
+        return ("你改动了 %s 里已经写下的内容。\n\n"
                 "决策记录是追加式的。已有条目是双方共识的凭据,改它等于伪造共识,\n"
                 "和手工改 %s 同级。\n\n"
-                "要推翻旧结论,**追加**一条新条目说明为什么推翻,不要动旧的。"
+                "要推翻旧结论:进 discuss,两方都发过言之后在 resume 时**追加**一条带\n"
+                "`- 推翻: <旧条目的完整标题>` 的新条目。旧条目原样留着,status 不再读它。"
                 % (dfile, STATE_REL))
 
+    cur = _read(root / dfile)
     fresh = new_decision_entries(root, cfg)
 
     # --- 写了东西却没构成条目 -------------------------------------------
     # 最坏的结果不是被拒绝,是写下去却没人认得 —— agent 以为自己记录了,
     # 而 status 永远召回不到它。宁可在这里吵一次。
-    added = _read(root / dfile)[len(old):].strip()
+    added = cur[len(old):].strip()
     if added and not fresh:
-        return ("拒绝交接 —— 你往 %s 写了内容,但它不构成一条决策条目,\n"
+        return ("你往 %s 写了内容,但它不构成一条决策条目,\n"
                 "解析不出来的东西 status 永远召回不到,等于没写。\n\n"
                 "(如果这只是 init 刚铺下的骨架,让人类先把它提交进去。)\n\n%s"
                 % (dfile, DECISION_FORMAT_HINT))
@@ -1520,9 +1557,44 @@ def check_memory(root, cfg, state, phase, verdict, target, args):
     for eid, title, body, _, _ in fresh:
         problems = validate_decision(title, body)
         if problems:
-            return ("拒绝交接 —— %s 里的新条目「%s」不合格:\n  - %s\n\n%s"
+            return ("%s 里的新条目「%s」不合格:\n  - %s\n\n%s"
                     % (dfile, eid or "(无ID)", "\n  - ".join(problems),
                        DECISION_FORMAT_HINT))
+
+    # --- 推翻:讨论的产出,只认 HEAD 里已有的条目 -----------------------
+    with_refs = [e for e in fresh if overturn_refs(e[2])]
+    if not with_refs:
+        return None
+    if not at_resume:
+        return ("新条目「%s — %s」带了 `推翻:`。推翻旧决策是一次讨论的产出,只在讨论结束时写:\n"
+                "先 discuss,两方都发过言之后 resume 时再追加这条。本回合把它从 %s 里拿掉。"
+                % (with_refs[0][0], with_refs[0][1], dfile))
+    head_keys = [(e[0], e[1]) for e in parse_decisions(old)]
+    entries = parse_decisions(cur)
+    for eid, title, body, start, _ in with_refs:
+        dead = overturned_by(entries, skip=start)
+        for raw in overturn_refs(body):
+            key = parse_overturn_ref(raw)
+            if key is None or head_keys.count(key) != 1:
+                return ("新条目「%s — %s」的 `推翻: %s` 对不上 %s 里已提交的任何一条。\n"
+                        "要写旧条目的完整标题(`ID — 结论原文`,ID 不唯一,只写 ID 不行);本回合新写的条目不能被推翻。"
+                        % (eid, title, raw, dfile))
+            if key in dead:
+                return ("新条目「%s — %s」要推翻的「%s — %s」已经被「%s — %s」推翻过了,不用再推翻一次。"
+                        % ((eid, title) + key + dead[key]))
+    return None
+
+
+def check_memory(root, cfg, state, phase, verdict, target, args):
+    """记忆层门禁。返回拒绝理由;None 表示放行。"""
+    if not memory_on(cfg):
+        return None
+    item = state["item"]
+    dfile = cfg["decisions_file"]
+    bad = decision_violation(root, cfg, at_resume=False)
+    if bad:
+        return "拒绝交接 —— " + bad
+    fresh = new_decision_entries(root, cfg)
 
     mine = [e for e in fresh if e[0] == item]
     settled = [e for e in parse_decisions(_read(root / dfile)) if e[0] == item]
@@ -3272,6 +3344,15 @@ def _prose_only(root, cfg, entries):
     return bad
 
 
+def _discuss_decisions(root, cfg, what, at_resume):
+    """讨论回合的决策校验,与正常交接同一套(W71);`推翻:` 只在 resume 放行。"""
+    if not memory_on(cfg):
+        return
+    bad = decision_violation(root, cfg, at_resume)
+    if bad:
+        die("拒绝 %s —— %s" % (what, bad))
+
+
 def _commit_prose(root, entries, subject, body):
     paths = sorted(set([STATE_REL] + [p for _, p in entries]))
     git("add", "-A", "--", *paths, cwd=root)
@@ -3315,6 +3396,7 @@ def cmd_discuss(root, cfg, args):
     rewritten = [p for _, p in entries if proposal_rewrite(root, cfg, p) or review_rewrite_violation(root, cfg, p)]
     if rewritten:
         die("拒绝 discuss —— 已提交的内容只能追加:%s" % " ".join(rewritten))
+    _discuss_decisions(root, cfg, "discuss", at_resume=False)
     other = [r for r in ROLES if r != me][0]
     state["discuss"] = {"proposal": proposal, "why": why, "opened_by": me, "turn": other, "spoke": [me],
                         "suspended": {"phase": phase, "last_actor": state["last_actor"],
@@ -3346,6 +3428,7 @@ def discuss_handoff(root, cfg, args, me, state):
     bad = _prose_only(root, cfg, entries)
     if bad:
         die("拒绝交接 —— %s" % ";".join(bad))
+    _discuss_decisions(root, cfg, "交接", at_resume=False)
     other = [r for r in ROLES if r != me][0]
     d["spoke"] = sorted(set(d["spoke"]) | {me}, key=ROLES.index)
     d["turn"] = other
@@ -3380,6 +3463,7 @@ def cmd_resume(root, cfg, args):
     bad = _prose_only(root, cfg, entries)
     if bad:
         die("拒绝 resume —— %s" % ";".join(bad))
+    _discuss_decisions(root, cfg, "resume", at_resume=True)
     sus = d["suspended"]
     state["phase"] = sus["phase"]
     state["last_actor"] = sus["last_actor"]
