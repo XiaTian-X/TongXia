@@ -829,3 +829,8 @@
 - 理由: 人类选择做 D4,把 P0-5 收尾。额度做成配置键,默认 1 与 D2 已落地的行为一致;`discussed` 改为可重复计数,老状态每项最多 1 次,含义不变。撞上额度只拒绝这一次 discuss、不停止轮转:死锁闸停轮转是因为双方谈不拢,额度用完时工作项本身还能做 —— 撞额度就停,一方再提一次 discuss 就能让双方都停下,等于把逃生口反过来用。`report` 的讨论频次给判定而不只给数:从不讨论与讨论过多是两种相反的病,没有提示就没人看;样本不足时沿用 `MIN_SAMPLE` 只给数。讨论次数只认正文第一行 `discuss=open` 的提交,讨论回合与恢复不计。
 - 已否决: 撞额度就停轮转 —— 一方能借此让双方都停下;默认额度改成 2 —— 改变已落地行为,老项目静默多一次;只出一个数、不给判定 —— 两种病都没有提示。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `INSTALL.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W69 — 额度与死锁闸同构在"可配、有上限",不在"撞上就停";频次要给判定
+
+- 理由: D2 把讨论额度写死成每项一次,D4 做成 `discuss_limit`(默认 1 与已落地的一致,0 = 不允许),`discussed` 改为每次 resume 记一次、按出现次数比。撞上额度只拒绝这一次 discuss,不改状态、不停轮转:死锁闸停轮转是因为双方谈不拢、工作项走不下去;额度用完时工作项本身还能做,停轮转反而让一方靠再提一次讨论就让双方都停下。`report` 只认正文第一行 `discuss=open` 的提交,认领满 `MIN_SAMPLE` 才判"从未讨论"(方向问题可能被压下)与"偏高"(规划可能太粗,讨论 × 2 > 认领;恰好一半不判)—— 两种相反的病都要有提示才有人看。至此 P0-5(D1–D4)落地,P0-6、P1-9 强版本、P1-11 可以复用这套机制。
+- 已否决: 撞额度就停轮转 —— 逃生口被反过来用;默认额度改成 2 —— 已落地行为静默改变;按子串数讨论 —— 讨论回合、恢复与人写的主题都会被算进去。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_discuss_quota.py`, `docs/protocol-spec.md`, `docs/command-reference.md`

@@ -913,7 +913,7 @@
 > 人类选择做 D4,把 P0-5 收尾(D1 提案目录、D2 挂起与恢复、D3 签字与人类批准已落地)。D2 把额度写死成每项一次,这里做成可配置;
 > `report` 统计讨论频次 ——"从不进 discuss 和频繁进 discuss 是两种相反的病"。规划经 dev 自审后人类批准(2026-10-24),授权 dev 代笔立项。
 
-- [ ] **W69** [feature] — `discuss_limit` 与 `report` 的讨论频次
+- [x] **W69** [feature] — `discuss_limit` 与 `report` 的讨论频次
   - **来源**:路线图 P0-5 的 D4(分轮计划「P0-5 必须拆成四步」)
   - 验收标准:①新配置键 `discuss_limit`(每个工作项最多进几次 discuss),默认 1、0 表示不允许;`discussed` 每次 resume 记一次工作项 ID(可重复),
     进入时本工作项已记次数 ≥ `discuss_limit` 就拒绝,文案指向写提案交人类或由人类调高 `discuss_limit`;撞上额度只拒绝这一次 discuss,不停止轮转;

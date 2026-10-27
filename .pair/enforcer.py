@@ -170,7 +170,7 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "discuss-open",          # 进 discuss:自己回合、有工作项、提案本回合有发言、工作区只有散文(W67)
     "discuss-prose-only",    # 讨论回合只写散文,且必须在那份提案里追加(W67)
     "discuss-resume",        # 两个角色都发过言才能恢复;恢复取挂起时的现场(W67)
-    "discuss-once",          # 同一工作项只能进一次 discuss(W67;D4 再做成可配额度)
+    "discuss-quota",         # 同一工作项进 discuss 的次数不超过 discuss_limit(W67 起每项一次,W69 可配)
     "proposal-sign",         # 签字:自己回合、非 idle、提案在提案目录且有 diff 块、不重复签(W68)
     "ratify-signed",         # 批准:PAIR_ROLE=human、双方对最后一个 diff 已提交的签字由本人回合提交、只碰 PLAN 与契约、能干净应用(W68)
 )
@@ -341,6 +341,8 @@ def load_config(root, required=True):
     cfg.setdefault("shared_paths", ["docs/reviews"])
     # W66:提案目录。默认不启用 —— 默认目录可能与老项目的角色路径重叠,一上来就让 verify-setup 判失败。
     cfg.setdefault("proposal_paths", [])
+    # W69:每个工作项最多进几次 discuss。默认 1 与 W67 已落地的行为一致;0 = 不允许。
+    cfg.setdefault("discuss_limit", 1)
     cfg.setdefault("frozen_paths", [])
     cfg.setdefault("ignore_paths", [])
     # 本轮结对能碰的范围。空 = 不限。存量项目最危险的不是结构不合适,
@@ -1831,6 +1833,11 @@ def cmd_status(root, cfg, args):
         print("协议状态文件由脚本维护,任何人手工修改都是违规的。")
         print("下次 handoff 会拒绝交接并还原它。")
 
+    if cfg.get("proposal_paths") and state["item"]:     # W69:剩余讨论额度
+        used = (state.get("discussed") or []).count(state["item"])
+        print(" 讨论额度 : 本工作项还剩 %d 次(discuss_limit = %s)"
+              % (max(0, cfg["discuss_limit"] - used), cfg["discuss_limit"]))
+
     if phase == DISCUSS and state.get("discuss"):     # W67
         d = state["discuss"]
         print()
@@ -3272,9 +3279,13 @@ def cmd_discuss(root, cfg, args):
     proposal = args.proposal.strip()
     if not matches_any(proposal, cfg["proposal_paths"]):
         die("%s 不在提案目录(%s)下。讨论要写在一份提案里。" % (proposal, " ".join(cfg["proposal_paths"])))
-    if state["item"] in (state.get("discussed") or []):
-        die("工作项 %s 已经进过一次 discuss,同一工作项只能进一次。\n"
-            "还有没谈完的方向问题,写进提案交给人类排期。" % state["item"])
+    # W69:额度可配。撞上额度只拒绝这一次 discuss,不停轮转 —— 额度用完时工作项本身还能做;
+    # 撞额度就停,一方再提一次 discuss 就能让双方都停下,等于把逃生口反过来用。
+    used = (state.get("discussed") or []).count(state["item"])
+    if used >= cfg["discuss_limit"]:
+        die("工作项 %s 的讨论额度已用完(已进 %d 次,discuss_limit = %d)。\n"
+            "还有没谈完的方向问题:写进提案交给人类排期;或者由人类在 %s 里调高 discuss_limit。"
+            % (state["item"], used, cfg["discuss_limit"], CONFIG_REL))
     if not _appended(root, proposal):
         die("本回合没有在 %s 里写下开场陈述。先把问题写进提案,再 discuss。" % proposal)
     entries = _turn_entries(root, cfg)
@@ -3729,6 +3740,7 @@ def cmd_report(root, cfg, args):
 
     reviews = changes = disputes = 0
     requests_n = declined_n = 0         # W65:代办次数与被拒数
+    discussions = ratified = 0          # W69:进讨论的次数、人类批准的提案
     claimed = deadlocks = no_decision = contract_changes = 0
     idle_rounds = unjudged = 0          # W14:空转的 impl 回合 / 没有判定行的 impl 回合
     finished = 0                        # W20:区间里把工作项推进到完成的交接
@@ -3747,6 +3759,10 @@ def cmd_report(root, cfg, args):
         elif subject.startswith("chore(pair): 拒绝代办 ") or (
                 DEADLOCK_SUBJECT_RE.match(subject) and DECLINE_LINE_RE.search(body)):
             declined_n += 1
+        if subject.startswith("discuss:") and body.strip("\n").startswith("discuss=open "):
+            discussions += 1                            # W69:只认进入;讨论回合与恢复不算
+        if subject.startswith("chore(pair): 人类批准提案 "):
+            ratified += 1
         if subject.startswith("chore(pair): 认领工作项"):
             claimed += 1
         if DEADLOCK_SUBJECT_RE.match(subject):
@@ -3806,6 +3822,13 @@ def cmd_report(root, cfg, args):
         _flag("死锁工作项占比", dl_rate, claimed >= MIN_SAMPLE))
     row("测试异议", "%d 次" % disputes, "—")
     # W65:被拒率高说明代办正在被当成打回用 —— 那是误用的信号。
+    # W69:从不讨论与讨论过多是两种相反的病 —— 前者方向问题可能被压下,后者规划可能太粗。
+    row("讨论", "%d" % discussions, "—")
+    row("讨论 / 认领", "%d / %d" % (discussions, claimed),
+        ("?  从未讨论(方向问题可能被压下)" if not discussions
+         else "!  偏高(规划可能太粗)" if discussions * 2 > claimed else "—")
+        if claimed >= MIN_SAMPLE else "—")
+    row("人类批准的提案", "%d" % ratified, "—")
     row("代办", "%d 次" % requests_n, "—")
     row("代办被拒率", _fmt_rate(declined_n, requests_n), "—")
     row("决策/完成项", "%d / %d" % (decisions, done),
@@ -4649,6 +4672,11 @@ def cmd_verify_setup(root, cfg, args):
             bad("记忆层路径落在 shared_paths 之下。这会让"
                 "\n      「异议必须写下来」那条检查被随手写的笔记满足,"
                 "\n      等于静默削掉一条现有防护。请把它们配成互不包含的路径。")
+
+    # --- 讨论额度是非负整数(W69)--------------------------------------------------
+    lim = cfg.get("discuss_limit")
+    if isinstance(lim, bool) or not isinstance(lim, int) or lim < 0:
+        bad("discuss_limit 必须是非负整数(每个工作项最多进几次 discuss,0 = 不允许),现在是 %r" % (lim,))
 
     # --- 提案目录不与任何别的路径类别重叠(W66)----------------------------------
     for key, pats in proposal_overlaps(cfg):
