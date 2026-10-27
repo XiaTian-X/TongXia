@@ -68,10 +68,14 @@ class TestFrozenNeedsDeclaration(FrozenBase):
         self.touch_contract()
         self.assertAccepted(self.full())
 
-    def test_带声明改_PLAN_放行(self):
+    def test_带声明改_PLAN_被拒_改走提案批准(self):
+        """第四十一轮 W70 起:PLAN 的任何改动(纯追加也算)不再凭 `--contract-change` 落笔,走提案的签字与人类 `ratify`。
+        (第四轮 W9 这里是"放行";分级之后反过来,详见 `test_v1_contract_tiers`。)"""
         self.claim()
         self.repo.write(PLAN, self.repo.read(PLAN) + "\n- 备注一句\n")
-        self.assertAccepted(self.full())
+        before = self.repo.commit_count()
+        self.assertRefused(self.full(), "提案", "ratify")
+        self.assertEqual(self.repo.commit_count(), before)
 
     def test_声明进提交正文(self):
         self.claim()

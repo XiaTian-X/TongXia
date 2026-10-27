@@ -112,14 +112,15 @@ class TestShortcutNotTaken(ShortcutBase):
         self.assertAccepted(self.spec_handoff(*DECISION_ARGS))
         self.assertEqual(self.phase(), "impl")
 
-    def test_这一回合改了规划_照旧进_impl(self):
-        """规划文件的变化不改变契约的 sha —— "按改动判"那一条要单独管它。"""
+    def test_这一回合改规划_带声明也被拒(self):
+        """第四十一轮 W70 起 PLAN 不能凭 `--contract-change` 在回合里改(走提案的签字与人类 `ratify`),
+        这一回合"改了规划却走捷径"的路径不复存在:交接直接被拒、停在 spec。契约那一条(`test_这一回合改了契约_照旧进_impl`)照旧守着"按改动判"。"""
         self.rebound_from_review_test()
         self.fix_tests_green()
         self.repo.write(PLAN, self.repo.read(PLAN) + "\n")
         self.repo.append_decision("W1", title="规划补一行")
-        self.assertAccepted(self.spec_handoff(*DECISION_ARGS))
-        self.assertEqual(self.phase(), "impl")
+        self.assertRefused(self.spec_handoff(*DECISION_ARGS), "ratify")
+        self.assertEqual(self.phase(), "spec")
 
     def test_打回之后契约被人提交过_照旧进_impl(self):
         """**只看这一回合的改动看不见它。** 第五轮 W15 那一节就是这样提交的(`e62bdf5`)。"""
