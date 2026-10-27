@@ -1370,6 +1370,59 @@ MUTATIONS = [
     ('分级_冻结文案不指向批准',
      '                if path in named_frozen else "")))',
      '                if False else "")))'),
+
+    # --- W71 决策的推翻(第四十二轮)---------------------------------------
+    ('推翻_注入不跳过被推翻的',
+     '        if (eid, title) in dead:\n            continue\n',
+     '        if False:\n            continue\n'),
+
+    ('推翻_正常交接放行',
+     '    bad = decision_violation(root, cfg, at_resume=False)\n',
+     '    bad = decision_violation(root, cfg, at_resume=True)\n'),
+
+    ('推翻_讨论回合的_handoff_放行',
+     '    _discuss_decisions(root, cfg, "交接", at_resume=False)\n',
+     '    _discuss_decisions(root, cfg, "交接", at_resume=True)\n'),
+
+    ('推翻_discuss_开场放行',
+     '    _discuss_decisions(root, cfg, "discuss", at_resume=False)\n',
+     '    _discuss_decisions(root, cfg, "discuss", at_resume=True)\n'),
+
+    ('推翻_讨论回合不做决策校验',
+     '    bad = decision_violation(root, cfg, at_resume)\n',
+     '    bad = None\n'),
+
+    ('推翻_引用不校验',
+     '            if key is None or head_keys.count(key) != 1:\n',
+     '            if False:\n'),
+
+    ('推翻_本回合新写的也能被推翻',
+     '    head_keys = [(e[0], e[1]) for e in parse_decisions(old)]\n',
+     '    head_keys = [(e[0], e[1]) for e in parse_decisions(cur)]\n'),
+
+    ('推翻_不判重复推翻',
+     '            if key in dead:\n',
+     '            if False:\n'),
+
+    ('推翻_判重复时算上自己',
+     '        dead = overturned_by(entries, skip=start)\n',
+     '        dead = overturned_by(entries)\n'),
+
+    ('推翻_判重复只看_HEAD',
+     '        dead = overturned_by(entries, skip=start)\n',
+     '        dead = overturned_by(parse_decisions(old))\n'),
+
+    ('推翻_字段解析不认推翻',
+     '    r"^\\s*[-*]\\s*(理由|已否决|影响路径|推翻)\\s*[::]\\s*(.*)$")\n',
+     '    r"^\\s*[-*]\\s*(理由|已否决|影响路径)\\s*[::]\\s*(.*)$")\n'),
+
+    ('推翻_引用不去井号与反引号',
+     '    text = re.sub(r"^#+[ \\t]*", "", raw.strip().strip("`").strip())\n',
+     '    text = raw.strip()\n'),
+
+    ('推翻_格式提示不提推翻',
+     '  - 推翻: W3 — <旧条目的结论原文>   (可选,可多行;只在讨论结束 resume 时写)\n',
+     ''),
 ]
 
 # unittest 的失败行有两种形态:

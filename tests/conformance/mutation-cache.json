@@ -1,5 +1,5 @@
 {
-  "baseline": "698ce8f09535d8a4",
+  "baseline": "b87858f3d2d5bf9f",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -642,6 +642,45 @@
     ],
     "捷径的契约在打回时才记": [
       "test_v1_rebound_shortcut.TestShortcutNotTaken.test_review_test_期间契约被人提交过_照旧进_impl"
+    ],
+    "推翻_discuss_开场放行": [
+      "test_v1_decision_overturn.TestOnlyAtResume.test_discuss_开场被拒"
+    ],
+    "推翻_不判重复推翻": [
+      "test_v1_decision_overturn.TestAlreadyOverturned.test_重复推翻被拒_点名已推翻它的那一条"
+    ],
+    "推翻_判重复只看_HEAD": [
+      "test_v1_decision_overturn.TestSameTurnDoubleOverturn.test_同一回合两条新条目推翻同一条被拒"
+    ],
+    "推翻_判重复时算上自己": [
+      "test_v1_decision_overturn.TestOverturnAtResume.test_resume_时推翻放行_旧条目留在文件里_status_不再注入它"
+    ],
+    "推翻_字段解析不认推翻": [
+      "test_v1_decision_overturn.TestFieldParsing.test_dev_主体的阶段不召回"
+    ],
+    "推翻_引用不去井号与反引号": [
+      "test_v1_decision_overturn.TestOverturnAtResume.test_引用可带前导井号并用反引号包住"
+    ],
+    "推翻_引用不校验": [
+      "test_v1_decision_overturn.TestReferenceChecked.test_ID_不符被拒"
+    ],
+    "推翻_本回合新写的也能被推翻": [
+      "test_v1_decision_overturn.TestReferenceChecked.test_引用本回合新写的条目被拒"
+    ],
+    "推翻_格式提示不提推翻": [
+      "test_v1_decision_overturn.TestNormalHandoffTexts.test_条目格式提示补了推翻这个可选字段"
+    ],
+    "推翻_正常交接放行": [
+      "test_v1_decision_overturn.TestOnlyAtResume.test_正常交接被拒"
+    ],
+    "推翻_注入不跳过被推翻的": [
+      "test_v1_decision_overturn.TestInjectionBudget.test_六条里推翻一条_注入其余五条_最早那条回来了"
+    ],
+    "推翻_讨论回合不做决策校验": [
+      "test_v1_decision_overturn.TestAlreadyOverturned.test_重复推翻被拒_点名已推翻它的那一条"
+    ],
+    "推翻_讨论回合的_handoff_放行": [
+      "test_v1_decision_overturn.TestOnlyAtResume.test_讨论回合的_handoff_被拒"
     ],
     "提交不限定路径": [
       "test_v1_setup_commit.TestOnlyTheAddedBatchIsCommitted.test_结论有改动时_预先暂存的实现不进这次提交_仍留在索引里"
