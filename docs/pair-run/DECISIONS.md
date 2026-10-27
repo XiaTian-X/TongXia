@@ -844,3 +844,8 @@
 - 理由: 人类裁决分级。带 `--contract-change` 只放行契约的纯追加;PLAN 的任何改动(方向)与契约的改写(相对 HEAD 有删除行)拒绝,走第三十九轮的提案签字与人类 `ratify`。分级放在写权限边界之前、依据检查之前,被分级拒绝时什么都不落盘,文案给出完整的正式通道。判据复用 `has_rewrite`:插在中间的「补充」没有删除行,本仓库几乎每轮都有的契约澄清照旧放行;改错别字也算改写,协议不判语义。两条与本项矛盾的既有用例改写成本项期望而不是删除。追加 ADR-025 取代第四轮对改写与 PLAN 的放行。
 - 已否决: 按语义判断"小改动"放行 —— 脚本判不了语义,判了就是新的绕过口;把分级放在依据检查之后 —— 被拒时先报"依据没指向真实文件",指错方向;删除那两条矛盾的旧用例 —— 它们守的场景还在,只是期望变了。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_contract_tiers.py`, `tests/conformance/test_v1_frozen.py`, `docs/design-decisions.md`, `.agents/skills/pair-protocol/references/rules.md`
+## SETUP — 第四十二轮做 P1-11(决策的推翻),规划经自审后人类批准(2026-10-27)
+
+- 理由: 追加式不放宽,加的是标记不是改写。推翻只在 `resume` 时写:那是两个角色都发过言之后唯一的时机,讨论回合的 `handoff` 只代表一方。引用完整标题而不是 ID —— 本仓库 155 条里 `SETUP` 有 45 条、`W8` 有 7 条,而完整标题没有重复;只认 HEAD 里已有的条目,本回合新写的不能被推翻。注入先过滤再取最后 5 条,被推翻的才真正不占预算。规划时查出讨论回合根本不校验决策记录(能改写旧条目),不补它"推翻"就能写成直接改掉旧条目,所以一并补上。
+- 已否决: 改写旧条目加删除线 —— 违背追加式,等于伪造共识;讨论回合的 handoff 也放行 —— 一方的意见不是讨论的产出;按 ID 引用 —— ID 不唯一,一次会推翻多条;被推翻的在注入里标成已废止 —— 仍占预算,P1-11 要的就是不占。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`

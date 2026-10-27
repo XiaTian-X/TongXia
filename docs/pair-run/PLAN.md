@@ -935,3 +935,17 @@
     ④不带声明照旧被冻结判定拒绝,越界文案补一句改写与 PLAN 走提案签字批准;DONE 时脚本勾选 PLAN 不受影响;⑤`ENFORCEMENTS` 加 `contract-change-tier`;
     追加 ADR-025,两份 README 的 ADR 计数改为 25;`protocol-spec.md`、`command-reference.md`、`architecture.md`、`rules.md`、`troubleshooting.md` 跟上,路线图 P1-9 标 ✅
   - 对应契约:`docs/pair-run/CONTRACT.md` → 承重文件的修改分级
+
+### 第四十二轮:决策的推翻(P1-11)
+
+> 人类选择做 P1-11:推翻一条旧决策是一次讨论的产出,讨论结束时追加带 `推翻:` 的新条目,旧条目留在文件里、退出 `status` 注入。
+> 规划时查出讨论回合不经过决策记录的校验(能改写已有条目),一并补上。规划经 dev 自审后人类批准(2026-10-27),授权 dev 代笔立项。
+
+- [ ] **W71** [feature] — 决策条目可带 `推翻:`,只在 `resume` 时写;被推翻的条目退出 `status` 注入、不占预算;讨论回合补上决策校验
+  - **来源**:路线图 P1-11(依赖 P0-5 的 discuss,第三十七至四十轮已落地)
+  - 验收标准:①条目可选字段 `- 推翻: <旧条目完整标题>`(`ID — 结论`,可带前导 `## ` 与反引号),可多行,每行一条;`推翻` 被字段解析认出,不混进 `影响路径`;
+    ②新条目带 `推翻:` 只在 `resume` 放行,正常交接、`discuss` 开场、讨论回合的 `handoff` 拒绝且什么都不提交;③每条引用正好对上 HEAD 里一条已有条目(ID 与标题都相等),
+    只写 ID、标题不符、引用本回合新写的条目都拒绝;已被推翻的不能再推翻,文案点名推翻它的那一条;④`status` 的相关决策先跳过被推翻的再取最后 5 条,旧条目仍在文件里;
+    ⑤讨论回合的三个入口与正常交接同一套决策校验(追加式、写了内容却不构成条目、新条目格式与长度);⑥`ENFORCEMENTS` 加 `decision-overturn`、`discuss-decision-format`;
+    `protocol-spec.md`、`command-reference.md`、`architecture.md`、`rules.md`、`troubleshooting.md` 跟上,路线图 P1-11 标 ✅
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 决策的推翻
