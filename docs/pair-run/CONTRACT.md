@@ -2370,3 +2370,29 @@ tester 的回合里写了 dev 的签字行;diff 碰了别的文件;diff 应用�
 变异点:额度写死为 1、额度判定用 > 而不是 ≥、report 把讨论回合也算进讨论次数、"从未讨论"判定不看样本量、"偏高"判定不生效。
 
 **不做** 撞额度停止轮转;按角色分别计额度;跨工作项的总额度。
+
+## 承重文件的修改分级
+
+- 依据: 人类定稿
+
+**背景** 第四轮 W9(路线图 P1-9 弱版本)让 agent 带 `--contract-change "依据"` 就能直接改 PLAN 与契约,防合谋只靠 `report` 的事后观测。
+第三十九轮 W68 给了正式通道:提案里写 diff → 双方 `sign` → 人类 `ratify`。人类裁决强版本按"分级"收紧:契约的纯追加(本仓库几乎每轮都有的「补充」)照旧带声明落笔,
+对方当场重校验;PLAN 的任何改动(方向)与契约的改写(删掉或改掉已有条款)必须走签字批准。
+
+**行为**
+- `handoff` 带了 `--contract-change`、且本回合的改动里有 `plan_file` 或 `contract_file` 时,在现有的依据检查之前先分级:
+  - 改动里有 `plan_file` → 拒绝(不论纯追加还是改写);
+  - 改动里有 `contract_file`、且它相对 HEAD 有删除行(与路线图 `--basis` 判改写同一口径)→ 拒绝;
+  - 拒绝文案给出正式通道:在提案里写出 diff、双方 `sign`、告诉人类 `ratify`(文案含"提案"与 `ratify`);拒绝时什么都不提交、工作区不动。
+  - 只有 `contract_file` 的纯追加(只有新增行,插在已有内容中间也算)→ 照旧走既有规则:依据指向真实产物、当场留决策、正文写 `契约变更(已声明):`。
+- 不带 `--contract-change` 改承重文件,照旧被冻结判定拒绝;越界文案在冻结那一项后补一句:改写契约或改 PLAN 走提案的签字与人类批准。
+- 工作项完成时脚本勾选 PLAN、人类的直接提交都不经过这道检查,不受影响。
+- 登记 `ENFORCEMENTS`(`contract-change-tier`);`docs/design-decisions.md` 追加 ADR-025「承重文件的修改分级」(ADR-001 到 024 原文不动),
+  `README.md` 与 `docs/README.md` 的 ADR 计数改为 25;`protocol-spec.md`、`command-reference.md`(`--contract-change` 一行)、`architecture.md`、`rules.md`(契约变更流程)、
+  `troubleshooting.md` 跟上;路线图 P1-9 标 ✅。
+
+**判据** 用例:带 `--contract-change` 改 PLAN 被拒(纯追加一行也拒),文案含"提案"与 `ratify`、没有新提交;带 `--contract-change` 改掉契约的一个已有行被拒、删一行被拒;
+带 `--contract-change` 往契约中间插一段「补充」照旧放行、声明进正文、当场留决策;不带声明改契约照旧被拒;同一段 PLAN diff,`--contract-change` 被拒、走签字加 `ratify` 生效。
+变异点:PLAN 不拒、改写不拒、纯追加也拒。
+
+**不做** 路线图 `improvements.md` 不纳入分级(在 dev 路径,改写已要求 `--basis` 指向真实产物,✅ 标记是例行改写);不收回人类直接提交的权限;不改 `report`。

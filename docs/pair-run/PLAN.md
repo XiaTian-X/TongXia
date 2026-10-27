@@ -922,3 +922,16 @@
     `人类批准的提案`;`--since` 时跟着起点走;④`ENFORCEMENTS` 的 `discuss-once` 改名 `discuss-quota`;`protocol-spec.md`、`command-reference.md`、
     `architecture.md`、`rules.md`、`INSTALL.md` 跟上,路线图 D4 ✅、P0-5 标已落地
   - 对应契约:`docs/pair-run/CONTRACT.md` → 讨论额度与频次
+
+### 第四十一轮:承重文件的修改分级(P1-9 强版本)
+
+> 人类选择做 P1-9 强版本,并裁决范围为"分级":契约的纯追加照旧带 `--contract-change` 落笔,PLAN 的任何改动与契约的改写走提案的签字与人类批准(第三十九轮 W68)。
+> 规划经 dev 自审后人类批准(2026-10-27),授权 dev 代笔立项。
+
+- [ ] **W70** [feature] — `--contract-change` 只放行契约的纯追加;PLAN 改动与契约改写走签字批准
+  - **来源**:路线图 P1-9 强版本(第四轮 W9 落地弱版本;P0-5 的 D3 落地之后可做)
+  - 验收标准:①交接带 `--contract-change` 且本回合改了 `plan_file` → 拒绝,文案给出提案 diff → 双方 `sign` → 人类 `ratify` 的路径;
+    ②改了 `contract_file` 且相对 HEAD 有删除行(改写)→ 同样拒绝;③`contract_file` 纯追加(只有新增行,插在中间也算)照旧放行,依据检查与当场留决策不变;
+    ④不带声明照旧被冻结判定拒绝,越界文案补一句改写与 PLAN 走提案签字批准;DONE 时脚本勾选 PLAN 不受影响;⑤`ENFORCEMENTS` 加 `contract-change-tier`;
+    追加 ADR-025,两份 README 的 ADR 计数改为 25;`protocol-spec.md`、`command-reference.md`、`architecture.md`、`rules.md`、`troubleshooting.md` 跟上,路线图 P1-9 标 ✅
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 承重文件的修改分级

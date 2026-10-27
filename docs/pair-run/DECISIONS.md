@@ -834,3 +834,8 @@
 - 理由: D2 把讨论额度写死成每项一次,D4 做成 `discuss_limit`(默认 1 与已落地的一致,0 = 不允许),`discussed` 改为每次 resume 记一次、按出现次数比。撞上额度只拒绝这一次 discuss,不改状态、不停轮转:死锁闸停轮转是因为双方谈不拢、工作项走不下去;额度用完时工作项本身还能做,停轮转反而让一方靠再提一次讨论就让双方都停下。`report` 只认正文第一行 `discuss=open` 的提交,认领满 `MIN_SAMPLE` 才判"从未讨论"(方向问题可能被压下)与"偏高"(规划可能太粗,讨论 × 2 > 认领;恰好一半不判)—— 两种相反的病都要有提示才有人看。至此 P0-5(D1–D4)落地,P0-6、P1-9 强版本、P1-11 可以复用这套机制。
 - 已否决: 撞额度就停轮转 —— 逃生口被反过来用;默认额度改成 2 —— 已落地行为静默改变;按子串数讨论 —— 讨论回合、恢复与人写的主题都会被算进去。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_discuss_quota.py`, `docs/protocol-spec.md`, `docs/command-reference.md`
+## SETUP — 第四十一轮做 P1-9 强版本(承重文件的修改分级),规划经自审后人类批准(2026-10-27)
+
+- 理由: 人类裁决"分级"。真正要人类把关的是方向(PLAN 的任何改动)与改写(删掉或改掉已有的契约条款);契约的纯追加澄清在本仓库几乎每轮都有,对方当场重校验,继续带声明落笔。判据复用 `has_rewrite`(相对 HEAD 有删除行),插在中间的补充没有删除行,照旧放行。正式通道是第三十九轮的提案签字与人类 `ratify`,拒绝文案要把这条路径说全。取代第四轮"任一方可改、强制留痕"里对改写与 PLAN 的放行,追加 ADR-025;旧 ADR 原文有指纹,不动。
+- 已否决: 全部走批准 —— 每补一句澄清都要两回合签字加人类一次 ratify,每轮多停几次;只加观测 —— 合谋风险仍只靠事后统计;路线图也纳入 —— ✅ 标记这类例行改写会被卡住,而它的改写已经要 `--basis`。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/design-decisions.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `README.md`, `docs/README.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
