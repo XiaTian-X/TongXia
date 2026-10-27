@@ -137,7 +137,7 @@ agent 被人类唤醒
 
 这是理解这个架构最重要的一张表:**哪些规则是脚本拦的,哪些只能靠留痕。**
 
-<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-quota proposal-sign ratify-signed contract-change-tier -->
+<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-quota proposal-sign ratify-signed contract-change-tier decision-overturn discuss-decision-format -->
 
 | 规则 | 强制方式 | 失效条件 |
 |---|---|---|
@@ -152,7 +152,8 @@ agent 被人类唤醒
 | 承重文件带声明才放行 | 脚本拒绝;豁免只认 `plan_file` / `contract_file` 两个键 | 改代码 |
 | 承重文件的修改分级 | 脚本拒绝(带声明也只放行契约的纯追加;PLAN 的改动与契约的改写走提案签字与人类 `ratify`) | 把改写拆成先追加新条款、旧条款留着不删 |
 | 声明的那次交接当场留决策 | 脚本拒绝 | 改代码 |
-| 决策格式与追加式 | 脚本拒绝 | 改代码 |
+| 决策格式与追加式 | 脚本拒绝(讨论回合的三个入口同一套校验,W71) | 改代码 |
+| 决策的推翻 | 脚本拒绝(带 `推翻:` 的条目只在 `resume` 写;引用要正好对上一条已提交的条目;不重复推翻);被推翻的退出 `status` 注入 | 人类直接提交的 `推翻:` 不经校验 |
 | 考古记录三小节 | 脚本拒绝 | 改代码 |
 | 契约变更留记录 | 脚本拒绝(比对 blob sha) | 改代码 |
 | 笔记晋升 | 脚本拒绝,除非 `--no-decision` | 改代码 |
