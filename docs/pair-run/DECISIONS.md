@@ -839,3 +839,8 @@
 - 理由: 人类裁决"分级"。真正要人类把关的是方向(PLAN 的任何改动)与改写(删掉或改掉已有的契约条款);契约的纯追加澄清在本仓库几乎每轮都有,对方当场重校验,继续带声明落笔。判据复用 `has_rewrite`(相对 HEAD 有删除行),插在中间的补充没有删除行,照旧放行。正式通道是第三十九轮的提案签字与人类 `ratify`,拒绝文案要把这条路径说全。取代第四轮"任一方可改、强制留痕"里对改写与 PLAN 的放行,追加 ADR-025;旧 ADR 原文有指纹,不动。
 - 已否决: 全部走批准 —— 每补一句澄清都要两回合签字加人类一次 ratify,每轮多停几次;只加观测 —— 合谋风险仍只靠事后统计;路线图也纳入 —— ✅ 标记这类例行改写会被卡住,而它的改写已经要 `--basis`。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/design-decisions.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `README.md`, `docs/README.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W70 — 承重文件按"是否推翻已有约定"分级,判据用删除行而不是语义
+
+- 理由: 人类裁决分级。带 `--contract-change` 只放行契约的纯追加;PLAN 的任何改动(方向)与契约的改写(相对 HEAD 有删除行)拒绝,走第三十九轮的提案签字与人类 `ratify`。分级放在写权限边界之前、依据检查之前,被分级拒绝时什么都不落盘,文案给出完整的正式通道。判据复用 `has_rewrite`:插在中间的「补充」没有删除行,本仓库几乎每轮都有的契约澄清照旧放行;改错别字也算改写,协议不判语义。两条与本项矛盾的既有用例改写成本项期望而不是删除。追加 ADR-025 取代第四轮对改写与 PLAN 的放行。
+- 已否决: 按语义判断"小改动"放行 —— 脚本判不了语义,判了就是新的绕过口;把分级放在依据检查之后 —— 被拒时先报"依据没指向真实文件",指错方向;删除那两条矛盾的旧用例 —— 它们守的场景还在,只是期望变了。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_contract_tiers.py`, `tests/conformance/test_v1_frozen.py`, `docs/design-decisions.md`, `.agents/skills/pair-protocol/references/rules.md`
