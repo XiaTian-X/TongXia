@@ -1339,6 +1339,19 @@ MUTATIONS = [
     ('讨论_额度判定用大于',
      '    if used >= cfg["discuss_limit"]:\n',
      '    if used > cfg["discuss_limit"]:\n'),
+
+    # W69 report 的讨论频次(review-impl 登记)。
+    ('讨论频次_讨论回合也算进讨论',
+     '        if subject.startswith("discuss:") and body.strip("\\n").startswith("discuss=open "):\n',
+     '        if subject.startswith("discuss"):\n'),
+
+    ('讨论频次_判定不看样本量',
+     '        if claimed >= MIN_SAMPLE else "—")\n',
+     '        if True else "—")\n'),
+
+    ('讨论频次_偏高不生效',
+     'if discussions * 2 > claimed else',
+     'if False else'),
 ]
 
 # unittest 的失败行有两种形态:

@@ -1,5 +1,5 @@
 {
-  "baseline": "39ea3da1f397215d",
+  "baseline": "7c419b73532eb421",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -822,6 +822,21 @@
     ],
     "讨论_进入不查工作区": [
       "test_v1_discuss.TestEnterRefused.test_工作区有代码改动拒绝_点名文件"
+    ],
+    "讨论_额度写死为_1": [
+      "test_v1_discuss_quota.TestLimitTwo.test_撞上额度只拒绝这一次_不停轮转"
+    ],
+    "讨论_额度判定用大于": [
+      "test_v1_discuss.TestResume.test_同一工作项第二次进入被拒"
+    ],
+    "讨论频次_偏高不生效": [
+      "test_v1_discuss_quota.TestReport.test_讨论过半标偏高"
+    ],
+    "讨论频次_判定不看样本量": [
+      "test_v1_discuss_quota.TestReport.test_两个工作项各讨论一次"
+    ],
+    "讨论频次_讨论回合也算进讨论": [
+      "test_v1_discuss_quota.TestReport.test_两个工作项各讨论一次"
     ],
     "记忆层关着也排除出指纹": [
       "test_v1_test_reuse.TestMemoryOff.test_记忆层关着时笔记目录照常进指纹"
