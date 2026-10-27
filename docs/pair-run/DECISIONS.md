@@ -849,3 +849,8 @@
 - 理由: 追加式不放宽,加的是标记不是改写。推翻只在 `resume` 时写:那是两个角色都发过言之后唯一的时机,讨论回合的 `handoff` 只代表一方。引用完整标题而不是 ID —— 本仓库 155 条里 `SETUP` 有 45 条、`W8` 有 7 条,而完整标题没有重复;只认 HEAD 里已有的条目,本回合新写的不能被推翻。注入先过滤再取最后 5 条,被推翻的才真正不占预算。规划时查出讨论回合根本不校验决策记录(能改写旧条目),不补它"推翻"就能写成直接改掉旧条目,所以一并补上。
 - 已否决: 改写旧条目加删除线 —— 违背追加式,等于伪造共识;讨论回合的 handoff 也放行 —— 一方的意见不是讨论的产出;按 ID 引用 —— ID 不唯一,一次会推翻多条;被推翻的在注入里标成已废止 —— 仍占预算,P1-11 要的就是不占。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W71 — 判"已被推翻"不算这条新条目自己,本回合其他新条目算
+
+- 理由: 契约写"引用的条目已被(文件里任一条目的 `推翻:`)推翻过 → 拒绝",而 resume 时工作区的文件已经含有正在写的新条目、它自己的 `推翻:` 正引用着旧条目 —— 照字面每次推翻都被拒、点名的是它自己,特性一次也用不出来。排除自己;HEAD 里已有条目与本回合其他新条目的 `推翻:` 都算,同一回合两条推翻同一条照样拒。
+- 已否决: 只看 HEAD 里已有条目 —— 同一回合两条新条目推翻同一条会放行,注入里看不出该以哪条为准;改写契约原句 —— W70 之后契约改写要走提案批准,纯追加一段「补充」就够说清。
+- 影响路径: `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_decision_overturn.py`, `.agents/skills/pair-protocol/scripts/pair.py`

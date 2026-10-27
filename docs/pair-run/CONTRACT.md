@@ -2417,6 +2417,9 @@ tester 的回合里写了 dev 的签字行;diff 碰了别的文件;diff 应用�
 - 登记 `ENFORCEMENTS`(`decision-overturn`、`discuss-decision-format`,都不是交接不变量);`protocol-spec.md`(记忆层、discuss 两处)、`command-reference.md`(`resume` 一行)、
   `architecture.md`、`rules.md`(决策记录、discuss 两节)、`troubleshooting.md` 跟上;路线图 P1-11 标 ✅。
 
+**补充**(W71 spec 回合,开工前审查 ㉓)判"引用的条目已被推翻过"时**不算这条新条目自己**的 `推翻:` —— resume 时工作区里已经有这条新条目,照字面每次推翻都会被判成"已被推翻"。
+HEAD 里已有条目的 `推翻:` 与本回合**其他**新条目的 `推翻:` 都算:同一回合两条新条目推翻同一条,拒绝。
+
 **判据** 用例:`resume` 时追加带 `推翻:` 的条目放行,旧条目仍在文件里,之后 `status` 的相关决策里没有旧条目、有新条目;
 六条相关条目推翻其中一条,注入的是其余五条(没有推翻时被挤掉的最早那条回来了);带 `推翻:` 的条目在正常交接、`discuss` 开场、讨论回合的 `handoff` 被拒、没有新提交;
 只写 ID、标题不符、引用本回合新写的条目被拒;重复推翻被拒且点名已推翻它的那条;讨论回合里改写已有决策被拒、写不合格的条目被拒(至少讨论回合的 `handoff` 与 `resume` 两处);
