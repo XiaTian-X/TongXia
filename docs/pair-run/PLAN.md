@@ -949,3 +949,18 @@
     ⑤讨论回合的三个入口与正常交接同一套决策校验(追加式、写了内容却不构成条目、新条目格式与长度);⑥`ENFORCEMENTS` 加 `decision-overturn`、`discuss-decision-format`;
     `protocol-spec.md`、`command-reference.md`、`architecture.md`、`rules.md`、`troubleshooting.md` 跟上,路线图 P1-11 标 ✅
   - 对应契约:`docs/pair-run/CONTRACT.md` → 决策的推翻
+
+### 第四十三轮:understand 模式(P0-6)
+
+> 人类选择做 P0-6,并裁决范围为"只做机制":understand 复用 discuss 的全部机制,只换时钟(空闲时进入)与产物(双方签字的契约草案与一批 cover 工作项)。
+> 路线图验收里"在存量样板上跑一遍"留作之后的独立实测,不是工作项。规划经 dev 自审后人类批准(2026-10-27),授权 dev 代笔立项。
+
+- [ ] **W72** [feature] — `discuss --understand`:空闲时进入,至少三次发言完成交叉检查,`resume` 时交出双方签字的草案或带声明不交
+  - **来源**:路线图 P0-6(依赖 P0-5 的 discuss 与 D3 的签字批准)
+  - 验收标准:①`discuss --understand` 只在 idle、由空闲时轮到的一方执行,其余条件同普通 discuss;工作阶段带它拒绝,idle 不带它拒绝且文案含 `--understand`;
+    不计额度、不记 `discussed`,正文第一行 `understand=open role=…`;②讨论回合照旧,`speeches` 递增,正文第一行 `understand=reply role=…`;
+    ③`resume` 要求累计至少 3 次发言(本回合追加提案算一次);④产物二选一:提案最后一个 diff 块有双方签字、只碰 PLAN 与契约、契约至少新增一节、
+    每个新增小节有 `依据: 考古观察@<真实 sha>`、PLAN 新增的都是 `[cover]`、每个新增小节被至少一个新增 cover 项的 `对应契约` 引用;或 `resume --no-draft "理由"`;
+    否则拒绝且状态不变;恢复到 idle,正文第一行 `understand=resume role=…`;⑤`status` 简报说明独立理解的约定与草案要求;`ENFORCEMENTS` 加 `understand-open`、
+    `understand-crosscheck`、`understand-draft`;`protocol-spec.md`、`command-reference.md`、`architecture.md`、`rules.md`、`brownfield.md`、`troubleshooting.md`、`SKILL.md` 跟上,路线图 P0-6 标 ✅
+  - 对应契约:`docs/pair-run/CONTRACT.md` → understand 模式

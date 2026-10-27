@@ -858,3 +858,8 @@
 - 理由: 追加式不放宽,推翻只是标记。`resume` 是两方都发过言之后唯一的时机,讨论回合的 handoff 只代表一方。引用完整标题:ID 不唯一,本仓库 `SETUP` 就有 45 条。只认 HEAD 里正好一条的,判重复不算正在写的这条(㉓)。注入先跳过被推翻的再取最后 5 条,所以被推翻的不占预算;推翻者被推翻时旧条目也不回来。讨论回合以前不经过决策校验、能改写旧条目,这次抽出 `decision_violation`,四个入口共用。`_FIELD_LINE_RE` 必须认 `推翻`,否则它会变成 `影响路径` 的续行,召回凭空多出几条。
 - 已否决: 改写旧条目加删除线 —— 等于伪造共识;讨论回合的 handoff 也放行 —— 不是讨论的产出;按 ID 引用 —— 一次推翻多条;被推翻的标成已废止留在注入里 —— 仍占预算。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_decision_overturn.py`, `docs/protocol-spec.md`, `.agents/skills/pair-protocol/references/rules.md`
+## SETUP — 第四十三轮做 P0-6(understand 模式),人类裁决只做机制,规划经自审后人类批准(2026-10-27)
+
+- 理由: 路线图判据"三个阶段只在时钟上不同":understand 是 discuss 带 `--understand`,只换时钟(空闲时进入、恢复回空闲)与产物(双方签字的契约草案加 cover 工作项,人类 `ratify` 落地)。交叉检查要求至少三次发言:开场方独立理解、对方独立理解加交叉检查、开场方再查对方。草案每个新增小节必须是 `考古观察@<真实 sha>` 并被一个新增 cover 项引用,这是验收里"每条都有绿着的特征测试"能被脚本检查的那一半。独立性只能是约定:两个 agent 共用目录,脚本只保证开场方事后改不了自己的理解。
+- 已否决: 新增 understand 阶段 —— 违背"只在时钟上不同";哈希承诺强制独立 —— 内容总要落盘,挡不住,只会制造已强制的错觉;resume 时脚本直接应用草案 —— 越过人类批准;不留 `--no-draft` —— 谈不拢就卡死在讨论阶段。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/brownfield.md`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`

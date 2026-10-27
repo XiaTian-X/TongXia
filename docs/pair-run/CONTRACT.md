@@ -2428,3 +2428,37 @@ HEAD 里已有条目的 `推翻:` 与本回合**其他**新条目的 `推翻:` �
 
 **不做** 不改 `report`(决策数照数全部条目);"推翻的推翻"不恢复旧条目(要恢复就把旧结论重写成新条目);不管人类的直接提交(其中的 `推翻:` 照样在注入时生效);
 空闲时不能推翻(没有工作项进不了 discuss,由人类直接提交);晋升闸与 `--no-decision` 判"本工作项有没有决策"时被推翻的仍算。
+
+## understand 模式
+
+- 依据: 人类定稿
+
+**背景** 存量项目接入时两个 agent 对代码库一无所知,而现在没有任何一步是"读懂这个项目";考古发生在 `cover` 工作项的 spec 回合,但契约必须在 `claim` 之前就存在(路线图 P0-6)。
+路线图的判据是"不新增阶段机,只换时钟与产物":understand 复用 discuss(W67)的挂起与恢复、只写散文、双方发言,复用签字与人类批准(W68)落地草案。人类裁决本轮只做机制。
+
+**行为**
+- `discuss --understand --proposal <提案> "<要读懂哪一块、为什么>"`:
+  - 只在 `phase == idle` 时、由空闲时轮到的那一方(`phase_owner`)执行;工作阶段带 `--understand` 拒绝,文案指向普通 discuss;idle 时不带 `--understand` 照旧拒绝,文案补上 `--understand`;
+  - 其余条件同普通 discuss:配了 `proposal_paths`、提案在提案目录下、本回合在提案里写了开场陈述(开场方的独立理解)、工作区只有散文、决策校验(W71);
+  - 不计 `discuss_limit`、不记 `discussed`;状态 `discuss` 加 `mode: "understand"` 与 `speeches: 1`,挂起现场照旧记(恢复回 idle);提交正文第一行 `understand=open role=<r> …`。
+- 讨论回合照旧走讨论回合的 `handoff`;understand 模式下 `speeches` 加 1,正文第一行 `understand=reply role=<r>`。
+- understand 模式的 `resume` 在普通 discuss 的条件之外:
+  - 累计发言至少 3 次(本回合追加了提案算一次),否则拒绝,文案说明还差交叉检查;
+  - 产物二选一,否则拒绝:(a)提案里**最后一个** diff 块 —— 当前文件里有 tester 与 dev 对它哈希的签字行;只碰 `plan_file` 与 `contract_file`;契约至少新增一个 `## ` 小节;
+    每个新增小节的新增行里有 `依据: 考古观察@<sha>` 且 sha 是本仓库真实的 commit;PLAN 新增的工作项都是 `[cover]`;每个新增小节的标题被至少一个新增 cover 项的 `对应契约` 引用。
+    (b)`resume --no-draft "理由"`,正文写 `未产出草案(已声明): 理由`。
+  - 被拒时什么都不提交、状态不变;放行时恢复到 idle、不记 `discussed`,正文第一行 `understand=resume role=<r>`,(a)时正文写提案路径与 diff 哈希,文案告诉人类去 `ratify`。
+- 脚本不应用草案:由人类 `PAIR_ROLE=human … ratify <提案>` 落地(W68)。
+- `status` 在 understand 模式下的简报说明:先写自己的独立理解再读对方的(约定)、交叉检查写什么、草案的要求、`resume` 与 `--no-draft`。
+- 登记 `ENFORCEMENTS`(`understand-open`、`understand-crosscheck`、`understand-draft`);`protocol-spec.md`(§5.6、状态表)、`command-reference.md`、`architecture.md`
+  (独立性记为只有约定)、`rules.md`、`brownfield.md`(标准节奏前加 understand 一步)、`troubleshooting.md`、`SKILL.md` 跟上;路线图 P0-6 标 ✅。
+
+**判据** 用例:idle 时 `discuss --understand` 放行(阶段 discuss、轮到对方、工作项为空、正文第一行 `understand=open`);工作阶段带它被拒;idle 不带它被拒且文案含 `--understand`;
+不是自己回合、提案本回合没写、工作区有代码都被拒;讨论回合后 `speeches` 递增;两次发言后 `resume` 被拒且状态不变,第三次放行;
+合规签字草案放行、恢复到 idle、`discussed` 不变,之后人类 `ratify` 能落地契约新节与 cover 项;缺一方签字、签的不是最后一个 diff 块、diff 碰了别的文件、契约没新增小节、
+新增小节没写考古观察或 sha 不存在、PLAN 新增的不是 cover、某个新增小节没被 cover 引用,各被拒;没草案也没 `--no-draft` 被拒,带 `--no-draft` 放行且正文有声明;
+`report` 的讨论次数不算 understand;后发言方第一次发言前 `status` 简报含"独立"。
+变异点:idle 不带 `--understand` 放行、工作阶段带它放行、不数发言次数、不查签字、不查考古观察的 sha、不查只加 cover、不查每节有 cover 引用、`--no-draft` 不生效、understand 的 resume 记了 `discussed`。
+
+**不做** 不强制独立性(同一目录、同一用户下挡不住,记为约定;脚本只保证开场方事后改不了自己的理解,因为提案只能追加);不设 understand 的额度;不改 `report`;
+脚本不应用草案;不新增阶段;存量样板与实测不是本工作项。
