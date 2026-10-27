@@ -665,9 +665,10 @@ MUTATIONS = [
      '    if state.get("rebound_from") != "review-test":',
      '    if False:'),
 
-    ("捷径不看本回合承重文件改动",
-     '    if changed_named_frozen:\n        return False',
-     '    if False:\n        return False'),
+    # 「捷径不看本回合承重文件改动」(锚 `if changed_named_frozen: return False`)在第四十一轮 W70 注销:等价变异。
+    # 那道防护只为"回合里改了 PLAN"存在(PLAN 不改契约的 sha,比对 `reviewed_contract` 看不见它);W70 之后回合里改不了 PLAN,
+    # 契约只能纯追加、必然改变 sha,`reviewed_contract` 那一条已经拦住 —— 正常流程里"看"与"不看"走不出差别。实现那一行留作纵深防护。
+    # 本仓库完成时的全量(串着变异检查)因此挑出它存活。
 
     ("捷径不比 review-impl 时的契约",
      '    return state.get("reviewed_contract") == worktree_sha(root, cfg["contract_file"])',

@@ -1,9 +1,9 @@
 {
   "round": 67,
-  "phase": "spec",
+  "phase": "impl",
   "item": "W70",
   "item_type": "feature",
-  "last_actor": "dev",
+  "last_actor": "tester",
   "changes_count": 1,
   "completed_items": [
     "W2",
@@ -81,8 +81,8 @@
     "tester": "09305d8bd4ddfeade951af8f416c054d907ddb3c",
     "dev": "09305d8bd4ddfeade951af8f416c054d907ddb3c"
   },
-  "after_rebound": true,
-  "rebound_from": "review-test",
+  "after_rebound": false,
+  "rebound_from": null,
   "reviewed_contract": "09305d8bd4ddfeade951af8f416c054d907ddb3c",
   "last_full_failed": false,
   "full_failures": [],

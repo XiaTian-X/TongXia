@@ -637,9 +637,6 @@
     "捷径不看回弹来源": [
       "test_v1_effective.TestReportSplitsRounds.test_两数之和恒等于交接提交"
     ],
-    "捷径不看本回合承重文件改动": [
-      "test_v1_rebound_shortcut.TestShortcutNotTaken.test_这一回合改了规划_照旧进_impl"
-    ],
     "捷径从不生效": [
       "test_v1_rebound_shortcut.TestShortcutTaken.test_带了声明但没真改承重文件_照样走捷径"
     ],
