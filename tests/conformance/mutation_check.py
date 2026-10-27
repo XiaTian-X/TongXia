@@ -1352,6 +1352,23 @@ MUTATIONS = [
     ('讨论频次_偏高不生效',
      'if discussions * 2 > claimed else',
      'if False else'),
+
+    # W70 承重文件的修改分级(review-impl 登记)。
+    ('分级_PLAN_不拒',
+     '                  if p == cfg["plan_file"] or (p == cfg["contract_file"] and has_rewrite(root, p))]\n',
+     '                  if False or (p == cfg["contract_file"] and has_rewrite(root, p))]\n'),
+
+    ('分级_改写不拒',
+     '                  if p == cfg["plan_file"] or (p == cfg["contract_file"] and has_rewrite(root, p))]\n',
+     '                  if p == cfg["plan_file"] or (p == cfg["contract_file"] and False)]\n'),
+
+    ('分级_纯追加也拒',
+     '                  if p == cfg["plan_file"] or (p == cfg["contract_file"] and has_rewrite(root, p))]\n',
+     '                  if p == cfg["plan_file"] or (p == cfg["contract_file"])]\n'),
+
+    ('分级_冻结文案不指向批准',
+     '                if path in named_frozen else "")))',
+     '                if False else "")))'),
 ]
 
 # unittest 的失败行有两种形态:

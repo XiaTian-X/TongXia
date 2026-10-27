@@ -1,5 +1,5 @@
 {
-  "baseline": "7c419b73532eb421",
+  "baseline": "3a84008d3a6fb4ee",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -219,6 +219,18 @@
     ],
     "共用目录警告写法角色写死": [
       "test_v1_shared_dir_role.TestWarnsWhenRoleIsNotFromEnv.test_给出的写法用的是读到的那个角色"
+    ],
+    "分级_PLAN_不拒": [
+      "test_v1_contract_tiers.TestPlanAlwaysRefused.test_PLAN_纯追加一行也拒"
+    ],
+    "分级_冻结文案不指向批准": [
+      "test_v1_contract_tiers.TestWithoutFlag.test_不带声明改契约照旧被冻结判定拒绝_文案指向提案批准"
+    ],
+    "分级_改写不拒": [
+      "test_v1_contract_tiers.TestContractRewriteRefused.test_删掉契约的一行被拒"
+    ],
+    "分级_纯追加也拒": [
+      "test_v1_contract_tiers.TestContractPureAppendAllowed.test_往契约中间插一段补充_照旧放行_声明进正文"
     ],
     "判定行不排除异议": [
       "test_v1_effective.TestReportSplitsRounds.test_异议回合不算开销"
