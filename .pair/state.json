@@ -1,8 +1,8 @@
 {
   "round": 67,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W70",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -76,7 +76,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "09305d8bd4ddfeade951af8f416c054d907ddb3c",
   "setup_verified_contract": {
     "tester": "09305d8bd4ddfeade951af8f416c054d907ddb3c",
     "dev": "09305d8bd4ddfeade951af8f416c054d907ddb3c"
@@ -86,7 +86,7 @@
   "reviewed_contract": "95ebf4ee6f441e5bd0011586785849d09e934d4c",
   "last_full_failed": false,
   "full_failures": [],
-  "item_base": "c7b2abffaa801f0c71b1ed75cc7b102c2ef81349",
+  "item_base": "892f86bef71e5d3fe1e057de52918d2a53d29fbe",
   "requests": [],
   "discuss": null,
   "discussed": []
