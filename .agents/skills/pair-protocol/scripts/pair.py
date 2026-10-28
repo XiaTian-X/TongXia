@@ -4641,8 +4641,9 @@ OUTCOME_WORDS = ("返回", "错误", "异常", "抛出", "失败", "拒绝", "�
                  "return", "raise", "throw", "error", "exception", "exit code")
 # 动已有代码的工作项类型:契约描述的应该是现在的代码,名字对不上就是疑似漂移。
 DRIFT_TYPES = ("cover", "refactor", "bug")
-_IDENT_DEF_RE = re.compile(r"\b(?:def|class|function|fn|func)\s+([A-Za-z_][A-Za-z0-9_]*)")
-_IDENT_CALL_RE = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+# 前边界用 ASCII 断言而不是 `\b`:`\b` 按 Unicode 判,"调用build_gadget(" 里中文与名字之间不算边界。
+_IDENT_DEF_RE = re.compile(r"(?<![A-Za-z0-9_])(?:def|class|function|fn|func)\s+([A-Za-z_][A-Za-z0-9_]*)")
+_IDENT_CALL_RE = re.compile(r"(?<![A-Za-z0-9_])([A-Za-z_][A-Za-z0-9_]*)\s*\(")
 # 去掉的不只是关键字:`len(x)`、`print(...)` 这种调用在任何代码里都在,留着它们
 # 漂移就永远查不出来。
 _NOT_IDENTS = frozenset("""
@@ -4714,10 +4715,10 @@ def contract_identifiers(codes):
 def identifiers_tracked(root, cfg, files, names):
     """任一名字(整词)出现在两个角色名下的已跟踪文件里。`docs/` 不在两边名下 ——
     契约自己就含着这些名字,算进去就永远查不出漂移。"""
-    pats = cfg["roles"]["tester"] + cfg["roles"]["dev"]
     rx = re.compile(r"(?<![A-Za-z0-9_])(?:%s)(?![A-Za-z0-9_])" % "|".join(map(re.escape, names)))
     for f in files:
-        if not matches_any(f, pats):
+        # 两边分别判:拼成一个列表时,dev 的 `!**/*_test.go` 会把 tester 的文件也排除掉。
+        if not (matches_any(f, cfg["roles"]["tester"]) or matches_any(f, cfg["roles"]["dev"])):
             continue
         try:
             if rx.search((root / f).read_text(encoding="utf-8", errors="ignore")):
