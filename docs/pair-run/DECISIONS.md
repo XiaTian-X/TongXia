@@ -878,3 +878,8 @@
 - 理由: 人类要求开始下一个工作项,dev 按路线图从剩余条目里选 P0-3:契约含糊是本协议自认唯一会致命的失败模式,而 `verify-setup` 让一个只有一句散文的小节通过全部检查。只查形状(代码块或填了数据的表、返回或错误的描述、存量类工作项的标识符是否还在代码里),默认警告、`strict_contract` 开严;依据不可断言的小节不查,免得严格模式挡住来修它的 cover 项。小节正文含子小节,因为模板把签名放在 `###` 里;去掉 HTML 注释,因为模板注释里就有"返回 null"。
 - 已否决: 默认就失败 —— 契约是人类写的,会被烦到关掉检查;漂移也随严格模式升级 —— 从自由格式代码块抽标识符是启发式,伪代码与示例调用会误伤;复用 `contract_sections` —— 它不含子小节、抹掉代码块,模板的签名查不到;先做 P1-10 —— 与严格轮流有张力,且一部分痛点已被 W17 捷径与 P1-13 `request` 接走。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `.agents/skills/pair-protocol/references/rules.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W73 — 漂移判"在不在角色名下"两边分别判,抽名字与匹配名字用同一种 ASCII 边界
+
+- 理由: 契约写"在 `roles.tester` 与 `roles.dev` 名下的已跟踪文件里"。两边模式拼成一个列表交给 `matches_any` 时,任一负模式都会排除文件,Go 同目录布局下 dev 的 `!**/*_test.go` 把 tester 的测试文件全吃掉,名字只在测试里就被报成漂移,文案与事实相反。抽名字用 Unicode 的 `\b`,中文紧挨着名字(`调用build_gadget(`)时抽不出,整节漏查。review-impl 打回修了实现,review-test 打回补用例守住它们。
+- 已否决: 把 tester 的负模式也拼进去、只换顺序 —— `matches_any` 的语义与顺序无关,拼在一起就会互相排除;只改匹配侧的边界 —— 抽不出来时根本走不到匹配,漏报照旧。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_contract_shape.py`
