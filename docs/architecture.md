@@ -137,7 +137,7 @@ agent 被人类唤醒
 
 这是理解这个架构最重要的一张表:**哪些规则是脚本拦的,哪些只能靠留痕。**
 
-<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-quota proposal-sign ratify-signed contract-change-tier decision-overturn discuss-decision-format understand-open understand-crosscheck understand-draft -->
+<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-quota proposal-sign ratify-signed contract-change-tier decision-overturn discuss-decision-format understand-open understand-crosscheck understand-draft contract-shape -->
 
 | 规则 | 强制方式 | 失效条件 |
 |---|---|---|
@@ -162,6 +162,7 @@ agent 被人类唤醒
 | 评审带证据 | 脚本拒绝(approve 要检查清单,changes 要位置引用) | 引用真文件 + 假行号 |
 | 范围收缩 | 脚本拒绝(配了 `scope` 时) | 改代码 |
 | 契约依据分级 | 脚本拒绝(不可断言的规格开不了非 cover 项) | 人类把 `依据` 填成"人类定稿"却没真核实 |
+| 契约形状(W73) | 默认只警告;`strict_contract: true` 时形状、返回或错误两条 `verify-setup` 失败;疑似漂移始终只警告 | 查的是形状不是语义:一张填了无关内容的表加一个"返回"字样就过 |
 | cover 的特征测试记录 | 脚本拒绝(两个小节) | 写满字数但不说实话 |
 | refactor 的安全网 | 脚本拒绝(保护测试路径必须存在且属 tester) | 指向一个跟本次重构无关的测试目录 |
 | 异议后必须真的改测试 | 脚本拒绝(豁免红绿,但要求动过 tester 路径) | 改一个无关的测试文件 |

@@ -130,7 +130,7 @@ P0 就是这两个缺口。其余是扩面和体验。
 
 ---
 
-## P0-3 契约的机器可校验性
+## P0-3 契约的机器可校验性  ✅ 已落地(第四十四轮 W73;`verify-setup` 查被引用小节的形状、返回或错误、存量类工作项的疑似漂移,默认警告,`strict_contract` 开严;模板补「不做」)
 
 **来源:** [GitHub Spec Kit](https://github.com/github/spec-kit) 的
 `/clarify`(消歧)和 `/analyze`(跨产物一致性校验)。

@@ -309,6 +309,10 @@ PAIR_ROLE=human pair.py ratify docs/proposals/<主题>.md   # 人类:核对后�
 | `scope` 匹配不到任何已跟踪文件 | 警告 |
 | 被引用的契约小节写了 `依据` | 失败 |
 | 非 `cover` 的待办项指向可断言的小节 | 警告(硬闸在 `claim`) |
+| 被待办项引用的可断言小节有形状:内容非空的代码块,或带非空数据行的表格(W73) | 警告;`strict_contract: true` 时失败 |
+| 同上的小节写了返回或错误(关键词,大小写不敏感,HTML 注释不算) | 警告;`strict_contract: true` 时失败 |
+| `cover`/`refactor`/`bug` 项引用的小节,代码块里的标识符至少一个出现在两个角色名下的已跟踪文件里(疑似漂移) | 警告(始终) |
+| `strict_contract` 是布尔值 | 失败 |
 | `refactor` 的 `保护测试` 已声明且存在 | 警告(硬闸在 `claim`) |
 | `refactor` 的 `保护测试` 不属 tester | 失败 |
 | `full_test_cmd` 是绿的 | 警告 |
@@ -328,6 +332,8 @@ PAIR_ROLE=human pair.py ratify docs/proposals/<主题>.md   # 人类:核对后�
 | **契约歧义审查结论已提交且 ≥120 字** | 失败 |
 
 最后一条是脚本查不了的那件事的替代品:它至少强制交出一份结论。
+
+**契约形状(W73)只查形状,不查语义。** 小节正文从标题到下一个同级或更高级标题为止,含子小节(模板把签名放在 `###` 里),代码块保留原文,先去掉 HTML 注释(模板注释里就有"返回 null");依据不可断言的小节不查(上一行已提醒,严格模式下查它会挡住来修它的 cover 项);同一小节被多个工作项引用只报一次,文案列出这些工作项。关键词:`返回`、`错误`、`异常`、`抛出`、`失败`、`拒绝`、`退出码`、`return`、`raise`、`throw`、`error`、`exception`、`exit code`。漂移抽的是 `def`/`class`/`function`/`fn`/`func` 后的名字与 `名字(` 形态,去掉关键字与常见内置调用、长度至少 3,整词匹配;抽不到不查。
 没有歧义就明确写"无歧义"并说明逐条核对了什么 —— 空泛的一句"看过了"不算。
 
 通过后写入 `state.setup_verified = true`,并按执行者的角色记下这次读的是哪一份契约
@@ -423,6 +429,7 @@ PAIR_ROLE=human pair.py ratify docs/proposals/<主题>.md   # 人类:核对后�
 | `roles.tester` | string[] | `["tests"]` | tester 可写路径/glob。**与 dev 不得重叠** |
 | `roles.dev` | string[] | `["src"]` | dev 可写路径/glob |
 | `shared_paths` | string[] | `["docs/reviews"]` | 双方任何阶段都能写。异议举证认这里 |
+| `strict_contract` | bool | `false` | 契约形状检查(W73)的形状、返回或错误两条从警告升为失败;疑似漂移不受影响。`verify-setup` 要求布尔值 |
 | `discuss_limit` | int | `1` | 每个工作项最多进几次 discuss(W69,P0-5 的 D4)。0 = 不允许。撞上额度只拒绝这一次 discuss,不停止轮转;`verify-setup` 要求非负整数 |
 | `proposal_paths` | string[] | `[]` | 提案目录(W66,P0-5 的 D1):除 idle 外四个阶段两个角色都能写;已提交的顶层 `.md` 只能追加。**不是** `shared_paths`:异议举证、打回的位置引用、评审命名、`--doc-reason` 都不认它;对 `scope` 豁免、不进 W57 指纹,`inbox` 摆出原文,交接正文写一行 `提案:`。默认不启用,`init` 给新项目写 `["docs/proposals"]` |
 | `frozen_paths` | string[] | `["docs/PLAN.md","docs/CONTRACT.md",".agents",".claude",".pair"]` | agent 一律不得修改 |
