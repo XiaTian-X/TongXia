@@ -3573,8 +3573,8 @@ def cmd_resume(root, cfg, args):
     return 0
 
 
-def _diff_added(block):
-    """{路径: [新增行(去掉开头的 +)]}。按 `+++ ` 头切段。"""
+def _diff_lines(block):
+    """{路径: [(是否新增, 去掉首字符的行)]}。按 `+++ ` 头切段;上下文行、删除行与 hunk 头记为非新增。"""
     out, cur = {}, None
     for line in block.splitlines():
         if line.startswith("+++ "):
@@ -3584,9 +3584,26 @@ def _diff_added(block):
                 out.setdefault(cur, [])
         elif line.startswith("diff --git "):
             cur = None
-        elif cur is not None and line.startswith("+"):
-            out[cur].append(line[1:])
+        elif cur is not None:
+            out[cur].append((line.startswith("+"), line[1:]))
     return out
+
+
+def _cover_refs(lines):
+    """新增 cover 项自己的块里的 `对应契约` 标题。块 = 从一行新增的工作项行起、连续的新增行;
+    遇到上下文行、删除行或下一个工作项行就结束 —— 挂在已有工作项下面的引用不算(W72 review-impl)。"""
+    refs, cur = set(), None
+    for added, text in lines:
+        if not added:
+            cur = None
+            continue
+        m = ITEM_RE.match(text)
+        if m:
+            cur = m.group("typename") or "feature"
+            continue
+        if cur == "cover":
+            refs.update(r.strip().strip("`") for r in CONTRACT_REF_RE.findall(text))
+    return refs
 
 
 def understand_draft_problem(root, cfg, proposal):
@@ -3604,9 +3621,9 @@ def understand_draft_problem(root, cfg, proposal):
     stray = sorted(diff_paths(last) - {cfg["plan_file"], cfg["contract_file"]})
     if stray:
         return "diff 碰了 PLAN 与契约以外的文件:%s。" % " ".join(stray), h
-    added = _diff_added(last)
+    seg = _diff_lines(last)
     sections, cur = [], None
-    for line in added.get(cfg["contract_file"], []):
+    for line in [t for a, t in seg.get(cfg["contract_file"], []) if a]:
         m = re.match(r"^##[ \t]+(.+?)[ \t]*$", line)
         if m:
             cur = [m.group(1), []]
@@ -3622,13 +3639,10 @@ def understand_draft_problem(root, cfg, proposal):
         for sha in shas:
             if git("cat-file", "-e", sha + "^{commit}", cwd=root, check=False) is None:
                 return "新增小节「%s」的 `考古观察@%s` 在本仓库找不到这个 commit。" % (title, sha), h
-    items, refs = [], set()
-    for line in added.get(cfg["plan_file"], []):
-        m = ITEM_RE.match(line)
-        if m:
-            items.append((m.group("id").strip(), m.group("typename") or "feature"))
-        for ref in CONTRACT_REF_RE.findall(line):
-            refs.add(ref.strip().strip("`"))
+    plan = seg.get(cfg["plan_file"], [])
+    items = [(m.group("id").strip(), m.group("typename") or "feature")
+             for m in (ITEM_RE.match(t) for a, t in plan if a) if m]
+    refs = _cover_refs(plan)
     not_cover = ["%s [%s]" % it for it in items if it[1] != "cover"]
     if not_cover:
         return "PLAN 新增的工作项只能是 [cover]:%s。" % "、".join(not_cover), h
