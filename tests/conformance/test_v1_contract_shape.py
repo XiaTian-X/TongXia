@@ -15,7 +15,7 @@ harness 的布局:tester 拥有 `tests`,dev 拥有 `src`;PLAN `docs/PLAN.md`,契
 
 import re
 
-from harness import (BareRepo, PairTestCase, VERIFY_OK, setup_report)
+from harness import (BareRepo, GO_CONFIG, PairTestCase, VERIFY_OK, setup_report)
 
 REPORT = "docs/reviews/setup-verification-dev.md"
 FENCE = "```"
@@ -298,12 +298,38 @@ class TestDrift(ShapeBase):
         self.lay([section(NAME, KEYWORD, code)], [item("C1", NAME, "cover")])
         self.assertQuiet(self.verify())
 
+    def test_中文紧挨着的调用名也抽(self):
+        """`\\b` 按 Unicode 判,"用"与 `b` 之间不算边界;抽不出来整节就"抽不到不查",漂移漏报。"""
+        code = FENCE + "\n// 调用build_gadget(spec)\n" + FENCE
+        self.lay([section(NAME, KEYWORD, code)], [item("C1", NAME, "cover")])
+        hits = self.assertWarned(self.verify())
+        self.assertTrue(any("build_gadget" in t for t in hits), hits)
+
     def test_bug_项同样查(self):
         self.lay([self.SECTION], [item("B1", NAME, "bug")])
         self.assertWarned(self.verify())
 
     def test_refactor_项同样查(self):
         self.lay([self.SECTION], [item("R1", NAME, "refactor")])
+        self.assertWarned(self.verify())
+
+
+class TestDriftNegativePatterns(ShapeBase):
+    """Go 同目录布局:dev 是 `**/*.go` + `!**/*_test.go`。两个角色的模式拼成一个列表时,dev 的负模式会把 tester 的 `_test.go` 也排除掉。"""
+
+    config = GO_CONFIG
+    SECTION = section(NAME, KEYWORD, CODE)
+
+    def test_名字只在_tester_的测试文件里_不报漂移(self):
+        self.lay([self.SECTION], [item("C1", NAME, "cover")],
+                 files={"pkg/widget_test.go": "func TestWidget() { make_widget(spec) }\n",
+                        "pkg/widget.go": "package pkg\n"})
+        self.assertQuiet(self.verify())
+
+    def test_对照_两边都没有照报(self):
+        """上一条的对照组:同样的布局只差测试文件里有没有这个名字 —— 证明 Go 布局下漂移检查确实在跑。"""
+        self.lay([self.SECTION], [item("C1", NAME, "cover")],
+                 files={"pkg/widget_test.go": "package pkg\n", "pkg/widget.go": "package pkg\n"})
         self.assertWarned(self.verify())
 
 

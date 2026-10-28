@@ -1,5 +1,5 @@
 {
-  "baseline": "43a59fb6d45a3d34",
+  "baseline": "7bde1a21a0112b84",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -355,11 +355,17 @@
     "形状_围栏里的井号当标题": [
       "test_v1_contract_shape.TestSectionBody.test_代码块里的井号注释行不截断小节"
     ],
+    "形状_抽名字的前边界改回_b": [
+      "test_v1_contract_shape.TestDrift.test_中文紧挨着的调用名也抽"
+    ],
     "形状_漂移不按整词": [
       "test_v1_contract_shape.TestDrift.test_只作为更长名字的一部分不算存在"
     ],
     "形状_漂移不限工作项类型": [
       "test_v1_contract_shape.TestDrift.test_同样的小节被_feature_项引用不查"
+    ],
+    "形状_漂移两个角色的模式拼成一个列表": [
+      "test_v1_contract_shape.TestDriftNegativePatterns.test_名字只在_tester_的测试文件里_不报漂移"
     ],
     "形状_漂移只认_dev_名下": [
       "test_v1_contract_shape.TestDrift.test_函数名在测试目录下存在也不警告"

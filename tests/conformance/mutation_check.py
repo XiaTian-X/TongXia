@@ -1559,6 +1559,14 @@ MUTATIONS = [
     ('形状_同一节每个引用者各报一次',
      'shaped_refs.setdefault(anchor, []).append((item_id, typ))',
      'shaped_refs.setdefault(anchor + item_id, []).append((item_id, typ))'),
+
+    ('形状_漂移两个角色的模式拼成一个列表',
+     'if not (matches_any(f, cfg["roles"]["tester"]) or matches_any(f, cfg["roles"]["dev"])):',
+     'if not matches_any(f, cfg["roles"]["tester"] + cfg["roles"]["dev"]):'),
+
+    ('形状_抽名字的前边界改回_b',
+     '_IDENT_CALL_RE = re.compile(r"(?<![A-Za-z0-9_])([A-Za-z_]',
+     '_IDENT_CALL_RE = re.compile(r"\\b([A-Za-z_]'),
 ]
 
 # unittest 的失败行有两种形态:
