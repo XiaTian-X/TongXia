@@ -868,3 +868,8 @@
 - 理由: 契约写"每个新增小节被至少一个新增 cover 项的 `对应契约` 引用"。收 PLAN diff 里任何新增的 `对应契约` 时,一个 cover 都不加、只在已有工作项下补一行引用就能放行,落地后新契约节没有任何特征测试的工作项,正是 understand 要防的。引用从一行新增的工作项行起,到上下文行、删除行或下一个工作项行为止,工作项是 `[cover]` 才算。review-impl 打回修了实现,review-test 打回补两条用例守住它。
 - 已否决: 只要 PLAN 里有新增 cover 项、引用随便挂在哪 —— cover 项可以引用别处,新节照样没人测;按工作项 ID 回查整份 PLAN 的块 —— 已有工作项的块不是草案的产出,不该替草案担保。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_understand.py`
+## W72 — understand 是 discuss 换时钟与产物:空闲进入、至少三次发言、交签字草案或带声明不交
+
+- 理由: 复用 discuss 的提案、散文、决策校验与挂起现场,`--understand` 只换进入条件(只在 idle)、跳过额度、不记 `discussed`,状态多 `mode`/`speeches`。提交第一行用 `understand=open|reply|resume`,`report` 的讨论次数自然不算它,`role=` 仍在第一行供 `ratify` 溯源。草案只认提案里最后一个 diff 块,检查双方签字齐、只碰 PLAN 与契约、至少一个新增小节且各有 `考古观察@<真实 sha>`、新增工作项全是 cover、每节被新增 cover 项自己块里的 `对应契约` 引用;应用草案仍由人类 `ratify`。
+- 已否决: 把 understand 计入 `discuss_limit` —— 额度按工作项算,空闲时没有工作项;复用 `discuss=open` 作第一行 —— `report` 会把它算成讨论,拉高"讨论 / 认领";草案取第一个 diff 块或合并所有块 —— 签字签的是哪一份就对不上;独立性写成检查 —— 同一目录挡不住,只记成约定。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_understand.py`, `.agents/skills/pair-protocol/references/brownfield.md`, `docs/protocol-spec.md`, `docs/architecture.md`

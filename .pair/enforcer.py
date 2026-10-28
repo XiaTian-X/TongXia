@@ -176,6 +176,9 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "contract-change-tier",  # --contract-change 只放行契约的纯追加;PLAN 的改动与契约的改写走提案签字与人类批准(W70)
     "decision-overturn",     # 带 `推翻:` 的决策只在 resume 时写,引用要正好对上一条已有条目,不重复推翻(W71)
     "discuss-decision-format",  # 讨论回合的三个入口与正常交接同一套决策校验(W71)
+    "understand-open",       # discuss --understand 只在 idle、由空闲时轮到的一方进入;工作阶段只能用普通 discuss(W72)
+    "understand-crosscheck",  # understand 的 resume 要求累计至少 3 次发言(W72)
+    "understand-draft",      # understand 的 resume 交出双方签字、合规的契约草案,或 --no-draft 声明(W72)
 )
 
 
@@ -1914,10 +1917,17 @@ def cmd_status(root, cfg, args):
     if phase == DISCUSS and state.get("discuss"):     # W67
         d = state["discuss"]
         print()
-        print(">>> 讨论中(discuss),工作项 %s 挂起在 %s 阶段。<<<" % (state["item"], d["suspended"]["phase"]))
-        print("  提案: %s" % d["proposal"])
-        print("  为什么: %s" % d["why"])
-        print("  发起方: %s   发过言: %s   轮到: %s" % (d["opened_by"], "、".join(d["spoke"]), d["turn"]))
+        if d.get("mode") == "understand":                # W72
+            print(">>> understand 中:空闲时读懂存量代码,结束后回到 %s。<<<" % d["suspended"]["phase"])
+            print("  提案: %s" % d["proposal"])
+            print("  范围: %s" % d["why"])
+            print("  发起方: %s   发过言: %s   累计发言: %d 次   轮到: %s"
+                  % (d["opened_by"], "、".join(d["spoke"]), d.get("speeches", 1), d["turn"]))
+        else:
+            print(">>> 讨论中(discuss),工作项 %s 挂起在 %s 阶段。<<<" % (state["item"], d["suspended"]["phase"]))
+            print("  提案: %s" % d["proposal"])
+            print("  为什么: %s" % d["why"])
+            print("  发起方: %s   发过言: %s   轮到: %s" % (d["opened_by"], "、".join(d["spoke"]), d["turn"]))
 
     ripe = pending_ratification(root, cfg)              # W68:等人类批准的提案
     if ripe:
@@ -2000,7 +2010,10 @@ def cmd_status(root, cfg, args):
         print(IDLE_REVERIFY_BRIEF % {"prog": PROG_HINT, "why": IDLE_REVERIFY_WHY[gap],
                                      "how": reverify_how("dev", gap)})
     elif phase == DISCUSS:
-        print(DISCUSS_BRIEF % {"prog": PROG_HINT, "proposal": (state.get("discuss") or {}).get("proposal")})
+        d = state.get("discuss") or {}
+        brief = UNDERSTAND_BRIEF if d.get("mode") == "understand" else DISCUSS_BRIEF
+        print(brief % {"prog": PROG_HINT, "proposal": d.get("proposal"),
+                       "plan": cfg["plan_file"], "contract": cfg["contract_file"]})
     else:
         print(PHASE_BRIEF[phase] % _brief_vars(cfg, state, phase))
     if phase != "idle":
@@ -3297,6 +3310,22 @@ DISCUSS_BRIEF = """  你在讨论回合(discuss)。工作项挂起着,本回合�
   讨论期间不能改代码、测试、PLAN 或契约。结论要改 PLAN 或契约的,写进提案交给人类。"""
 
 
+UNDERSTAND_BRIEF = """  你在 understand 的讨论回合:空闲时读懂存量代码,本回合只写散文(读代码、跑代码都可以,临时脚本放 .pair/scratch/)。
+
+  1. 还没发过言:先读代码、写下**你自己的独立理解**,写完再读对方的。脚本挡不住你先读 ——
+     这是约定;先读了,两份理解就会趋同,交叉检查就少了一道。
+  2. 然后交叉检查对方的理解:漏了什么、说错了什么,指到代码位置。都追加在 %(proposal)s 末尾。
+  3. 交给对方:  python3 %(prog)s handoff "一句话说明"
+
+  结束(累计至少 3 次发言,本回合追加的算一次):
+    python3 %(prog)s resume "结论"
+  产物是一份双方签字的草案 —— 提案里最后一个 ```diff 块,只碰 %(plan)s 与 %(contract)s:
+    - 契约至少新增一个 `## ` 小节,每节写 `- 依据: 考古观察@<真实的 commit sha>`;
+    - PLAN 新增的工作项都是 [cover],每个新增小节被至少一个 cover 项的 `对应契约` 引用;
+    - 双方都对这个块签字:  python3 %(prog)s sign %(proposal)s
+  这次交不出草案:resume "结论" --no-draft "理由"。草案由人类 ratify 落地,脚本不替人类应用。"""
+
+
 def prose_paths_of(cfg):
     """散文路径:提案、评审目录、记忆层(memory 开着时)。"""
     out = list(cfg.get("proposal_paths") or []) + list(cfg["shared_paths"])
@@ -3364,8 +3393,14 @@ def cmd_discuss(root, cfg, args):
     _discuss_tamper_guard(root, "discuss")
     state = load_state(root)
     phase = state["phase"]
-    if phase not in WORK_PHASES or not state["item"]:
-        die("discuss 只在有工作项进行时用(当前 %s)。没有工作项可挂起时,方向问题写进提案交给人类。" % phase)
+    understand = bool(getattr(args, "understand", False))
+    if understand:
+        # W72:understand 只换时钟 —— 空闲时进入、恢复回空闲;有工作项时的方向问题走普通 discuss。
+        if phase != "idle":
+            die("discuss --understand 只在空闲时用(当前 %s)。有工作项进行时的方向问题,用普通 discuss。" % phase)
+    elif phase not in WORK_PHASES or not state["item"]:
+        die("discuss 只在有工作项进行时用(当前 %s)。没有工作项可挂起时,方向问题写进提案交给人类;\n"
+            "要在开工前读懂存量代码、产出契约草案,空闲时用 discuss --understand。" % phase)
     turn = phase_owner(root, cfg, state)
     if me != turn:
         die("discuss 只能在自己的回合发起:现在是 %s 的 %s 回合,不是你(%s)的。" % (turn, phase, me))
@@ -3379,11 +3414,12 @@ def cmd_discuss(root, cfg, args):
         die("%s 不在提案目录(%s)下。讨论要写在一份提案里。" % (proposal, " ".join(cfg["proposal_paths"])))
     # W69:额度可配。撞上额度只拒绝这一次 discuss,不停轮转 —— 额度用完时工作项本身还能做;
     # 撞额度就停,一方再提一次 discuss 就能让双方都停下,等于把逃生口反过来用。
-    used = (state.get("discussed") or []).count(state["item"])
-    if used >= cfg["discuss_limit"]:
-        die("工作项 %s 的讨论额度已用完(已进 %d 次,discuss_limit = %d)。\n"
-            "还有没谈完的方向问题:写进提案交给人类排期;或者由人类在 %s 里调高 discuss_limit。"
-            % (state["item"], used, cfg["discuss_limit"], CONFIG_REL))
+    if not understand:      # understand 没有工作项,不计额度(W72)
+        used = (state.get("discussed") or []).count(state["item"])
+        if used >= cfg["discuss_limit"]:
+            die("工作项 %s 的讨论额度已用完(已进 %d 次,discuss_limit = %d)。\n"
+                "还有没谈完的方向问题:写进提案交给人类排期;或者由人类在 %s 里调高 discuss_limit。"
+                % (state["item"], used, cfg["discuss_limit"], CONFIG_REL))
     if not _appended(root, proposal):
         die("本回合没有在 %s 里写下开场陈述。先把问题写进提案,再 discuss。" % proposal)
     entries = _turn_entries(root, cfg)
@@ -3402,12 +3438,20 @@ def cmd_discuss(root, cfg, args):
                         "suspended": {"phase": phase, "last_actor": state["last_actor"],
                                       "after_rebound": state["after_rebound"],
                                       "rebound_from": state["rebound_from"]}}
+    if understand:
+        state["discuss"].update({"mode": "understand", "speeches": 1})
     state["phase"] = DISCUSS
     save_state(root, state)
-    _commit_prose(root, entries, "discuss: %s" % why.splitlines()[0][:80],
-                  "discuss=open role=%s item=%s 挂起于 %s\n提案: %s\n为什么: %s"
-                  % (me, state["item"], phase, proposal, why))
-    print("[结对协议] 进入讨论:工作项 %s 挂起在 %s 阶段,轮到 %s。" % (state["item"], phase, other))
+    if understand:
+        # 第一行不以 discuss=open 开头:report 的讨论次数按工作项算,understand 没有工作项。
+        _commit_prose(root, entries, "understand: %s" % why.splitlines()[0][:80],
+                      "understand=open role=%s 范围: %s\n提案: %s" % (me, why.splitlines()[0], proposal))
+        print("[结对协议] 进入 understand:空闲时读懂存量代码,轮到 %s 写它自己的独立理解。" % other)
+    else:
+        _commit_prose(root, entries, "discuss: %s" % why.splitlines()[0][:80],
+                      "discuss=open role=%s item=%s 挂起于 %s\n提案: %s\n为什么: %s"
+                      % (me, state["item"], phase, proposal, why))
+        print("[结对协议] 进入讨论:工作项 %s 挂起在 %s 阶段,轮到 %s。" % (state["item"], phase, other))
     print("现在请告诉人类:轮到 %s 了(讨论回合)。然后停止工作。" % other)
     return 0
 
@@ -3432,10 +3476,17 @@ def discuss_handoff(root, cfg, args, me, state):
     other = [r for r in ROLES if r != me][0]
     d["spoke"] = sorted(set(d["spoke"]) | {me}, key=ROLES.index)
     d["turn"] = other
+    understand = d.get("mode") == "understand"
+    if understand:
+        d["speeches"] = d.get("speeches", 1) + 1
     state["discuss"] = d
     save_state(root, state)
-    _commit_prose(root, entries, "discuss: %s" % message.splitlines()[0][:80],
-                  "discuss=reply role=%s item=%s\n提案: %s" % (me, state["item"], d["proposal"]))
+    if understand:
+        _commit_prose(root, entries, "understand: %s" % message.splitlines()[0][:80],
+                      "understand=reply role=%s\n提案: %s" % (me, d["proposal"]))
+    else:
+        _commit_prose(root, entries, "discuss: %s" % message.splitlines()[0][:80],
+                      "discuss=reply role=%s item=%s\n提案: %s" % (me, state["item"], d["proposal"]))
     print("[结对协议] 已交接(讨论回合),轮到 %s。" % other)
     print("现在请告诉人类:轮到 %s 了(讨论回合)。然后停止工作。" % other)
     return 0
@@ -3464,22 +3515,141 @@ def cmd_resume(root, cfg, args):
     if bad:
         die("拒绝 resume —— %s" % ";".join(bad))
     _discuss_decisions(root, cfg, "resume", at_resume=True)
+    understand = d.get("mode") == "understand"
+    no_draft = (getattr(args, "no_draft", None) or "").strip()
+    if getattr(args, "no_draft", None) is not None and not understand:
+        die("--no-draft 只用于 understand 的 resume;普通讨论没有草案要交。")
+    draft_hash = None
+    if understand:
+        # W72:交叉检查 —— 开场方的独立理解、对方的理解加交叉检查、开场方再查对方,至少三次发言。
+        speeches = d.get("speeches", 1) + (1 if _appended(root, d["proposal"]) else 0)
+        if speeches < 3:
+            die("拒绝 resume —— understand 要累计至少 3 次发言才算交叉检查过(现在 %d 次)。\n"
+                "开场方的独立理解、对方的理解加交叉检查之后,还差开场方对对方理解的交叉检查:\n"
+                "在 %s 末尾追加它再 resume。" % (speeches, d["proposal"]))
+        if getattr(args, "no_draft", None) is not None:
+            if not no_draft:
+                die("--no-draft 要写理由:为什么这次读懂之后没有契约草案。")
+        else:
+            problem, draft_hash = understand_draft_problem(root, cfg, d["proposal"])
+            if problem:
+                die("拒绝 resume —— understand 的产物是双方签字的契约草案:%s\n\n"
+                    "草案的要求:提案里最后一个 ```diff 块只碰 %s 与 %s;契约至少新增一个 `## ` 小节,\n"
+                    "每个新增小节写 `- 依据: 考古观察@<真实的 commit sha>`;PLAN 新增的工作项都是 [cover],\n"
+                    "每个新增小节被至少一个新增 cover 项的 `对应契约` 引用;tester 与 dev 都对这个块 sign 过。\n"
+                    "这次确实交不出草案:resume \"结论\" --no-draft \"理由\"。"
+                    % (problem, cfg["plan_file"], cfg["contract_file"]))
     sus = d["suspended"]
     state["phase"] = sus["phase"]
     state["last_actor"] = sus["last_actor"]
     state["after_rebound"] = sus["after_rebound"]
     state["rebound_from"] = sus["rebound_from"]
     state["discuss"] = None
-    state["discussed"] = list(state.get("discussed") or []) + [state["item"]]
+    if not understand:
+        state["discussed"] = list(state.get("discussed") or []) + [state["item"]]
     save_state(root, state)
-    _commit_prose(root, entries, "discuss(resume): %s" % conclusion.splitlines()[0][:80],
-                  "discuss=resume role=%s item=%s 恢复到 %s\n提案: %s\n结论: %s"
-                  % (me, state["item"], sus["phase"], d["proposal"], conclusion))
+    if understand:
+        body = ("understand=resume role=%s 恢复到 %s\n提案: %s\n结论: %s"
+                % (me, sus["phase"], d["proposal"], conclusion))
+        body += ("\n未产出草案(已声明): %s" % no_draft) if draft_hash is None \
+            else "\n草案: %s sha256:%s" % (d["proposal"], draft_hash)
+        _commit_prose(root, entries, "understand(resume): %s" % conclusion.splitlines()[0][:80], body)
+    else:
+        _commit_prose(root, entries, "discuss(resume): %s" % conclusion.splitlines()[0][:80],
+                      "discuss=resume role=%s item=%s 恢复到 %s\n提案: %s\n结论: %s"
+                      % (me, state["item"], sus["phase"], d["proposal"], conclusion))
     back = phase_owner(root, cfg, state)
-    print("[结对协议] 讨论结束,工作项 %s 恢复到 %s 阶段,轮到 %s。" % (state["item"], sus["phase"], back))
-    print("结论要改 PLAN 或契约的,写进提案交给人类。")
+    if understand:
+        print("[结对协议] understand 结束,回到 %s,轮到 %s。" % (sus["phase"], back))
+        if draft_hash:
+            print("草案(sha256:%s)双方已签字,等人类批准落地 —— 告诉人类运行:" % draft_hash)
+            print("  PAIR_ROLE=human python3 %s ratify %s" % (PROG_HINT, d["proposal"]))
+        else:
+            print("这次没有契约草案(已声明)。")
+    else:
+        print("[结对协议] 讨论结束,工作项 %s 恢复到 %s 阶段,轮到 %s。" % (state["item"], sus["phase"], back))
+        print("结论要改 PLAN 或契约的,写进提案交给人类。")
     print("现在请告诉人类:轮到 %s 了。然后停止工作。" % back)
     return 0
+
+
+def _diff_lines(block):
+    """{路径: [(是否新增, 去掉首字符的行)]}。按 `+++ ` 头切段;上下文行、删除行与 hunk 头记为非新增。"""
+    out, cur = {}, None
+    for line in block.splitlines():
+        if line.startswith("+++ "):
+            m = re.match(r"^\+\+\+ (?:b/)?(.+?)\s*$", line)
+            cur = m.group(1) if m and m.group(1) != "/dev/null" else None
+            if cur is not None:
+                out.setdefault(cur, [])
+        elif line.startswith("diff --git "):
+            cur = None
+        elif cur is not None:
+            out[cur].append((line.startswith("+"), line[1:]))
+    return out
+
+
+def _cover_refs(lines):
+    """新增 cover 项自己的块里的 `对应契约` 标题。块 = 从一行新增的工作项行起、连续的新增行;
+    遇到上下文行、删除行或下一个工作项行就结束 —— 挂在已有工作项下面的引用不算(W72 review-impl)。"""
+    refs, cur = set(), None
+    for added, text in lines:
+        if not added:
+            cur = None
+            continue
+        m = ITEM_RE.match(text)
+        if m:
+            cur = m.group("typename") or "feature"
+            continue
+        if cur == "cover":
+            refs.update(r.strip().strip("`") for r in CONTRACT_REF_RE.findall(text))
+    return refs
+
+
+def understand_draft_problem(root, cfg, proposal):
+    """understand 草案的问题;返回 (问题说明或 None, 最后一个 diff 块的哈希)。"""
+    text = _read(root / proposal)
+    blocks = diff_blocks(text)
+    if not blocks:
+        return "%s 里没有 ```diff 块。" % proposal, None
+    last = blocks[-1]          # 签字绑最后一个块(与 ratify 同口径)
+    h = block_hash(last)
+    signed = {role for role, sig in SIGN_RE.findall(text) if sig == h}
+    missing = [r for r in ROLES if r not in signed]
+    if missing:
+        return "最后一个 diff 块(sha256:%s)缺 %s 的签字。" % (h, "、".join(missing)), h
+    stray = sorted(diff_paths(last) - {cfg["plan_file"], cfg["contract_file"]})
+    if stray:
+        return "diff 碰了 PLAN 与契约以外的文件:%s。" % " ".join(stray), h
+    seg = _diff_lines(last)
+    sections, cur = [], None
+    for line in [t for a, t in seg.get(cfg["contract_file"], []) if a]:
+        m = re.match(r"^##[ \t]+(.+?)[ \t]*$", line)
+        if m:
+            cur = [m.group(1), []]
+            sections.append(cur)
+        elif cur is not None:
+            cur[1].append(line)
+    if not sections:
+        return "契约没有新增 `## ` 小节 —— 读懂的东西要落成契约的一节。", h
+    for title, lines in sections:
+        shas = ARCHAEOLOGY_SHA_RE.findall("\n".join(lines))
+        if not shas:
+            return "新增小节「%s」没写 `依据: 考古观察@<sha>`。" % title, h
+        for sha in shas:
+            if git("cat-file", "-e", sha + "^{commit}", cwd=root, check=False) is None:
+                return "新增小节「%s」的 `考古观察@%s` 在本仓库找不到这个 commit。" % (title, sha), h
+    plan = seg.get(cfg["plan_file"], [])
+    items = [(m.group("id").strip(), m.group("typename") or "feature")
+             for m in (ITEM_RE.match(t) for a, t in plan if a) if m]
+    refs = _cover_refs(plan)
+    not_cover = ["%s [%s]" % it for it in items if it[1] != "cover"]
+    if not_cover:
+        return "PLAN 新增的工作项只能是 [cover]:%s。" % "、".join(not_cover), h
+    orphan = [t for t, _ in sections if t not in refs]
+    if orphan:
+        return "新增小节没有对应的 cover 工作项(`对应契约` 引用它):%s。" % "、".join(orphan), h
+    return None, h
 
 
 # --------------------------------------------------------------------------
@@ -5069,8 +5239,12 @@ def main(argv=None):
     p_ds = sub.add_parser("discuss", help="挂起当前工作项,进入讨论阶段(要先在提案里写开场陈述)")
     p_ds.add_argument("why", metavar="为什么")
     p_ds.add_argument("--proposal", required=True, metavar="路径", help="提案目录下的那份提案")
+    p_ds.add_argument("--understand", action="store_true",
+                      help="空闲时读懂存量代码:双方各写独立理解、交叉检查,结束时交出签字的契约草案(W72)")
     p_rs = sub.add_parser("resume", help="结束讨论,原样恢复挂起的工作项(两方都发过言之后)")
     p_rs.add_argument("conclusion", nargs="*", metavar="结论")
+    p_rs.add_argument("--no-draft", metavar="理由", default=None,
+                      help="understand 结束时声明这次没有契约草案,并写明为什么")
     p_sg = sub.add_parser("sign", help="对提案里最后一个 diff 块签字")
     p_sg.add_argument("proposal", metavar="提案")
     p_rf = sub.add_parser("ratify", help="人类批准提案:核对双方签字后应用 diff(PAIR_ROLE=human)")
