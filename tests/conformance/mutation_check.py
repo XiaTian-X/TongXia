@@ -1423,6 +1423,66 @@ MUTATIONS = [
     ('推翻_格式提示不提推翻',
      '  - 推翻: W3 — <旧条目的结论原文>   (可选,可多行;只在讨论结束 resume 时写)\n',
      ''),
+    # --- W72 understand 模式(第四十三轮)-----------------------------------
+    ('理解_idle_不带也放行',
+     '    elif phase not in WORK_PHASES or not state["item"]:\n        die("discuss 只在有工作项进行时用(当前 %s)。没有工作项可挂起时,方向问题写进提案交给人类;\\n"',
+     '    elif phase not in WORK_PHASES + ("idle",):\n        die("discuss 只在有工作项进行时用(当前 %s)。没有工作项可挂起时,方向问题写进提案交给人类;\\n"'),
+
+    ('理解_工作阶段带它放行',
+     '        if phase != "idle":\n            die("discuss --understand 只在空闲时用',
+     '        if False:\n            die("discuss --understand 只在空闲时用'),
+
+    ('理解_额度照算',
+     '    if not understand:      # understand 没有工作项,不计额度(W72)\n',
+     '    if True:\n'),
+
+    ('理解_speeches_不加',
+     '        d["speeches"] = d.get("speeches", 1) + 1\n',
+     '        pass\n'),
+
+    ('理解_不数发言',
+     '        if speeches < 3:\n',
+     '        if False:\n'),
+
+    ('理解_no_draft_不生效',
+     '        if getattr(args, "no_draft", None) is not None:\n            if not no_draft:',
+     '        if False:\n            if not no_draft:'),
+
+    ('理解_resume_记了_discussed',
+     '    if not understand:\n        state["discussed"]',
+     '    if True:\n        state["discussed"]'),
+
+    ('理解_不查签字',
+     '    if missing:\n        return "最后一个 diff 块',
+     '    if False:\n        return "最后一个 diff 块'),
+
+    ('理解_签字不限最后一块',
+     '    signed = {role for role, sig in SIGN_RE.findall(text) if sig == h}\n',
+     '    signed = {role for role, sig in SIGN_RE.findall(text)}\n'),
+
+    ('理解_不查别的文件',
+     '    if stray:\n        return "diff 碰了 PLAN 与契约以外的文件',
+     '    if False:\n        return "diff 碰了 PLAN 与契约以外的文件'),
+
+    ('理解_不要求新增小节',
+     '    if not sections:\n        return "契约没有新增',
+     '    if False:\n        return "契约没有新增'),
+
+    ('理解_不查考古观察',
+     '        if not shas:\n            return "新增小节「%s」没写',
+     '        if False:\n            return "新增小节「%s」没写'),
+
+    ('理解_不查考古观察的_sha',
+     '            if git("cat-file", "-e", sha + "^{commit}", cwd=root, check=False) is None:\n                return "新增小节',
+     '            if False:\n                return "新增小节'),
+
+    ('理解_不查只加_cover',
+     '    if not_cover:\n',
+     '    if False:\n'),
+
+    ('理解_不查每节有_cover_引用',
+     '    orphan = [t for t, _ in sections if t not in refs]\n',
+     '    orphan = []\n'),
 ]
 
 # unittest 的失败行有两种形态:
