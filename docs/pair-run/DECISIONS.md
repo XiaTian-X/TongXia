@@ -873,3 +873,8 @@
 - 理由: 复用 discuss 的提案、散文、决策校验与挂起现场,`--understand` 只换进入条件(只在 idle)、跳过额度、不记 `discussed`,状态多 `mode`/`speeches`。提交第一行用 `understand=open|reply|resume`,`report` 的讨论次数自然不算它,`role=` 仍在第一行供 `ratify` 溯源。草案只认提案里最后一个 diff 块,检查双方签字齐、只碰 PLAN 与契约、至少一个新增小节且各有 `考古观察@<真实 sha>`、新增工作项全是 cover、每节被新增 cover 项自己块里的 `对应契约` 引用;应用草案仍由人类 `ratify`。
 - 已否决: 把 understand 计入 `discuss_limit` —— 额度按工作项算,空闲时没有工作项;复用 `discuss=open` 作第一行 —— `report` 会把它算成讨论,拉高"讨论 / 认领";草案取第一个 diff 块或合并所有块 —— 签字签的是哪一份就对不上;独立性写成检查 —— 同一目录挡不住,只记成约定。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_understand.py`, `.agents/skills/pair-protocol/references/brownfield.md`, `docs/protocol-spec.md`, `docs/architecture.md`
+## SETUP — 第四十四轮做 P0-3(契约形状检查),规划经自审后人类批准(2026-10-28)
+
+- 理由: 人类要求开始下一个工作项,dev 按路线图从剩余条目里选 P0-3:契约含糊是本协议自认唯一会致命的失败模式,而 `verify-setup` 让一个只有一句散文的小节通过全部检查。只查形状(代码块或填了数据的表、返回或错误的描述、存量类工作项的标识符是否还在代码里),默认警告、`strict_contract` 开严;依据不可断言的小节不查,免得严格模式挡住来修它的 cover 项。小节正文含子小节,因为模板把签名放在 `###` 里;去掉 HTML 注释,因为模板注释里就有"返回 null"。
+- 已否决: 默认就失败 —— 契约是人类写的,会被烦到关掉检查;漂移也随严格模式升级 —— 从自由格式代码块抽标识符是启发式,伪代码与示例调用会误伤;复用 `contract_sections` —— 它不含子小节、抹掉代码块,模板的签名查不到;先做 P1-10 —— 与严格轮流有张力,且一部分痛点已被 W17 捷径与 P1-13 `request` 接走。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `.agents/skills/pair-protocol/references/rules.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
