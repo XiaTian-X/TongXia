@@ -1,5 +1,5 @@
 {
-  "baseline": "a9aeadb3e612c9b4",
+  "baseline": "c92c2cbbe1046a74",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -819,6 +819,9 @@
     ],
     "理解_工作阶段带它放行": [
       "test_v1_understand.TestOpen.test_工作阶段带它被拒"
+    ],
+    "理解_引用不限于新增_cover_项的块": [
+      "test_v1_understand.TestDraftRefused.test_cover_项引用别处_新节的引用挂在已有工作项块里"
     ],
     "理解_签字不限最后一块": [
       "test_v1_understand.TestDraftRefused.test_签的不是最后一个_diff_块"

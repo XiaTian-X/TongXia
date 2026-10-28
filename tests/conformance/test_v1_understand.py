@@ -182,6 +182,13 @@ class TestSpeeches(UnderstandBase):
 
 class TestNoDraft(UnderstandBase):
 
+    def test_no_draft_空理由被拒(self):
+        self.assertAccepted(self.open())
+        self.assertAccepted(self.reply())
+        self.say("tester", "交叉检查:成立。")
+        before = self.snapshot()
+        self.assertNothingHappened(self.resume("--no-draft", "  ", speak=False), before, "--no-draft")
+
     def test_没草案也没声明被拒(self):
         self.assertAccepted(self.open())
         self.assertAccepted(self.reply())
@@ -264,6 +271,16 @@ class TestDraftRefused(UnderstandBase):
 
     def test_某个新增小节没被_cover_引用(self):
         self.assertDraftRefused(self.draft(contract_add=contract_section() + contract_section(title="重试的现状")))
+
+    # review-impl 第一次打回修掉的那处:引用只认**新增 cover 项自己的块**里的。
+    # draft() 把 plan_add 接在 PLAN 末尾,紧跟模板里 W2 的块 —— 没有工作项行开头的新增行就落进 W2 的块。
+    REF = "  - 对应契约:`docs/CONTRACT.md` → %s\n" % SECTION
+
+    def test_一个_cover_项都不加_只在已有工作项块里引用新节(self):
+        self.assertDraftRefused(self.draft(plan_add=self.REF))
+
+    def test_cover_项引用别处_新节的引用挂在已有工作项块里(self):
+        self.assertDraftRefused(self.draft(plan_add=self.REF + COVER % "W1"))
 
 
 class TestStatusBrief(UnderstandBase):

@@ -1483,6 +1483,10 @@ MUTATIONS = [
     ('理解_不查每节有_cover_引用',
      '    orphan = [t for t, _ in sections if t not in refs]\n',
      '    orphan = []\n'),
+
+    ('理解_引用不限于新增_cover_项的块',
+     '        if cur == "cover":\n',
+     '        if True:\n'),
 ]
 
 # unittest 的失败行有两种形态:
