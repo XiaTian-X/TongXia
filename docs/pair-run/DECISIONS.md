@@ -863,3 +863,8 @@
 - 理由: 路线图判据"三个阶段只在时钟上不同":understand 是 discuss 带 `--understand`,只换时钟(空闲时进入、恢复回空闲)与产物(双方签字的契约草案加 cover 工作项,人类 `ratify` 落地)。交叉检查要求至少三次发言:开场方独立理解、对方独立理解加交叉检查、开场方再查对方。草案每个新增小节必须是 `考古观察@<真实 sha>` 并被一个新增 cover 项引用,这是验收里"每条都有绿着的特征测试"能被脚本检查的那一半。独立性只能是约定:两个 agent 共用目录,脚本只保证开场方事后改不了自己的理解。
 - 已否决: 新增 understand 阶段 —— 违背"只在时钟上不同";哈希承诺强制独立 —— 内容总要落盘,挡不住,只会制造已强制的错觉;resume 时脚本直接应用草案 —— 越过人类批准;不留 `--no-draft` —— 谈不拢就卡死在讨论阶段。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/brownfield.md`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W72 — 草案的 cover 引用只认新增 cover 项自己块里的,挂在已有项下的不算
+
+- 理由: 契约写"每个新增小节被至少一个新增 cover 项的 `对应契约` 引用"。收 PLAN diff 里任何新增的 `对应契约` 时,一个 cover 都不加、只在已有工作项下补一行引用就能放行,落地后新契约节没有任何特征测试的工作项,正是 understand 要防的。引用从一行新增的工作项行起,到上下文行、删除行或下一个工作项行为止,工作项是 `[cover]` 才算。review-impl 打回修了实现,review-test 打回补两条用例守住它。
+- 已否决: 只要 PLAN 里有新增 cover 项、引用随便挂在哪 —— cover 项可以引用别处,新节照样没人测;按工作项 ID 回查整份 PLAN 的块 —— 已有工作项的块不是草案的产出,不该替草案担保。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_understand.py`
