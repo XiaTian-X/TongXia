@@ -1487,6 +1487,78 @@ MUTATIONS = [
     ('理解_引用不限于新增_cover_项的块',
      '        if cur == "cover":\n',
      '        if True:\n'),
+
+    ('形状_不查子小节',
+     '            if len(n.group(1)) <= level:\n',
+     '            if True:\n'),
+
+    ('形状_空数据行的表也算形状',
+     '            if row.replace("|", "").strip():\n',
+     '            if True:\n'),
+
+    ('形状_不去_HTML_注释',
+     '    body = _HTML_COMMENT_RE.sub("", body)\n',
+     '    body = body\n'),
+
+    ('形状_不可断言的小节也查',
+     '            if ok:\n                shaped_refs.setdefault',
+     '            if True:\n                shaped_refs.setdefault'),
+
+    ('形状_严格模式不升级',
+     '        gate = bad if strict else warn\n',
+     '        gate = warn\n'),
+
+    ('形状_漂移不限工作项类型',
+     'drift = [i for i, t in users if t in DRIFT_TYPES]',
+     'drift = [i for i, t in users]'),
+
+    ('形状_漂移在严格模式下也升级',
+     '                warn("契约小节 \'%s\'(%s 引用)可能已经',
+     '                gate("契约小节 \'%s\'(%s 引用)可能已经'),
+
+    ('形状_漂移把_docs_也算进去',
+     '        if not (matches_any(f, cfg["roles"]["tester"]) or matches_any(f, cfg["roles"]["dev"])):\n            continue\n',
+     '        if False:\n            continue\n'),
+
+    ('形状_围栏里的井号当标题',
+     '    blanked = _FENCE_RE.sub(lambda m: re.sub(r"[^\\n]", " ", m.group(0)), text)\n',
+     '    blanked = text\n'),
+
+    ('形状_漂移不按整词',
+     'rx = re.compile(r"(?<![A-Za-z0-9_])(?:%s)(?![A-Za-z0-9_])"',
+     'rx = re.compile(r"(?:%s)"'),
+
+    ('形状_漂移只认_dev_名下',
+     'matches_any(f, cfg["roles"]["tester"]) or matches_any(f, cfg["roles"]["dev"])',
+     'matches_any(f, cfg["roles"]["dev"])'),
+
+    ('形状_关键词区分大小写',
+     '    low = body.lower()\n',
+     '    low = body\n'),
+
+    ('形状_关键词不看代码块',
+     'any(w in low for w in OUTCOME_WORDS)',
+     'any(w in prose.lower() for w in OUTCOME_WORDS)'),
+
+    ('形状_不抽_class_后的名字',
+     'for rx in (_IDENT_DEF_RE, _IDENT_CALL_RE):',
+     'for rx in (_IDENT_CALL_RE,):'),
+
+    ('形状_非布尔值照收',
+     '    if not isinstance(cfg.get("strict_contract"), bool):\n',
+     '    if False:\n'),
+
+    ('形状_空代码块也算形状',
+     'shaped = any(c.strip() for c in codes)',
+     'shaped = bool(codes)'),
+
+    ('形状_漂移附上会阻断',
+     '这条只提醒。"\n',
+     '这条只提醒。`strict_contract: true` 时这条会阻断开工。"\n'),
+
+    ('形状_同一节每个引用者各报一次',
+     'shaped_refs.setdefault(anchor, []).append((item_id, typ))',
+     'shaped_refs.setdefault(anchor + item_id, []).append((item_id, typ))'),
 ]
 
 # unittest 的失败行有两种形态:

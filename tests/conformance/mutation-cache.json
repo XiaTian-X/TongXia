@@ -1,5 +1,5 @@
 {
-  "baseline": "c92c2cbbe1046a74",
+  "baseline": "43a59fb6d45a3d34",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -327,6 +327,60 @@
     ],
     "当场留决策改成按工作项算": [
       "test_v1_validity.TestSameTurnGatesUnchanged.test_带声明改契约_更早回合的决策不算当场"
+    ],
+    "形状_不去_HTML_注释": [
+      "test_v1_contract_shape.TestKeywords.test_关键词只在_HTML_注释里仍警告"
+    ],
+    "形状_不可断言的小节也查": [
+      "test_v1_contract_shape.TestScope.test_依据待核实的不查"
+    ],
+    "形状_不抽_class_后的名字": [
+      "test_v1_contract_shape.TestDrift.test_class_后的名字也抽"
+    ],
+    "形状_不查子小节": [
+      "test_v1_contract_shape.TestSectionBody.test_代码块在_子小节里不警告"
+    ],
+    "形状_严格模式不升级": [
+      "test_v1_contract_shape.TestStrict.test_没有形状使_verify_setup_失败"
+    ],
+    "形状_关键词不看代码块": [
+      "test_v1_contract_shape.TestKeywords.test_关键词只在代码块里也算"
+    ],
+    "形状_关键词区分大小写": [
+      "test_v1_contract_shape.TestKeywords.test_英文关键词大小写不敏感"
+    ],
+    "形状_同一节每个引用者各报一次": [
+      "test_v1_contract_shape.TestDrift.test_class_后的名字也抽"
+    ],
+    "形状_围栏里的井号当标题": [
+      "test_v1_contract_shape.TestSectionBody.test_代码块里的井号注释行不截断小节"
+    ],
+    "形状_漂移不按整词": [
+      "test_v1_contract_shape.TestDrift.test_只作为更长名字的一部分不算存在"
+    ],
+    "形状_漂移不限工作项类型": [
+      "test_v1_contract_shape.TestDrift.test_同样的小节被_feature_项引用不查"
+    ],
+    "形状_漂移只认_dev_名下": [
+      "test_v1_contract_shape.TestDrift.test_函数名在测试目录下存在也不警告"
+    ],
+    "形状_漂移在严格模式下也升级": [
+      "test_v1_contract_shape.TestStrict.test_漂移仍只警告"
+    ],
+    "形状_漂移把_docs_也算进去": [
+      "test_v1_contract_shape.TestDrift.test_bug_项同样查"
+    ],
+    "形状_漂移附上会阻断": [
+      "test_v1_contract_shape.TestDrift.test_漂移那条不说会阻断开工"
+    ],
+    "形状_空代码块也算形状": [
+      "test_v1_contract_shape.TestShape.test_只有空白的代码块不算形状"
+    ],
+    "形状_空数据行的表也算形状": [
+      "test_v1_contract_shape.TestShape.test_原样复制的模板警告"
+    ],
+    "形状_非布尔值照收": [
+      "test_v1_contract_shape.TestStrictValue.test_不是布尔值失败_文案写明只接受_true_false"
     ],
     "执行前不删旧报告": [
       "test_v1_junit_report.TestDegrades.test_上一次的报告还在而这一次没写_不读上一次的"
