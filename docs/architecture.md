@@ -137,7 +137,7 @@ agent 被人类唤醒
 
 这是理解这个架构最重要的一张表:**哪些规则是脚本拦的,哪些只能靠留痕。**
 
-<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-quota proposal-sign ratify-signed contract-change-tier decision-overturn discuss-decision-format -->
+<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-quota proposal-sign ratify-signed contract-change-tier decision-overturn discuss-decision-format understand-open understand-crosscheck understand-draft -->
 
 | 规则 | 强制方式 | 失效条件 |
 |---|---|---|
@@ -183,6 +183,10 @@ agent 被人类唤醒
 | 讨论额度 | 脚本拒绝(同一工作项进 discuss 的次数不超过 `discuss_limit`,默认 1;撞额度只拒绝、不停轮转) | 人类调高 `discuss_limit` |
 | 签字的条件 | 脚本拒绝(自己回合、非 idle、提案有 diff 块、不重复签) | 改代码 |
 | 批准的内容校验 | 脚本拒绝(双方对最后一个 diff 的签字已提交、由本人回合提交、只碰 PLAN 与契约、能干净应用) | 一方在对方回合之外伪造对方的协议提交 |
+| understand 的进入 | 脚本拒绝(只在 idle、由空闲时轮到的一方;工作阶段只能用普通 discuss;不计讨论额度) | 改代码 |
+| understand 的交叉检查 | 脚本拒绝(`resume` 要累计至少 3 次发言) | 第三次发言写一句空话 |
+| understand 的产物 | 脚本拒绝(最后一个 diff 块双方签字、只碰 PLAN 与契约、新增小节都是 `考古观察@<真实 sha>` 并各有新增 cover 项引用;或 `--no-draft` 声明) | 带声明放行;考古观察写的 sha 是真的、内容没真读 |
+| **understand 的独立理解** | ❌ 只有约定(两个 agent 共用目录,后发言方能先读对方的;脚本只保证开场方事后改不了自己的) | 后发言方先读对方的理解 |
 | **批准只由人类执行** | ❌ 只有约定 + `PAIR_ROLE=human` + 提交主题留痕 | agent 自己设 `PAIR_ROLE=human` |
 | **代办不得表达分歧** | ❌ 只有 prose + 对方 decline(补计打回)+ `report` 被拒率 | 双方合谋把分歧当代办 |
 | **不许过拟合断言** | ❌ 只有 prose + 对方评审 | 双方都敷衍 |

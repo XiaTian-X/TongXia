@@ -40,7 +40,7 @@
 | `impl` | dev | 最小实现至绿 |
 | `review-impl` | tester | 审实现是否作弊 |
 | `review-test` | dev | 审测试是否过拟合 |
-| `discuss` | 两方轮流(`discuss.turn`) | 讨论方向问题;工作项挂起,只写散文(§5.6,W67) |
+| `discuss` | 两方轮流(`discuss.turn`) | 讨论方向问题;工作项挂起,只写散文(§5.6,W67);`--understand` 时从 idle 进入、读懂存量代码(§5.6.1,W72) |
 
 `review-impl` 与 `review-test` 是**评审阶段**,只读:本回合只能写
 `shared_paths`(默认 `docs/reviews`)、记忆层路径与提案目录(`proposal_paths`,配了才有)。夹带任何代码改动都会被拒绝。
@@ -259,6 +259,26 @@ pair.py resume "<结论>"                                           # 结束讨�
 - `discuss` 与 `resume` 开头先查状态篡改(W67 spec 回合带声明补 ㉑)。讨论相关的提交正文不含交接那一行,`report` 不把它们算成交接。
 - **本轮不做**:签字、人类批准、提升为 PLAN/契约改动(D3);可配额度与 `report` 频次(D4)。讨论结论要改 PLAN 或契约的,写进提案交给人类。
 
+#### 5.6.1 understand 模式(W72,P0-6)
+
+存量项目开工前读懂代码,产出契约草案与 cover 工作项。不新增阶段:同一个 discuss,只换时钟(从 idle 进入、恢复回 idle)与产物。
+
+```
+pair.py discuss --understand --proposal docs/proposals/<主题>.md "<要读懂哪一块、为什么>"
+pair.py handoff "<说明>"                                   # 讨论回合照旧
+pair.py sign docs/proposals/<主题>.md                        # 双方对草案签字
+pair.py resume "<结论>"   |   pair.py resume "<结论>" --no-draft "<理由>"
+```
+
+- **进入**:只在 `phase == idle` 时、由空闲时轮到的那一方执行;工作阶段带 `--understand` 拒绝(用普通 discuss),idle 时不带它照旧拒绝(文案指向 `--understand`)。其余条件同普通 discuss(提案、开场陈述 —— 即开场方的独立理解、只有散文、决策校验)。不计 `discuss_limit`、不记 `discussed`;状态 `discuss` 加 `mode: "understand"`、`speeches: 1`。提交正文第一行 `understand=open role=<r> …`(不以 `discuss=open` 开头,`report` 的讨论次数不算它)。
+- **讨论回合**:照旧;`speeches` 加 1,正文第一行 `understand=reply role=<r>`。
+- **独立理解是约定**:后发言方应先写自己的理解再读对方的。两个 agent 共用目录,脚本挡不住先读;它只保证开场方事后改不了自己的理解(提案只能追加)。
+- **结束**:在普通 `resume` 的条件之外,累计发言至少 3 次(本回合追加了提案算一次);产物二选一 ——
+  (a)提案最后一个 ```diff 块:当前文件里有 tester 与 dev 对它哈希的签字行;只碰 `plan_file` 与 `contract_file`;契约至少新增一个 `## ` 小节;每个新增小节的新增行里有 `依据: 考古观察@<sha>`,sha 是本仓库真实的 commit;PLAN 新增的工作项都是 `[cover]`;每个新增小节被至少一个新增 cover 项的 `对应契约` 引用。
+  (b)`--no-draft "理由"`,正文写 `未产出草案(已声明): 理由`。
+  被拒时什么都不提交、状态不变。放行时恢复到 idle、不记 `discussed`,正文第一行 `understand=resume role=<r>`,(a)时正文写 `草案: <提案> sha256:<哈希>`。
+- 脚本不应用草案:人类 `PAIR_ROLE=human … ratify <提案>` 落地(§5.7);签字的溯源在那时校验。`--no-draft` 只用于 understand。
+
 ### 5.7 提案的签字与人类批准(W68,P0-5 的 D3)
 
 讨论定下的结论要改 PLAN 或契约时:提案里写出确切的 diff,两个角色对它签字,人类一条命令核对后原样应用。
@@ -476,7 +496,7 @@ PAIR_ROLE=human pair.py ratify docs/proposals/<主题>.md   # 人类:核对后�
 | `last_full_failed` | bool | 最近一次工作项完成时,全量套件(`full_test_cmd`)是否红。PLAN 全部完成之后 `status` / `whose-turn` / `handoff` 的完成提示读它:为真时不说"请向人类报告项目完成",改说项目算不算结束由人类决定。没配 `full_test_cmd` 记为 `false`;老状态没有这个键按 `false` |
 | `full_failures` | string[]\|null | 上一次全量里红着的用例 ID(排序列表,W59)。`verify-setup` 跑全量且读得出 `full_test_report` 时写入,每次工作项完成时更新;完成时新增的红 = 这一次红着的 − 它。不知道时为 `null`(没配报告、报告读不出、老状态),那时完成照旧只报告 |
 | `item_base` | string\|null | 认领那一刻的 HEAD(W60)。`affected_test_cmd` 的路径从它算起;老状态没有它时门禁用 `test_cmd` |
-| `discuss` | object\|null | 讨论阶段的现场(W67,§5.6):`{proposal, why, opened_by, turn, spoke, suspended}`;不在讨论时为 `null` |
+| `discuss` | object\|null | 讨论阶段的现场(W67,§5.6):`{proposal, why, opened_by, turn, spoke, suspended}`,understand 模式另有 `mode: "understand"` 与 `speeches`(累计发言次数,W72);不在讨论时为 `null` |
 | `discussed` | string[] | 每次 `resume` 记一次工作项 ID(可重复,W69)。进入时按当前工作项的出现次数与 `discuss_limit` 比;`claim` 不清 |
 | `requests` | object[] | 本工作项的代办(W65,§5.5)。每条 `{id, item, by, to, paths, what, reason, base, status, carried}`,`status` 为 open / fulfilled / declined;`claim` 时清空;老状态没有它 = 没有代办 |
 
