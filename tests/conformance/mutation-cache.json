@@ -1,5 +1,5 @@
 {
-  "baseline": "9d2461d3ef9cb6a6",
+  "baseline": "26370f18b19d99c8",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -975,6 +975,9 @@
     ],
     "缺口_带旗标不放开_tester_路径": [
       "test_v1_test_gap.TestApproveWithGap.test_加一条绿用例进_review_test_正文含测试缺口"
+    ],
+    "缺口_拆掉讨论回合的那次调用": [
+      "test_v1_test_gap.TestDiscussTurn.test_轮到的一方带_test_gap_交接被拒"
     ],
     "缺口_正文不写测试缺口": [
       "test_v1_test_gap.TestApproveWithGap.test_加一条绿用例进_review_test_正文含测试缺口"

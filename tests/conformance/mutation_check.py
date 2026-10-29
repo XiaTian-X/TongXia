@@ -1627,6 +1627,10 @@ MUTATIONS = [
     ('同名_判重只在_resume',
      '        if (eid, title) in taken:\n',
      '        if at_resume and (eid, title) in taken:\n'),
+
+    ('缺口_拆掉讨论回合的那次调用',
+     '    refusal = test_gap_refusal(DISCUSS, None, state.get("item_type"), args.test_gap)\n',
+     '    refusal = None\n'),
 ]
 
 # unittest 的失败行有两种形态:

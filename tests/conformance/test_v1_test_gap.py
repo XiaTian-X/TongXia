@@ -205,6 +205,39 @@ class TestWhereAllowed(GapBase):
         self.assertNothingHappened(self.approve("--test-gap", GAP), before, "[cover]")
 
 
+class TestDiscussTurn(GapBase):
+    """讨论回合也是"其他阶段"(W77)。讨论回合的交接走 `discuss_handoff` 那一支、不经过 `cmd_handoff` 里那次判定,
+    那边单独调了一次 —— 这两条守的是那一次调用:拆掉它,旗标就在讨论里被静默吞掉。"""
+
+    config = dict(GapBase.config, proposal_paths=["docs/proposals"])
+    PROPOSAL = "docs/proposals/空输入要不要补用例.md"
+
+    def say(self, role, text):
+        old = self.repo.read(self.PROPOSAL) if self.repo.exists(self.PROPOSAL) else "# 空输入要不要补用例\n"
+        self.repo.write(self.PROPOSAL, old + "\n## %s\n\n%s\n" % (role, text))
+
+    def to_dev_turn(self):
+        """spec 里 tester 开讨论,停在 dev 的讨论回合。"""
+        self.repo.advance_to("spec")
+        self.say("tester", "W1 的空输入路径契约没写清,先讨论要不要补用例。")
+        self.assertAccepted(self.repo.run("discuss", "--proposal", self.PROPOSAL, "空输入路径没写清", role="tester"))
+        self.assertEqual(self.phase(), "discuss")
+
+    def reply(self, *extra):
+        self.say("dev", "同意补,空输入返回空串。")
+        return self.repo.run("handoff", "dev 的看法", *extra, role="dev")
+
+    def test_轮到的一方带_test_gap_交接被拒(self):
+        self.to_dev_turn()
+        before = self.snapshot()
+        self.assertNothingHappened(self.reply("--test-gap", GAP), before)
+        self.assertEqual(self.phase(), "discuss")
+
+    def test_对照组_不带旗标照常交接(self):
+        self.to_dev_turn()
+        self.assertAccepted(self.reply())
+
+
 class TestFullRound(GapBase):
 
     def test_打回补红用例_修绿_两次评审通过_走到完成_打回计数为一(self):
