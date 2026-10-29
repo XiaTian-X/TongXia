@@ -921,3 +921,9 @@
 - 理由: 一个集合同时管"与 HEAD 重复"和"同回合之间重复",HEAD 里本来就同名的两条只是集合里的一个元素,不追溯是自然结果,不用另写分支。放在四个入口共用的 `decision_violation` 里,正常交接与讨论的三个入口一起生效;排在格式之后,格式不合格的条目先收到格式问题;排在 `推翻:` 之前,同名的推翻者先收到"同名"这个真问题。比较用 `parse_decisions` 去过两端空白的值,与 `推翻:` 引用的逐字比同一口径。
 - 已否决: 只在 `resume` 判 —— 同名条目在正常交接里写下同样谁也推翻不了;按整段文本判重 —— 条目靠完整标题被引用,只换理由的同名条目照样引用不了;做全角半角与标点归一 —— 契约「不做」,与 `推翻:` 的逐字口径会分叉。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_decision_unique.py`
+
+## SETUP — 第四十八轮做开放条目 56(有意改名的用例在改名那一回合声明),规划经自审后人类批准(2026-10-29)
+
+- 理由: 第四十一轮 W70 的实测账:tester 按契约改名了两条用例,完成时被 W61 判成不再跑;之后为一处只改测试的问题打回,修正回合本该走 W17 捷径,却因 ⑱ 看到上一次全量有不再跑的用例而进了 impl,dev 交空回合、tester 再 review-impl,多两个回合只为传递"这是改名"。这个事实在改名那一回合就在 tester 手里,所以让它在那一回合声明、记进状态;完成时只扣除一对一对上、新名真的在跑的,⑱ 同样只扣这些,"一句话带过一批消失"的形状照旧被拦。
+- 已否决: 从 diff 自动推断改名 —— 用例 ID 到文件的映射因工具而异,是路线图 P0-1 ①;⑱ 干脆不看不再跑的用例 —— 实现弄坏收集同样表现为不再跑,W61 把它放进 ⑱ 的理由仍然成立;让 dev 在完成被拒时声明 —— 那一刻已经撞上,省不下回合,而且改名的事实在 tester 手里;只声明不对应 —— 正是 W61 要防的形状。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
