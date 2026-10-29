@@ -1014,7 +1014,7 @@
     ⑤`ENFORCEMENTS` 加 `decision-unique-title`;`rules.md`、`protocol-spec.md`、`architecture.md`、`troubleshooting.md` 跟上,开放条目 57 标 ✅
   - 对应契约:`docs/pair-run/CONTRACT.md` → 决策条目不能同名
 
-- [ ] **W77** [cover] — 讨论回合的交接带 `--test-gap` 被拒的用例
+- [x] **W77** [cover] — 讨论回合的交接带 `--test-gap` 被拒的用例
   - **来源**:W75 review-test 的"没覆盖到"(`discuss_handoff` 里那次 `test_gap_refusal` 调用拆掉不会红)
   - 验收标准:①讨论回合里轮到的一方带 `--test-gap` 交接被拒,提交数与状态不变;②对照组不带旗标照常交接;③登记变异点「拆掉讨论回合的那次调用」并被抓;④不改 `pair.py`
   - 对应契约:`docs/pair-run/CONTRACT.md` → review-impl 的测试缺口

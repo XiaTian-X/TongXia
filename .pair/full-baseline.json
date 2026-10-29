@@ -938,6 +938,8 @@
   "test_v1_test_gap.TestBrief.test_review_impl_的简报说明这个旗标",
   "test_v1_test_gap.TestChangesWithGap.test_加一条红用例进_impl_正文含测试缺口",
   "test_v1_test_gap.TestChangesWithGap.test_套件是绿的被拒_文案提示_approve_test_gap",
+  "test_v1_test_gap.TestDiscussTurn.test_对照组_不带旗标照常交接",
+  "test_v1_test_gap.TestDiscussTurn.test_轮到的一方带_test_gap_交接被拒",
   "test_v1_test_gap.TestFullRound.test_打回补红用例_修绿_两次评审通过_走到完成_打回计数为一",
   "test_v1_test_gap.TestMustTouchTests.test_只删了测试被拒",
   "test_v1_test_gap.TestMustTouchTests.test_只追加了登记表被拒",
