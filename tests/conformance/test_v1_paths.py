@@ -126,8 +126,11 @@ class TestOrphanTruncation(PairTestCase):
         # 的行;打印总数当剩余数 -> 那行含 "12" 被排除,同样找不到。
         lines = r.text.split("\n")
         head = next(k for k, l in enumerate(lines) if "孤儿" in l and "12" in l)
+        # 一段 = 首行到下一条 [警告]/[失败] 行或空行为止,先到者为准(契约「补充(第四十五轮)」)。
+        # 只认空行时,W73 的形状警告紧跟在后面、带 `W1`/`W2`,剩余数打成总数照样绿。
         block = lines[head:]
-        block = block[:next((k for k, l in enumerate(block) if not l.strip()),
+        block = block[:next((k for k, l in enumerate(block)
+                             if k and ("[警告]" in l or "[失败]" in l or not l.strip())),
                             len(block))]
         rest = [l for l in block
                 if any(c.isdigit() for c in l)
@@ -230,8 +233,11 @@ class TestIgnorePathsTruncation(PairTestCase):
         lines = r.text.split("\n")
         head = next(k for k, l in enumerate(lines)
                     if "不受边界保护" in l and "12" in l)
+        # 一段 = 首行到下一条 [警告]/[失败] 行或空行为止,先到者为准(契约「补充(第四十五轮)」)。
+        # 只认空行时,W73 的形状警告紧跟在后面、带 `W1`/`W2`,剩余数打成总数照样绿。
         block = lines[head:]
-        block = block[:next((k for k, l in enumerate(block) if not l.strip()),
+        block = block[:next((k for k, l in enumerate(block)
+                             if k and ("[警告]" in l or "[失败]" in l or not l.strip())),
                             len(block))]
         rest = [l for l in block
                 if any(c.isdigit() for c in l)
