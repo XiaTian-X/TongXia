@@ -1,8 +1,8 @@
 {
   "round": 73,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W76",
+  "item_type": "bug",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -82,7 +82,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "c0edc21c172cbe97cc803c22fd2da400648838e3",
   "setup_verified_contract": {
     "tester": "c0edc21c172cbe97cc803c22fd2da400648838e3",
     "dev": "c0edc21c172cbe97cc803c22fd2da400648838e3"
@@ -92,7 +92,7 @@
   "reviewed_contract": "712f6ae7049da15f48011f16e238184fda549448",
   "last_full_failed": false,
   "full_failures": [],
-  "item_base": "96450b65dfdd94cd1ae595e808c2dad2cf943e60",
+  "item_base": "05099624c96c8626ea6f371c743143c7557d56b3",
   "requests": [],
   "discuss": null,
   "discussed": []
