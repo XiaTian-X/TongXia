@@ -1,8 +1,23 @@
-# 同夏 TóngXià
+<div align="center">
 
-**双 Agent 结对编程协议。**两个 AI agent 同做一个项目:一个写测试,一个写实现,严格轮流,互相评审。
+<img src="https://raw.githubusercontent.com/XiaTian-X/xia-logo/main/tongxia/latest/tongxia-primary-latest.svg" alt="同夏 Tóng Xià" width="360">
 
-它让**任意两个** AI coding agent(Claude Code / Codex / Cursor / Gemini CLI /
+**双 AI Agent 结对编程协议**
+
+一个写测试,一个写实现,严格轮流,互相评审。
+
+[![tests](https://github.com/XiaTian-X/TongXia/actions/workflows/tests.yml/badge.svg)](https://github.com/XiaTian-X/TongXia/actions/workflows/tests.yml)
+[![mutation](https://github.com/XiaTian-X/TongXia/actions/workflows/mutation.yml/badge.svg)](https://github.com/XiaTian-X/TongXia/actions/workflows/mutation.yml)
+![python](https://img.shields.io/badge/python-%E2%89%A5%203.9-3776AB?logo=python&logoColor=white)
+![dependencies](https://img.shields.io/badge/依赖-仅标准库-2ea44f)
+
+[快速开始](#快速开始) · [工作方式](#工作方式) · [为什么是这个设计](#为什么是这个设计) · [命令](#命令) · [文档](#文档)
+
+</div>
+
+---
+
+同夏让**任意两个** AI coding agent(Claude Code / Codex / Cursor / Gemini CLI /
 Copilot / Goose / OpenCode …)**共同把 `docs/PLAN.md` 里规划的项目做出来**:
 一个只写测试,一个只写实现,严格轮流交接,互相评审,直到 PLAN 全部勾选、
 门禁套件全绿;配了全量套件时,它红了不能宣布"完成"——如实告诉人类,由人类决定。
@@ -11,13 +26,39 @@ Copilot / Goose / OpenCode …)**共同把 `docs/PLAN.md` 里规划的项目做�
 不互相抵消**,收敛到同一个交付。协议以 [Agent Skill](https://agentskills.io)
 形态随仓库分发,**靠可执行脚本强制执行规则,而不是靠散文约束模型自觉**。
 
-```
-tester 写失败测试  →  dev 实现至绿  →  tester 审实现  →  dev 审测试  →  下一项
-```
+## 快速开始
 
 ```bash
+# 1. 装进你的项目(要求:是 git 仓库、有 python3、现有测试全绿)
 uvx --from git+https://github.com/XiaTian-X/TongXia pair init /你的项目
+
+# 2. 开两个终端,各起一个 agent,用环境变量分配角色
+PAIR_ROLE=tester <agent A 的命令>
+PAIR_ROLE=dev    <agent B 的命令>
 ```
+
+开工前由**还没动手的那一方**跑一次 `pair.py verify-setup`,然后在任意一端说"继续"。
+不该它动的那一端会自己停下 —— 回合状态在仓库里,不在对话里。
+
+存量项目的布局、契约怎么写、GUI / 云端 agent 怎么接,见 [INSTALL.md](INSTALL.md)。
+
+## 工作方式
+
+```
+claim ─► spec ────────────► impl ─────────────► review-impl ───────► review-test ───► 下一项
+         tester 写失败测试    dev 实现至绿        tester 审实现          dev 审测试
+         (必须交出 RED)      (必须交出 GREEN)    (只读,必须给裁决)    (只读,必须给裁决)
+```
+
+| 角色 | 只能写 | 职责 |
+|---|---|---|
+| `tester` | `tests/` | 把 PLAN 里的工作项翻译成**会失败**的测试 |
+| `dev` | `src/` | 让失败的测试变绿 |
+
+上图是 `feature` / `bug` 的完整流程;`cover` 跳过 impl、`refactor` 跳过 spec,见[适用范围](#适用范围)。
+路径是默认值,实际以 `.pair/config.json` 的 `roles` 为准(支持 glob 与 `!` 负模式)。
+每一回合以 `pair.py status` 开头、`pair.py handoff` 结尾;越界、红绿不对、
+空手通过,`handoff` 都会直接拒绝提交。
 
 ## 为什么是这个设计
 
@@ -63,37 +104,15 @@ agent 擅长的,也比传递对话记录省得多。`pair.py inbox` 就是收件
 **这也是上手成本最低的起步配置**。分工本身就有收益 —— aider 的 architect/editor
 实验里,Claude 3.5 Sonnet 自己配自己也从 77.4% 提升到 80.5%。
 
-证据的边界值得说清楚:aider 的 architect/editor 是**同一回合内的流水线**,
-两个角色不互相评审、也没有独立的产物所有权。所以那条实证支持得起"分工的收益
-同模型也成立",支持不起"对抗性评审的收益同模型也拿得到"。后者目前没有证据,
-它正是打回率这个指标要测的东西(见 [improvements.md](docs/improvements.md) 的 P1-1)。
+> [!NOTE]
+> 证据的边界值得说清楚:aider 的 architect/editor 是**同一回合内的流水线**,
+> 两个角色不互相评审、也没有独立的产物所有权。所以那条实证支持得起"分工的收益
+> 同模型也成立",支持不起"对抗性评审的收益同模型也拿得到"。后者目前没有证据,
+> 它正是打回率这个指标要测的东西(见 [improvements.md](docs/improvements.md) 的 P1-1)。
 
 布局上支持目录切分(`tests/` + `src/`)和同目录布局(Go 的 `*_test.go`、
 JS 的 `*.test.ts`,靠 glob 负模式切分)。**Rust 的文件内单元测试不支持** ——
 `#[cfg(test)] mod tests` 和实现在同一个文件里,目录切分物理上不成立。
-
-## 仓库结构
-
-```
-.agents/skills/pair-protocol/     ← 产物。复制这个目录就能接入任何项目
-├── SKILL.md                        协议正文(渐进式加载,不常驻上下文)
-├── references/                     按需加载的详解
-│   ├── rules.md                      硬性规则详解与判例
-│   ├── documents.md                  评审、异议、笔记、决策等文档的格式
-│   ├── contract-templates.md         契约模板
-│   └── brownfield.md                 存量项目接入(cover / refactor / bug)
-└── scripts/
-    ├── pair.py                       执行层。单文件,仅 stdlib
-    └── drive.py                      可选的自动驱动,默认不用
-cli/pair_bootstrap/               ← 极薄 bootstrap:复制 skill → 调用 pair.py init
-tests/conformance/                ← 协议一致性测试 + 变异检查
-examples/demo-project/            ← 样板项目模板
-INSTALL.md                        ← 怎么接入已有项目
-```
-
-CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交给它。这条约束是
-刻意的:一旦 CLI 里出现协议逻辑,它就会和 skill 漂移——而漂移会让 agent
-读到的规则不再是被强制的规则,交付质量因此失去保障。
 
 ## 命令
 
@@ -118,7 +137,7 @@ CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交�
 
 完整文档在 [`docs/`](docs/),索引见 [docs/README.md](docs/README.md)。
 
-| | |
+| 文档 | 内容 |
 |---|---|
 | [设计理念](docs/design-philosophy.md) | 九条第一性原理,以及每条的代价 |
 | [架构](docs/architecture.md) | 三层结构、回合数据流、**强制力分布表** |
@@ -129,6 +148,29 @@ CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交�
 | [改进提案](docs/improvements.md) | 从调研里提炼的路线图,以及明确不做的清单 |
 | [故障排查](docs/troubleshooting.md) | 报错怎么办,以及那些不报错但更危险的现象 |
 | [贡献指南](docs/contributing.md) | 单一真源纪律、新增防护的五步 |
+
+## 仓库结构
+
+```
+.agents/skills/pair-protocol/     ← 产物。复制这个目录就能接入任何项目
+├── SKILL.md                        协议正文(渐进式加载,不常驻上下文)
+├── references/                     按需加载的详解
+│   ├── rules.md                      硬性规则详解与判例
+│   ├── documents.md                  评审、异议、笔记、决策等文档的格式
+│   ├── contract-templates.md         契约模板
+│   └── brownfield.md                 存量项目接入(cover / refactor / bug)
+└── scripts/
+    ├── pair.py                       执行层。单文件,仅 stdlib
+    └── drive.py                      可选的自动驱动,默认不用
+cli/pair_bootstrap/               ← 极薄 bootstrap:复制 skill → 调用 pair.py init
+tests/conformance/                ← 协议一致性测试 + 变异检查
+examples/demo-project/            ← 样板项目模板
+INSTALL.md                        ← 怎么接入已有项目
+```
+
+CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交给它。这条约束是
+刻意的:一旦 CLI 里出现协议逻辑,它就会和 skill 漂移——而漂移会让 agent
+读到的规则不再是被强制的规则,交付质量因此失去保障。
 
 ## 开发
 
@@ -157,11 +199,16 @@ python3 tests/conformance/mutation_check.py   # 缓存命中时约 1.5 分钟;--
 python3 examples/make-demo.py /tmp/pair-demo
 ```
 
+<details>
+<summary>样板仓库的 git 身份</summary>
+
 git 推不出 author 或 committer 身份时(没配 `user.*`,hostname 又不是 FQDN),
 它会给样板仓库的 `.git/config` 写一份兜底身份 `conformance` /
 `conformance@test`——只碰这个仓库,不碰全局配置,已有身份的机器一字不写
 (两条 ident 都推得出才不写)。想换掉就在样板仓库里跑
 `git config user.email 你的邮箱`。
+
+</details>
 
 ## 已知边界
 
