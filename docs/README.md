@@ -35,7 +35,7 @@
 
 ### [protocol-spec.md](protocol-spec.md) — 协议规格
 
-规范性文档。角色解析、阶段与归属、工作项类型与流程、17 条不变量、
+规范性文档。角色解析、阶段与归属、工作项类型与流程、18 条不变量、
 命令契约、记忆层、配置 schema、状态 schema、退出码。
 
 ### [command-reference.md](command-reference.md) — 命令参考

@@ -114,7 +114,7 @@
 
 `handoff` 按以下顺序校验。任何一条不过即拒绝提交,**不得**绕过。
 
-<!-- pair-enforcements: turn-ownership project-done state-untampered verdict-valid transition-valid request-closed write-boundary test-deletion new-tests review-naming dispute-evidence review-evidence archaeology-sha document-shape memory-gate red-green deadlock -->
+<!-- pair-enforcements: turn-ownership project-done state-untampered verdict-valid transition-valid request-closed write-boundary test-deletion new-tests review-test-gap review-naming dispute-evidence review-evidence archaeology-sha document-shape memory-gate red-green deadlock -->
 
 | # | 不变量 | 触发条件 |
 |---|---|---|
@@ -127,14 +127,15 @@
 | 7 | 写权限边界 | 每个改动文件必须命中当前阶段的可写路径,不在 `frozen_paths` 下,且(配了 `scope` 时)落在 `scope` 内 —— 评审目录与记忆层对 `scope` 豁免。**评审目录顶层已提交的 `.md` 只能追加**:相对 HEAD 有删除行(含删除、改名)即拒绝,不分阶段、不分角色;`verify-setup` 对它那份结论同样判,且拒绝早于写状态 |
 | 8 | 测试删除 | 删除 tester 路径下的文件必须带 `--allow-deletion "理由"`。改名按旧路径删除 + 新路径新增判 |
 | 9 | 新增测试 | `cover` 的 spec 回合必须有非删除的测试文件改动 |
-| 10 | **评审目录命名** | 顶层 `.md` 的名字要对上 PLAN 里某个工作项,或是固定名 |
-| 11 | 异议举证 | `impl` 阶段的 `changes` 必须在 `shared_paths` 下写了文件 |
-| 12 | **评审证据** | `approve` 必须带 `--checked` 与 `--uncovered`;`changes` 的理由或本回合的评审文件里必须有一处 `路径:行号`,且路径真实存在 |
-| 13 | **考古 sha** | `依据: 考古观察@<sha>` 的 sha 必须是真实 commit |
-| 14 | **文档形状** | 异议必须存在且三小节;`contract-change-<ID>.md` 四小节;`baseline.md` 两小节 |
-| 15 | 记忆层门禁 | 见 §6 |
-| 16 | 红绿 | 按类型的 `expect`。**提异议那一回合全豁免**;**打回之后紧接着的 spec 回合只豁免 RED**(cover 的 GREEN 仍然强制),并另外要求本回合真的改动了 tester 路径下的文件 |
-| 17 | 死锁闸 | 同一工作项 `changes_count` 达到 3 时停止轮转 |
+| 10 | **测试缺口** | 带 `--test-gap` 时:只能在 review-impl、只能在 review-impl 通过后还有 review-test 的流程(feature/bug)、说明去掉空白后非空 —— 这三条在流程合法之后就判;必须有非删除的 tester 路径改动且不在 `review_append_paths` 下;`changes --test-gap` 期望 RED。带了它,写权限边界对 tester 路径放开,只追加路径照旧只追加 |
+| 11 | **评审目录命名** | 顶层 `.md` 的名字要对上 PLAN 里某个工作项,或是固定名 |
+| 12 | 异议举证 | `impl` 阶段的 `changes` 必须在 `shared_paths` 下写了文件 |
+| 13 | **评审证据** | `approve` 必须带 `--checked` 与 `--uncovered`;`changes` 的理由或本回合的评审文件里必须有一处 `路径:行号`,且路径真实存在 |
+| 14 | **考古 sha** | `依据: 考古观察@<sha>` 的 sha 必须是真实 commit |
+| 15 | **文档形状** | 异议必须存在且三小节;`contract-change-<ID>.md` 四小节;`baseline.md` 两小节 |
+| 16 | 记忆层门禁 | 见 §6 |
+| 17 | 红绿 | 按类型的 `expect`。**提异议那一回合全豁免**;**打回之后紧接着的 spec 回合只豁免 RED**(cover 的 GREEN 仍然强制),并另外要求本回合真的改动了 tester 路径下的文件 |
+| 18 | 死锁闸 | 同一工作项 `changes_count` 达到 3 时停止轮转 |
 
 ### 4.1 路径归属判定
 
@@ -146,6 +147,8 @@
 `proposal_paths`(W66)在除 idle 外的四个阶段对两个角色都可写;直接位于某个提案目录下的、已提交的 `.md` 只能追加,相对 HEAD 有删除行(含删除、改名)即拒绝,不分阶段、不分角色(与评审目录同一口径)。
 
 `review_append_paths` 里评审阶段执行者名下的路径单独判:文件必须已在 HEAD 里、相对 HEAD 没有删除行,否则拒绝;满足就放行,不再走越界判定。
+
+review-impl 带 `--test-gap`(W75)时,可写路径加上 `roles.tester`。只追加路径的判定排在前面,所以它们仍只追加。
 
 支持的通配:`*`(不跨 `/`)、`**`(跨 `/`)、`?`、`[...]`。
 不含通配字符的模式按**前缀目录**匹配(`tests` 匹配 `tests/a/b.py`)。
@@ -195,6 +198,7 @@ pair.py handoff approve "摘要" --checked "…" --uncovered "…"   # 仅评审
 pair.py handoff changes "问题清单"     # 评审阶段,或 impl 阶段的异议
   [--allow-deletion "理由"]
   [--no-decision "理由"]
+  [--test-gap "说明"]     # 仅 feature/bug 的 review-impl:tester 补自己的用例
 ```
 
 提交信息格式:
@@ -204,6 +208,7 @@ pair.py handoff changes "问题清单"     # 评审阶段,或 impl 阶段的异�
 
 role=<角色> phase=<从> -> <到> item=<ID> type=<类型>
 [删除测试(已声明): <理由>\n  <文件列表>]
+[测试缺口: <说明>]
 [未留决策(已声明): <理由>]
 ```
 

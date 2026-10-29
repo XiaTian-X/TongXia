@@ -89,6 +89,7 @@ pair.py handoff changes "问题清单"                  # 评审阶段,或 impl 
 pair.py handoff "说明" --allow-deletion "删除理由"
 pair.py handoff approve "摘要" --checked "查了什么" --uncovered "还没覆盖什么"
 pair.py handoff changes "问题清单,至少一处 路径:行号"
+pair.py handoff changes "…路径:行号…" --test-gap "补的用例覆盖什么"   # review-impl,补红用例
 ```
 
 **每回合的最后一条命令。** 它校验 → 提交 → 翻转回合。校验顺序与全部
@@ -105,6 +106,7 @@ pair.py handoff changes "问题清单,至少一处 路径:行号"
 | `--contract-change "依据"` | 本回合往契约里**追加**了内容(只加不删,插在中间也算)。依据要指向真实产物,当场要留决策。**PLAN 的任何改动与契约的改写(有删除行)带了也被拒**,走提案:写 diff → 双方 `sign` → 人类 `ratify`(W70) |
 | `--checked "内容"` | **approve 必填。** 你具体检查了什么 |
 | `--uncovered "内容"` | **approve 必填。** 你知道还没被覆盖到的是什么(没有就写"无")|
+| `--test-gap "说明"` | 只限 feature/bug 的 review-impl(tester)。本回合可以写 tester 路径(只追加路径照旧只追加),必须真的新增或修改了用例。`changes` 时补的用例要让套件变红(复现漏洞),`approve` 时要绿(只缺覆盖);之后都经 dev 的 review-test。说明写进提交正文的 `测试缺口:` 一行(W75)|
 
 两个 flag 的内容**必须自包含**,整段只写"详见某文件"会被拒 ——
 它们的强制力有一半来自进提交正文、对方在 `inbox` 里必然看到。

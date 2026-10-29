@@ -99,6 +99,22 @@
 **评审回合是只读的**——只能写 `docs/reviews/`,夹带任何代码改动都会被拒绝。
 裁决必须附理由,而且**理由的形状是被强制的**。
 
+**例外:review-impl 的测试缺口(`--test-gap`)。** tester 在 review-impl 挑出漏洞、同时发现
+自己的用例抓不到它时,只读意味着:dev 修 → tester 再审 → dev 在 review-test 以"缺用例"打回 →
+tester 补 → dev 再审,多绕三个回合,还白白触发一次"第二次打回要写决策"。所以 tester 可以在
+**打回的那一回合**就把用例写上:
+
+```
+pair.py handoff changes "…路径:行号…" --test-gap "补的用例覆盖哪条漏洞"   # 交出时必须 RED
+pair.py handoff approve "摘要" --checked "…" --uncovered "…" --test-gap "…"  # 只缺覆盖,交出时 GREEN
+```
+
+- 放开的只是 tester 自己的路径;`review_append_paths` 照旧只追加;必须真的新增或修改了用例
+  (只往登记表追加、只删测试都不算)。
+- 打回时要红:修复之前它就是红的,这本身证明它抓得到那条漏洞,不用再靠变异探针。
+- 只在 feature/bug:refactor 的 review-impl 通过即完成,补的用例没人评审,缺覆盖就另开 `[cover]`。
+- 补的用例都要经 dev 的 review-test;dev 那一侧的只读不变。
+
 ### approve:必须交出检查清单
 
 ```

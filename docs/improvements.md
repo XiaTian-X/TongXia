@@ -1905,7 +1905,11 @@ tester 照着写的 W3 用例因此没有区分力,是那一轮唯一的打回�
 契约「决策的推翻」没写这种情况,实现照字面没错,所以没打回。
 方向二选一:`resume` 时新条目的完整标题与 HEAD 里已有条目重复就拒绝(最小改动,顺带杜绝同名条目);或者注入按条目位置判"被推翻"(推翻只作用于它之前的条目)。
 
-### 58. review-impl 挑出的漏洞同时是测试缺口时,补用例要多绕三个回合
+### 58. review-impl 挑出的漏洞同时是测试缺口时,补用例要多绕三个回合  ✅ 已解决(第四十六轮 W75)
+
+> 2026-10-29:第四十六轮 W75 落地 `handoff --test-gap`,方向和下面写的不同:不插一个修复后的 spec 回合,而是 tester 在 review-impl **打回的那一回合**就写用例、交出 RED,
+> dev 修绿后照常 review-impl → review-test。打回后从五个回合降到三个,不会再有第二次打回;用例在修复前是红的,本身就证明它抓得到漏洞。
+> 实现没错只缺覆盖时 `approve --test-gap` 交 GREEN。打回计数不区分,死锁闸不动。理由见 `docs/pair-run/DECISIONS.md` 的第四十六轮 SETUP 条目。
 
 第四十三轮 W72 的 review-impl 里 tester 挑出实现漏洞(草案的 cover 引用收得太宽),同时承认自己的用例抓不到它。review-impl 回合只能登记变异点、不能加用例,
 所以 dev 修完实现、tester 第二次 review-impl 通过之后,还得 dev 在 review-test 以"缺这两条用例"打回 → tester 在 spec 补用例 → dev 再 review-test。

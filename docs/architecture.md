@@ -137,7 +137,7 @@ agent 被人类唤醒
 
 这是理解这个架构最重要的一张表:**哪些规则是脚本拦的,哪些只能靠留痕。**
 
-<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-quota proposal-sign ratify-signed contract-change-tier decision-overturn discuss-decision-format understand-open understand-crosscheck understand-draft contract-shape -->
+<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-quota proposal-sign ratify-signed contract-change-tier decision-overturn discuss-decision-format understand-open understand-crosscheck understand-draft contract-shape review-test-gap -->
 
 | 规则 | 强制方式 | 失效条件 |
 |---|---|---|
@@ -160,6 +160,7 @@ agent 被人类唤醒
 | 死锁闸 | 脚本拒绝 | 改代码 |
 | 契约歧义审查 | 脚本要求交出 ≥120 字结论 | 敷衍地写满 120 字 |
 | 评审带证据 | 脚本拒绝(approve 要检查清单,changes 要位置引用) | 引用真文件 + 假行号 |
+| review-impl 的测试缺口(W75) | 脚本拒绝(只在 feature/bug 的 review-impl;要真的补了用例;打回时要 RED) | 红来自一条与所挑漏洞无关的新用例(不判红的是哪一条,P0-1 ①) |
 | 范围收缩 | 脚本拒绝(配了 `scope` 时) | 改代码 |
 | 契约依据分级 | 脚本拒绝(不可断言的规格开不了非 cover 项) | 人类把 `依据` 填成"人类定稿"却没真核实 |
 | 契约形状(W73) | 默认只警告;`strict_contract: true` 时形状、返回或错误两条 `verify-setup` 失败;疑似漂移始终只警告 | 查的是形状不是语义:一张填了无关内容的表加一个"返回"字样就过 |
