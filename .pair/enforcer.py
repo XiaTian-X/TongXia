@@ -151,6 +151,7 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "setup-report",          # verify-setup 要求交出契约歧义审查结论
     "cover-note",            # cover 的 spec 回合要交出特征测试记录
     "contract-provenance",   # 契约小节必须写 `依据`,不可断言的不能开非 cover 项
+    "contract-shape",        # 被引用的可断言小节要有代码块或填了数据的表、写返回或错误;存量类工作项查疑似漂移(W73)
     "refactor-safety-net",   # refactor 必须声明保护它的测试
     "post-dispute-fix",      # 异议后的 spec 回合豁免红绿,但必须真的改了测试
     "dispute-shape",         # document-shape 的子项:异议必须存在且有三小节
@@ -349,6 +350,8 @@ def load_config(root, required=True):
     cfg.setdefault("proposal_paths", [])
     # W69:每个工作项最多进几次 discuss。默认 1 与 W67 已落地的行为一致;0 = 不允许。
     cfg.setdefault("discuss_limit", 1)
+    # W73:契约形状检查默认只警告;true 时形状、返回或错误两条升为失败(漂移始终只警告)。
+    cfg.setdefault("strict_contract", False)
     cfg.setdefault("frozen_paths", [])
     cfg.setdefault("ignore_paths", [])
     # 本轮结对能碰的范围。空 = 不限。存量项目最危险的不是结构不合适,
@@ -4285,6 +4288,9 @@ CONTRACT_SKELETON = """# 接口契约（冻结 — agent 只读，变更需双�
 
 **边界情况**
 <!-- 空输入、超长输入、并发、null。没在这里写明的边界,tester 不能凭空假设。 -->
+
+**不做**
+<!-- 明确不承诺的行为。写在这里的,tester 不为它写断言,dev 也不必实现它。 -->
 """
 
 DECISIONS_SKELETON = """# 决策记录（追加式 — 只能往后加，不能改已有条目）
@@ -4628,6 +4634,100 @@ def section_provenance(body):
     return raw, any(raw.startswith(k) for k in ASSERTABLE_PROVENANCE)
 
 
+# W73:契约小节的"可断言形状"。只查形状不查语义 —— 语义查不了,形状至少挡住
+# "用户可以登录"这种一句散文就过关的小节。
+_HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
+OUTCOME_WORDS = ("返回", "错误", "异常", "抛出", "失败", "拒绝", "退出码",
+                 "return", "raise", "throw", "error", "exception", "exit code")
+# 动已有代码的工作项类型:契约描述的应该是现在的代码,名字对不上就是疑似漂移。
+DRIFT_TYPES = ("cover", "refactor", "bug")
+# 前边界用 ASCII 断言而不是 `\b`:`\b` 按 Unicode 判,"调用build_gadget(" 里中文与名字之间不算边界。
+_IDENT_DEF_RE = re.compile(r"(?<![A-Za-z0-9_])(?:def|class|function|fn|func)\s+([A-Za-z_][A-Za-z0-9_]*)")
+_IDENT_CALL_RE = re.compile(r"(?<![A-Za-z0-9_])([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+# 去掉的不只是关键字:`len(x)`、`print(...)` 这种调用在任何代码里都在,留着它们
+# 漂移就永远查不出来。
+_NOT_IDENTS = frozenset("""
+    def class function func if elif else for while return yield await async lambda
+    not and or in is new switch case catch try except finally raise throw with as
+    import from assert typeof sizeof super self this print println printf len str
+    int float bool list dict set tuple range open isinstance type format map filter
+    sorted enumerate zip min max sum any all repr getattr setattr hasattr require
+""".split())
+
+
+def contract_sections_full(text):
+    """{小节名: 含子小节的全文}。代码块保留原文,只在找标题时把它们抹成空白。
+
+    与 `contract_sections` 的取法不同,这是有意的:那边要防子小节的 `依据` 被父小节
+    继承,这里要看小节**整体**有没有能被断言的东西 —— 模板把签名放在 `###` 里。
+    """
+    blanked = _FENCE_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), text)
+    heads = list(_LEVELLED_HEADING_RE.finditer(blanked))
+    out = {}
+    for i, m in enumerate(heads):
+        level, end = len(m.group(1)), len(text)
+        for n in heads[i + 1:]:
+            if len(n.group(1)) <= level:
+                end = n.start()
+                break
+        out.setdefault(m.group(2).strip().strip("`"), text[m.end():end])
+    return out
+
+
+def _has_filled_table(text):
+    """表头行 + 分隔行 + 至少一行去掉竖线与空白后还有字的数据行。"""
+    lines = text.split("\n")
+    for i, ln in enumerate(lines):
+        bare = ln.strip()
+        if (i == 0 or "|" not in bare or "-" not in bare
+                or set(bare) - set("|-: \t") or "|" not in lines[i - 1]):
+            continue
+        for row in lines[i + 1:]:
+            if "|" not in row:
+                break
+            if row.replace("|", "").strip():
+                return True
+    return False
+
+
+def contract_shape(body):
+    """(有可断言的形状, 写了返回或错误, [代码块内容])。先去掉 HTML 注释 ——
+    模板注释里就有"返回 null""抛异常",原样复制的模板不能靠注释过关。"""
+    body = _HTML_COMMENT_RE.sub("", body)
+    codes = ["\n".join(m.group(0).split("\n")[1:-1]) for m in _FENCE_RE.finditer(body)]
+    prose = _FENCE_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), body)
+    shaped = any(c.strip() for c in codes) or _has_filled_table(prose)
+    low = body.lower()
+    return shaped, any(w in low for w in OUTCOME_WORDS), codes
+
+
+def contract_identifiers(codes):
+    """代码块里像是本项目自己的名字:`def`/`class` 等后面的,和 `名字(` 形态的。"""
+    names = []
+    for code in codes:
+        for rx in (_IDENT_DEF_RE, _IDENT_CALL_RE):
+            for n in rx.findall(code):
+                if len(n) >= 3 and n not in _NOT_IDENTS and n not in names:
+                    names.append(n)
+    return names
+
+
+def identifiers_tracked(root, cfg, files, names):
+    """任一名字(整词)出现在两个角色名下的已跟踪文件里。`docs/` 不在两边名下 ——
+    契约自己就含着这些名字,算进去就永远查不出漂移。"""
+    rx = re.compile(r"(?<![A-Za-z0-9_])(?:%s)(?![A-Za-z0-9_])" % "|".join(map(re.escape, names)))
+    for f in files:
+        # 两边分别判:拼成一个列表时,dev 的 `!**/*_test.go` 会把 tester 的文件也排除掉。
+        if not (matches_any(f, cfg["roles"]["tester"]) or matches_any(f, cfg["roles"]["dev"])):
+            continue
+        try:
+            if rx.search((root / f).read_text(encoding="utf-8", errors="ignore")):
+                return True
+        except OSError:
+            continue
+    return False
+
+
 def _plan_blocks(root, cfg):
     """[(id, type, done, 该工作项的文本块)]"""
     p = root / cfg["plan_file"]
@@ -4857,6 +4957,7 @@ def cmd_verify_setup(root, cfg, args):
     else:
         text = cpath.read_text(encoding="utf-8")
         sections, dupes = contract_sections(text)
+        shaped_refs = {}      # 小节名 -> [(工作项, 类型)],形状检查每节只报一次(W73)
         for name in sorted(dupes):
             bad("契约里有多个标题都叫「%s」。工作项按标题文本指向小节,\n"
                 "      重名会让它读到另一节的 `依据` —— 请把标题改得唯一。" % name)
@@ -4882,6 +4983,8 @@ def cmd_verify_setup(root, cfg, args):
                        "、".join(sorted(sections)) or "(无)"))
                 continue
             raw, ok = section_provenance(sections[anchor])
+            if ok:
+                shaped_refs.setdefault(anchor, []).append((item_id, typ))
             if raw is None:
                 bad("契约小节 '%s' 没写 `依据`。在小节里加一行:\n"
                     "      - 依据: 人类定稿\n"
@@ -4901,6 +5004,30 @@ def cmd_verify_setup(root, cfg, args):
                      "契约草案),\n"
                      "      人类定稿之后这一项才能 claim。现在只是提醒,不阻断。"
                      % (item_id, typ, anchor, raw))
+
+        # --- 契约形状(W73):查形状不查语义;依据不可断言的上面已经单独提醒过 ---
+        strict = cfg.get("strict_contract") is True
+        gate = bad if strict else warn
+        tail = "" if strict else "\n      `strict_contract: true` 时这条会阻断开工。"
+        full = contract_sections_full(text)
+        for anchor, users in shaped_refs.items():
+            ids = "、".join(i for i, _ in users)
+            shaped, outcome, codes = contract_shape(full.get(anchor, ""))
+            if not shaped:
+                gate("契约小节 '%s'(%s 引用)没有可断言的形状:既没有内容非空的代码块,也没有填了数据行的表格。\n"
+                     "      tester 拿一句散文写不出确定的断言。补一个签名或示例代码块,或把参数约束、\n"
+                     "      错误条件写成表(契约模板里的「参数约束」「错误」两张表)。%s" % (anchor, ids, tail))
+            if not outcome:
+                gate("契约小节 '%s'(%s 引用)没写返回值或错误:正文里没有「返回」「错误」「抛出」之类的描述。\n"
+                     "      tester 只能断言写下来的结果 —— 补上正常路径返回什么、出错时怎样\n"
+                     "      (契约模板里的「返回」「错误」)。%s" % (anchor, ids, tail))
+            drift = [i for i, t in users if t in DRIFT_TYPES]
+            names = contract_identifiers(codes) if drift else []
+            if names and not identifiers_tracked(root, cfg, files, names):
+                warn("契约小节 '%s'(%s 引用)可能已经和代码对不上:代码块里的 %s\n"
+                     "      一个都不在 roles.tester / roles.dev 名下的已跟踪文件里。%s 动的是已有代码,\n"
+                     "      契约写的应该是现在的代码 —— 核对名字是不是改过。名字是从代码块里猜的,这条只提醒。"
+                     % (anchor, "、".join(drift), "、".join(names), "、".join(drift)))
 
     # --- refactor 的安全网 --------------------------------------------------
     for item_id, typ, _, block in pending:
@@ -4948,6 +5075,11 @@ def cmd_verify_setup(root, cfg, args):
     lim = cfg.get("discuss_limit")
     if isinstance(lim, bool) or not isinstance(lim, int) or lim < 0:
         bad("discuss_limit 必须是非负整数(每个工作项最多进几次 discuss,0 = 不允许),现在是 %r" % (lim,))
+
+    # --- 契约形状检查的开关是布尔值(W73)------------------------------------------
+    if not isinstance(cfg.get("strict_contract"), bool):
+        bad("strict_contract 只接受 true 或 false(契约形状检查是否从警告升为失败),现在是 %r"
+            % (cfg.get("strict_contract"),))
 
     # --- 提案目录不与任何别的路径类别重叠(W66)----------------------------------
     for key, pats in proposal_overlaps(cfg):

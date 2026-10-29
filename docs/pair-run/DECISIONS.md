@@ -883,3 +883,8 @@
 - 理由: 契约写"在 `roles.tester` 与 `roles.dev` 名下的已跟踪文件里"。两边模式拼成一个列表交给 `matches_any` 时,任一负模式都会排除文件,Go 同目录布局下 dev 的 `!**/*_test.go` 把 tester 的测试文件全吃掉,名字只在测试里就被报成漂移,文案与事实相反。抽名字用 Unicode 的 `\b`,中文紧挨着名字(`调用build_gadget(`)时抽不出,整节漏查。review-impl 打回修了实现,review-test 打回补用例守住它们。
 - 已否决: 把 tester 的负模式也拼进去、只换顺序 —— `matches_any` 的语义与顺序无关,拼在一起就会互相排除;只改匹配侧的边界 —— 抽不出来时根本走不到匹配,漏报照旧。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_contract_shape.py`
+## W73 — 契约形状只查可断言小节的形状:代码块或填了数据的表、返回或错误字样,存量项另查标识符;前两条随 strict_contract 升级,漂移始终只警告
+
+- 理由: verify-setup 在逐项循环里收集未完成工作项引用的、依据可断言的小节,循环后每节只查一次、文案列出全部引用者。正文另写 `contract_sections_full`:到下一个同级或更高级标题为止、含子小节、保留代码块原文,找标题时把围栏换成等长空白,再在原文上切。先去 HTML 注释再判:模板注释里就有"返回 null"。表格要有分隔行和至少一行有字的数据行,原样复制的模板因此判为没有形状。漂移只对 cover/refactor/bug 查,从代码块抽 `名字(` 与 `def`/`class`/`function`/`fn`/`func` 后的名字,两个角色的模式分别判,按 ASCII 整词匹配。`strict_contract` 只收布尔值。
+- 已否决: 用 `_blank_fenced_blocks` 的结果定位标题再切原文 —— 它把围栏换成等量换行,偏移会错位;同一节按引用者各报一次 —— 两个工作项引用同一节就是两条一样的警告;漂移按子串匹配 —— `widget` 会被 `make_widget_v2` 算成存在。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_contract_shape.py`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `.agents/skills/pair-protocol/references/rules.md`
