@@ -410,7 +410,7 @@ python3 .agents/skills/pair-protocol/scripts/drive.py --both "claude -p"
 ## 7. `pair init`(bootstrap CLI)
 
 ```bash
-uvx --from git+https://github.com/<你>/TongXia pair init /你的项目
+uvx --from git+https://github.com/XiaTian-X/TongXia pair init /你的项目
 ```
 
 这是**另一个程序**,不是 `pair.py`。它只做两件事:

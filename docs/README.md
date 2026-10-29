@@ -1,6 +1,6 @@
 # 文档
 
-双 Agent 结对编程协议的完整文档。项目总览在 [../README.md](../README.md),
+同夏 TongXia(双 Agent 结对编程协议)的完整文档。项目总览在 [../README.md](../README.md),
 接入步骤在 [../INSTALL.md](../INSTALL.md)。
 
 ## 按你要做的事找
@@ -40,7 +40,7 @@
 
 ### [command-reference.md](command-reference.md) — 命令参考
 
-八个 `pair.py` 子命令逐一:参数、前置条件、副作用、被拒了怎么办、退出码;
+十五个 `pair.py` 子命令逐一:参数、前置条件、副作用、被拒了怎么办、退出码;
 另含 bootstrap `pair init` 与可选的 `drive.py`。
 
 ### [prior-art.md](prior-art.md) — 同类工作调研
@@ -70,12 +70,12 @@ Agent Skills / AGENTS.md / MCP / A2A。
 
 ### [contributing.md](contributing.md) — 贡献指南
 
-单一真源纪律、两条必跑的命令、**新增一条防护的四步**、
+单一真源纪律、两条必跑的命令、**新增一条防护的五步**、
 拒绝文案的写法、反向约束、依赖与文档纪律。
 
 ### [dogfood-run-1.md](dogfood-run-1.md) / [2](dogfood-run-2.md) / [3](dogfood-run-3.md) / [4](dogfood-run-4.md) — 真实运行报告
 
-用本项目结对开发本项目,三轮。记的是**协议在真实使用里怎么表现** ——
+用本项目结对开发本项目,四轮。记的是**协议在真实使用里怎么表现** ——
 撞出的死锁、被打回的东西、以及每轮的打回率与净回合数。
 
 四轮共同的结论:**打回极少是红绿发现的** —— 累计 13 次打回,红绿只贡献
@@ -88,6 +88,14 @@ Agent Skills / AGENTS.md / MCP / A2A。
 dev 决定**。
 
 四轮共同的缺口:**都不是两个独立 agent 跑的**,dev 都是协议起草者本人。
+
+### 之后的运行报告
+
+[第五轮](dogfood-run-5.md)第一次由两个会话分别扮演两个角色,但规划与契约仍出自其中一方。
+从第七轮起是**独立运行**:两个没参与协议设计的会话只靠仓库里的文档,在样板项目上从开工跑到完成;
+之后每一轮都是上一轮修复的对照实验,各附一份编排日志(同名的 `-log.md`)——
+[7](dogfood-run-7.md) · [9](dogfood-run-9.md) · [11](dogfood-run-11.md) · [13](dogfood-run-13.md) ·
+[15](dogfood-run-15.md) · [18](dogfood-run-18.md) · [20](dogfood-run-20.md)。
 
 ## 阅读顺序建议
 

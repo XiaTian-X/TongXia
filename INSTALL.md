@@ -3,7 +3,7 @@
 ## 一条命令
 
 ```bash
-uvx --from git+https://github.com/<你>/TongXia pair init /你的项目
+uvx --from git+https://github.com/XiaTian-X/TongXia pair init /你的项目
 ```
 
 CLI 只做两件事:把协议复制进去、建好 Claude Code 需要的软链接,然后调用

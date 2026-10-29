@@ -1,6 +1,8 @@
-# 双 Agent 结对编程协议
+# 同夏 TongXia
 
-让**任意两个** AI coding agent(Claude Code / Codex / Cursor / Gemini CLI /
+**双 Agent 结对编程协议。**两个 AI agent 同做一个项目:一个写测试,一个写实现,严格轮流,互相评审。
+
+它让**任意两个** AI coding agent(Claude Code / Codex / Cursor / Gemini CLI /
 Copilot / Goose / OpenCode …)**共同把 `docs/PLAN.md` 里规划的项目做出来**:
 一个只写测试,一个只写实现,严格轮流交接,互相评审,直到 PLAN 全部勾选、
 门禁套件全绿;配了全量套件时,它红了不能宣布"完成"——如实告诉人类,由人类决定。
@@ -14,7 +16,7 @@ tester 写失败测试  →  dev 实现至绿  →  tester 审实现  →  dev �
 ```
 
 ```bash
-uvx --from git+https://github.com/<你>/TongXia pair init /你的项目
+uvx --from git+https://github.com/XiaTian-X/TongXia pair init /你的项目
 ```
 
 ## 为什么是这个设计
@@ -75,8 +77,14 @@ JS 的 `*.test.ts`,靠 glob 负模式切分)。**Rust 的文件内单元测试�
 ```
 .agents/skills/pair-protocol/     ← 产物。复制这个目录就能接入任何项目
 ├── SKILL.md                        协议正文(渐进式加载,不常驻上下文)
-├── references/rules.md             硬性规则详解与判例(按需加载)
-└── scripts/pair.py                 执行层。单文件,仅 stdlib
+├── references/                     按需加载的详解
+│   ├── rules.md                      硬性规则详解与判例
+│   ├── documents.md                  评审、异议、笔记、决策等文档的格式
+│   ├── contract-templates.md         契约模板
+│   └── brownfield.md                 存量项目接入(cover / refactor / bug)
+└── scripts/
+    ├── pair.py                       执行层。单文件,仅 stdlib
+    └── drive.py                      可选的自动驱动,默认不用
 cli/pair_bootstrap/               ← 极薄 bootstrap:复制 skill → 调用 pair.py init
 tests/conformance/                ← 协议一致性测试 + 变异检查
 examples/demo-project/            ← 样板项目模板
@@ -97,8 +105,14 @@ CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交�
 | `pair.py claim <ID>` | tester | 认领工作项 |
 | `pair.py handoff …` | 双方 | 每回合结尾。`changes` 用于评审打回和测试异议 |
 | `pair.py inbox` | 双方 | 看对方做了什么 |
+| `pair.py whose-turn` | 人类或脚本 | 一行输出:接下来该谁,或为什么该停 |
+| `pair.py request` / `fulfill` / `decline` | 双方 | 请对方在它的路径里做一处机械改动,不交出回合、不计打回 |
+| `pair.py discuss` / `resume` | 双方 | 挂起工作项进讨论,两方都发过言后恢复;推翻旧决策只在 `resume` 时写 |
+| `pair.py sign` / `ratify` | 双方 / **人类** | 提案的签字与人类批准:PLAN 的改动、契约的改写走这条路 |
 | `pair.py report` | **人类** | 打回率等健康度指标。接近 0 = 互相点头 |
 | `drive.py`(可选) | 人类 | 自动驱动两边,省掉来回敲。默认不开 |
+
+每条命令的参数、被拒了怎么办、退出码见[命令参考](docs/command-reference.md)。
 
 ## 文档
 
@@ -119,7 +133,7 @@ CLI **不含任何协议逻辑**,只负责把 skill 搬进目标项目然后交�
 ## 开发
 
 ```bash
-python3 tests/conformance/run.py              # 全量,并行(8 进程约 44 秒)
+python3 tests/conformance/run.py              # 全量,并行(8 进程约 3 分钟,1000 多条)
 python3 tests/conformance/run.py --changed    # 只跑与本次改动相关的
 python3 tests/conformance/run.py memory       # 只跑某几组
 ```
@@ -130,12 +144,12 @@ python3 tests/conformance/run.py memory       # 只跑某几组
 但全绿本身证明不了什么,一个恒真的测试集比没有测试更危险。所以还有变异检查:
 
 ```bash
-python3 tests/conformance/mutation_check.py   # 约 70 秒(含它自己跑的基线)
+python3 tests/conformance/mutation_check.py   # 缓存命中时约 1.5 分钟;--full 不用缓存,慢得多
 ```
 
 它逐个拆掉 `pair.py` 里的防护,确认每一条都有测试能发现它消失了。
 **改动强制逻辑后两个都要跑。**新增防护时,在 `MUTATIONS` 里补上对应变异点。
-上面两处秒数都是 8 进程实测,换机器会变,别当承诺。
+上面两处时间都是 8 进程实测,换机器会变,别当承诺。
 
 起一个可跑的样板项目:
 
