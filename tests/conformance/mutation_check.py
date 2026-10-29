@@ -1567,6 +1567,46 @@ MUTATIONS = [
     ('形状_抽名字的前边界改回_b',
      '_IDENT_CALL_RE = re.compile(r"(?<![A-Za-z0-9_])([A-Za-z_]',
      '_IDENT_CALL_RE = re.compile(r"\\b([A-Za-z_]'),
+
+    ('缺口_不限_review_impl',
+     '    if phase != "review-impl":\n        return ("拒绝交接 —— `--test-gap`',
+     '    if False:\n        return ("拒绝交接 —— `--test-gap`'),
+
+    ('缺口_评审阶段都放行',
+     '    if phase != "review-impl":\n        return ("拒绝交接 —— `--test-gap`',
+     '    if phase not in REVIEW_PHASES:\n        return ("拒绝交接 —— `--test-gap`'),
+
+    ('缺口_不限有_review_test_的流程',
+     'if flow["transitions"].get(("review-impl", "approve")) != "review-test":',
+     'if False:'),
+
+    ('缺口_changes_不要求_RED',
+     '        expect = "RED"\n        if green:\n            die("拒绝交接 —— 带了 `--test-gap` 打回',
+     '        expect = expect\n        if False:\n            die("拒绝交接 —— 带了 `--test-gap` 打回'),
+
+    ('缺口_不要求动测试',
+     '        if not gap_tests:\n',
+     '        if False:\n'),
+
+    ('缺口_只追加文件算作补用例',
+     '\n                     and not matches_any(p, appendable)]',
+     ']'),
+
+    ('缺口_删除算作补用例',
+     'if "D" not in xy and matches_any(p, test_paths)\n                     and not',
+     'if matches_any(p, test_paths)\n                     and not'),
+
+    ('缺口_带旗标不放开_tester_路径',
+     '        allowed = allowed + list(cfg["roles"]["tester"])\n',
+     '        pass\n'),
+
+    ('缺口_空说明放行',
+     '    if not gap.strip():\n',
+     '    if False:\n'),
+
+    ('缺口_正文不写测试缺口',
+     '        body += "\\n测试缺口: %s" % args.test_gap.strip()',
+     '        pass'),
 ]
 
 # unittest 的失败行有两种形态:
