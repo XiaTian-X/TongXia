@@ -177,6 +177,7 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "proposal-sign",         # 签字:自己回合、非 idle、提案在提案目录且有 diff 块、不重复签(W68)
     "ratify-signed",         # 批准:PAIR_ROLE=human、双方对最后一个 diff 已提交的签字由本人回合提交、只碰 PLAN 与契约、能干净应用(W68)
     "contract-change-tier",  # --contract-change 只放行契约的纯追加;PLAN 的改动与契约的改写走提案签字与人类批准(W70)
+    "decision-unique-title", # 新决策条目的完整标题不能与 HEAD 里或同一回合的其他条目重复(W76)
     "decision-overturn",     # 带 `推翻:` 的决策只在 resume 时写,引用要正好对上一条已有条目,不重复推翻(W71)
     "discuss-decision-format",  # 讨论回合的三个入口与正常交接同一套决策校验(W71)
     "understand-open",       # discuss --understand 只在 idle、由空闲时轮到的一方进入;工作阶段只能用普通 discuss(W72)
@@ -1568,6 +1569,20 @@ def decision_violation(root, cfg, at_resume):
             return ("%s 里的新条目「%s」不合格:\n  - %s\n\n%s"
                     % (dfile, eid or "(无ID)", "\n  - ".join(problems),
                        DECISION_FORMAT_HINT))
+
+    # --- 完整标题不能重名(W76)------------------------------------------
+    # 条目靠 `ID — 结论` 被引用:`推翻:` 要正好对上一条,注入按 (ID, 标题) 判被推翻。
+    # 同名的推翻者会连自己一起退出注入,两条同名条目之后谁也推翻不了 —— 而这里是追加式的,
+    # 写进去就改不掉。只拿新条目去比,HEAD 里本来就有的同名(人类直接提交的)不追溯。
+    # 排在 `推翻:` 之前:同名的推翻者先收到"同名"这个真问题。
+    taken = {(e[0], e[1]) for e in parse_decisions(old)}
+    for eid, title, _, _, _ in fresh:
+        if (eid, title) in taken:
+            return ("新条目「%s — %s」与 %s 里另一条条目同名(`ID — 结论` 一字不差)。\n"
+                    "条目靠完整标题被引用:同名之后 `推翻:` 对不上\"正好一条\",两条都推翻不了。\n"
+                    "换一句结论把它和那一条区分开;要推翻那一条,新结论本来就该写成不同的话。"
+                    % (eid, title, dfile))
+        taken.add((eid, title))
 
     # --- 推翻:讨论的产出,只认 HEAD 里已有的条目 -----------------------
     with_refs = [e for e in fresh if overturn_refs(e[2])]

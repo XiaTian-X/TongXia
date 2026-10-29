@@ -915,3 +915,9 @@
 - 理由: 开放条目 57 会留下改不掉的坏状态:`resume` 时推翻者与被推翻的条目同名照样放行,注入按 `(ID, 标题)` 判被推翻,推翻者自己也从召回里消失;两条同名条目之后谁也引用不了,而决策记录是追加式的。新条目判重放在四个入口共用的决策校验里,一条规则同时杜绝同名条目与同名推翻。W75 的 review-test 记下 `discuss_handoff` 里那次 `test_gap_refusal` 调用没有用例守着,契约与实现都在,只差用例,开成 `[cover]` 一并做。
 - 已否决: 注入按条目位置判被推翻(只作用于它之前的条目)—— 只修注入,两条同名条目照样留在文件里、谁也推翻不了;先做开放条目 56 —— 要设计改名声明的格式与状态字段,范围大一档,留到下一轮;把 W77 的缺口留到以后 —— 只差一条用例,上一轮刚留下,现在补成本最低。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+
+## W76 — 决策条目判重用一个以 HEAD 条目起手的 (ID, 标题) 集合,逐条判、判完加入;排在格式校验之后、推翻: 之前
+
+- 理由: 一个集合同时管"与 HEAD 重复"和"同回合之间重复",HEAD 里本来就同名的两条只是集合里的一个元素,不追溯是自然结果,不用另写分支。放在四个入口共用的 `decision_violation` 里,正常交接与讨论的三个入口一起生效;排在格式之后,格式不合格的条目先收到格式问题;排在 `推翻:` 之前,同名的推翻者先收到"同名"这个真问题。比较用 `parse_decisions` 去过两端空白的值,与 `推翻:` 引用的逐字比同一口径。
+- 已否决: 只在 `resume` 判 —— 同名条目在正常交接里写下同样谁也推翻不了;按整段文本判重 —— 条目靠完整标题被引用,只换理由的同名条目照样引用不了;做全角半角与标点归一 —— 契约「不做」,与 `推翻:` 的逐字口径会分叉。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_decision_unique.py`
