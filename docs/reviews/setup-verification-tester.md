@@ -903,3 +903,22 @@ agent 先手改 `.pair/state.json`(比如把 `changes_count` 改回 0、或往 `
 - W74 是 cover:改好的用例一上来就绿;cover 的 spec 回合要交 `行为来源` 与 `我冻结了哪些可疑行为` 两节,我写在 `docs/pair-run/notes/W74.md`。
 
 结论:路径归属的可见性 —— 补充一段无歧义,照上面的读法改两条用例。
+
+## 补记(第四十六轮 W75 立项之后重跑)
+
+上次校验之后契约只多了一节「review-impl 的测试缺口」(dev 代笔)。**没有缺陷。** 判据每条都能落到可观测的东西上:退出码、提交数、`state.json`(`phase`、`changes_count`)、
+提交正文的 `测试缺口:` 行、拒绝文案里的 `approve --test-gap` 与 `[cover]`。流程我按现有 `FLOWS` 核过:`bug` 与 `feature` 共用 `FEATURE_FLOW`(有 review-test),
+`refactor` 的 review-impl 通过即完成,`cover` 根本没有 review-impl。
+
+### 读法(与 dev 补记一致的不再重复)
+
+- **harness 的布局里 tester 的只追加文件要自己配**:用例按 `test_v1_review_append` 的写法给 tester 配一个 `review_append_paths`(在 `tests/` 下、已在 HEAD 里),
+  这样"只追加了它被拒""改写它已有行被拒"才有对象;它同时在 `roles.tester` 名下,正好测"只追加判定排在可写判定之前"。
+- **"不带旗标改测试被拒"** 断言被拒且状态不变,不断言越界文案的措辞(那是既有的写边界检查)。
+- **RED 的来源**:harness 的测试命令按文件布局判红绿(`tests/X` 没有 `src/X` 就红),新用例写成 `tests/<新名字>` 即红;`approve --test-gap` 时同时放一个已有 `src/` 同名文件的测试文件
+  —— 不行,`src/` 是 dev 的。所以绿用例写成"动已有的 `tests/W1`"(改内容不改布局),红用例写成"新增 `tests/<名>`"。
+- **"走到完成,打回计数为 1"**:`changes --test-gap` → impl(dev 补上 `src/<名>`)→ review-impl approve → review-test approve → `completed_items` 含该项,`changes_count` 在 DONE 之前读到 1。
+  DONE 之后 `changes_count` 会不会清零我不依赖,在 review-test 那一刻读。
+- `affected_test_cmd` 配了时新用例会不会被选中:harness 不配它,契约没说,不写用例。
+
+结论:review-impl 的测试缺口 —— 无歧义,照上面的读法写用例。
