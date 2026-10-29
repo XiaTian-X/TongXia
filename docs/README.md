@@ -1,6 +1,6 @@
 # 文档
 
-同夏 TongXia(双 Agent 结对编程协议)的完整文档。项目总览在 [../README.md](../README.md),
+同夏 TóngXià(双 Agent 结对编程协议)的完整文档。项目总览在 [../README.md](../README.md),
 接入步骤在 [../INSTALL.md](../INSTALL.md)。
 
 ## 按你要做的事找

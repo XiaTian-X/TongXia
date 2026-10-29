@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "pair-protocol"
 version = "1.0.0"
-description = "让任意两个 AI coding agent 结对开发同一项目的协议:一个写测试、一个写实现、互相评审"
+description = "同夏 TóngXià — 双 AI agent 结对编程协议：一个写测试、一个写实现，严格轮流、互相评审；红绿由测试判定，规则由脚本强制。以 Agent Skill 分发，Claude Code / Codex / Cursor / Gemini CLI 等通用"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = []
