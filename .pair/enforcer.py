@@ -131,6 +131,8 @@ HANDOFF_INVARIANTS = (
                            # 且(配了 scope 时)落在 scope 内
     "test-deletion",       # 删测试必须带 --allow-deletion
     "new-tests",           # cover 的 spec 回合必须真的碰了测试文件
+    "review-test-gap",     # --test-gap 只在 feature/bug 的 review-impl、说明非空、真的补了用例;
+                           # 打回时要 RED(W75)。旗标本身在转移表之后就判,放开 tester 路径在写权限边界里
     "review-naming",       # 评审目录顶层 .md 的名字要对上某个工作项
     "dispute-evidence",    # impl 阶段的 changes 必须写进 shared_paths
     "review-evidence",     # approve 要检查清单,changes 要 路径:行号 引用
@@ -1740,7 +1742,14 @@ PHASE_BRIEF = {
 
     打回 -> python3 %(prog)s handoff changes "问题清单,至少一处 路径:行号"
     通过 -> python3 %(prog)s handoff approve "摘要"
-                --checked "你具体检查了什么" --uncovered "还没覆盖到什么\"""",
+                --checked "你具体检查了什么" --uncovered "还没覆盖到什么"
+
+  【发现自己的用例抓不到】(只限 feature/bug)带 --test-gap "说明",本回合可以写
+  测试路径(只追加的路径照旧只追加),必须真的新增或修改了用例:
+    打回时补一条复现漏洞的用例,交出时要是 RED,dev 修绿:
+      python3 %(prog)s handoff changes "…路径:行号…" --test-gap "补的用例覆盖什么"
+    实现没错、只缺覆盖,补绿的用例,dev 在 review-test 评审它们:
+      python3 %(prog)s handoff approve "摘要" --checked "…" --uncovered "…" --test-gap "…\"""",
 
     "review-test": """  审查对方的测试。跑 inbox 看 diff。
 
@@ -2561,6 +2570,28 @@ def check_review_evidence(root, cfg, phase, verdict, entries, message, args):
     return None
 
 
+def test_gap_refusal(phase, flow, item_type, gap):
+    """`--test-gap` 用在了它不管的地方时的拒绝理由;没带或用对了返回 None(W75)。
+
+    只在 review-impl:那是 tester 唯一只读、却最先看出"这条漏洞我的用例抓不到"的回合。
+    只在 review-impl approve 之后还有 review-test 的流程:refactor 通过即完成,
+    这回合补的用例就没人评审了。review-impl 的归属是 tester,所以"dev 带它"在阶段这一道就挡住。
+    """
+    if gap is None:
+        return None
+    if phase != "review-impl":
+        return ("拒绝交接 —— `--test-gap` 只用于 review-impl,当前是 %s 阶段。\n"
+                "它让 tester 在只读的实现评审里补上自己的用例;别的阶段该写测试的一方本来就能写。" % phase)
+    if flow["transitions"].get(("review-impl", "approve")) != "review-test":
+        return ("拒绝交接 —— [%s] 的 review-impl 通过即完成,这回合补的用例之后没人评审,\n"
+                "所以这个类型不能带 `--test-gap`。\n\n"
+                "缺的覆盖请人类在 PLAN 里另开一个 [cover] 工作项;实现有漏洞照常打回。" % item_type)
+    if not gap.strip():
+        return ("拒绝交接 —— `--test-gap` 的说明是空的。写清楚补的用例覆盖哪条漏洞或哪段缺口:\n"
+                "它进提交正文,dev 在 inbox 里必然看到。")
+    return None
+
+
 # --------------------------------------------------------------------------
 # handoff
 # --------------------------------------------------------------------------
@@ -2634,6 +2665,11 @@ def cmd_handoff(root, cfg, args):
             % (state["item_type"], phase))
     target = flow["transitions"][(phase, verdict)]
 
+    # W75:旗标用错了地方,纸面问题,先于抓改动和跑测试。
+    refusal = test_gap_refusal(phase, flow, state["item_type"], args.test_gap)
+    if refusal:
+        die(refusal)
+
     # W50:dev 执行、会完成工作项的交接,dev 的开工前校验已不作数就当场拒绝。工作项进行中契约变过之后两个角色的
     # 校验都失效;tester 那一半在下一次认领时自愈,dev 那一半在 cover 里没有 impl 回合 —— 不在这里拦住,
     # 就要等 tester 认领被拒、人类再把 dev 单独叫回来(第二十七轮 W48 之后实际发生过)。这时基线是绿的,
@@ -2685,6 +2721,10 @@ def cmd_handoff(root, cfg, args):
     # --- 写权限边界校验 ---------------------------------------------------
     allowed = writable_paths(cfg, phase)
     appendable = review_append_paths(cfg, phase)
+    # W75:声明了测试缺口,只放开 tester 自己的路径。只追加的那批在下面先判、判完就 continue,
+    # 所以登记表照旧只追加,不会被这里放开成可写。
+    if args.test_gap is not None:
+        allowed = allowed + list(cfg["roles"]["tester"])
     exempt_from_scope = list(cfg["shared_paths"]) + list(cfg.get("proposal_paths") or [])
     if memory_on(cfg):
         exempt_from_scope += [cfg["notes_dir"], cfg["decisions_file"]]
@@ -2850,6 +2890,18 @@ def cmd_handoff(root, cfg, args):
                 "cover 类型全程是绿的,红绿不变量抓不到空手交接,所以这条单独检查。"
                 % (state["item_type"], " ".join(test_paths)))
 
+    # --- 声明了测试缺口就得真的补了用例(W75)------------------------------
+    # 只追加文件不算:只登记变异点,不带旗标本来就能做。删除也不算。
+    if args.test_gap is not None:
+        gap_tests = [p for xy, p in entries
+                     if "D" not in xy and matches_any(p, test_paths)
+                     and not matches_any(p, appendable)]
+        if not gap_tests:
+            die("拒绝交接 —— 带了 `--test-gap`,但你没有新增或修改任何用例。\n"
+                "补用例要落在 %s 下;只往 %s 里追加登记不算 —— 那个不带旗标也能做。\n"
+                "只是想记下这条缺口、这回合不写用例,就去掉 `--test-gap`,把它写进评审记录。"
+                % (" ".join(test_paths), " ".join(appendable) or "只追加路径"))
+
     # --- 评审目录的命名 ---------------------------------------------------
     refusal = check_review_names(
         root, cfg, entries, [i for i, _, _, _ in parse_plan(root, cfg)])
@@ -2924,6 +2976,15 @@ def cmd_handoff(root, cfg, args):
     expect = flow["expect"].get(phase)
     if is_dispute or (after_rebound and expect == "RED"):
         expect = None
+    # W75:打回时补的用例要复现所说的漏洞 —— 修复之前它就该是红的。这是它抓得到漏洞的证据。
+    if args.test_gap is not None and verdict == "changes":
+        expect = "RED"
+        if green:
+            die("拒绝交接 —— 带了 `--test-gap` 打回,但测试是 GREEN。\n"
+                "新用例没有红,它抓不到你说的漏洞:要么用例没打到那条路径,要么漏洞并不存在。\n\n"
+                "实现没错、只是缺覆盖,就改用 `approve --test-gap`(通过,补的用例交 GREEN):\n"
+                "  python3 %s handoff approve \"摘要\" --checked \"…\" --uncovered \"…\" --test-gap \"说明\"\n"
+                "补的用例会在 review-test 由 dev 评审。" % PROG_HINT)
     if expect == "RED" and green:
         die("%s 阶段结束时测试必须是 RED,现在是 GREEN。\n"
             "你要么没写新用例,要么写了个本来就能通过的用例。\n"
@@ -3049,6 +3110,8 @@ def cmd_handoff(root, cfg, args):
                                                     "\n  ".join(full_gone))
     if carried:
         body += "\n代办(不计打回): %s" % "、".join(r["id"] for r in carried)
+    if args.test_gap is not None:                       # W75:放行到这里就一定是用对了的
+        body += "\n测试缺口: %s" % args.test_gap.strip()
     proposals = sorted(p for xy, p in entries
                        if "D" not in xy and matches_any(p, cfg.get("proposal_paths") or []))
     if proposals:                                       # W66:对方在 inbox 里必然看到
@@ -3465,6 +3528,9 @@ def discuss_handoff(root, cfg, args, me, state):
     turn = phase_owner(root, cfg, state)
     if me != turn:
         die("现在是 %s 的讨论回合,不是你(%s)的。不要提交。" % (turn, me))
+    refusal = test_gap_refusal(DISCUSS, None, state.get("item_type"), args.test_gap)
+    if refusal:
+        die(refusal)
     _discuss_tamper_guard(root, "交接")
     message = " ".join(args.words).strip()
     if not message:
@@ -5349,6 +5415,8 @@ def main(argv=None):
                       help="改写路线图(有删除行)时必填:指向一份真实产物的路径")
     p_ho.add_argument("--contract-change", metavar="依据", default=None,
                       help="改 PLAN/CONTRACT 时必填:指向一份真实产物的路径")
+    p_ho.add_argument("--test-gap", metavar="说明", default=None,
+                      help="review-impl 里补自己的用例(tester,feature/bug):打回时交 RED,通过时交 GREEN")
     p_ho.add_argument("--checked", metavar="内容", default=None,
                       help="approve 必填:你具体检查了什么")
     p_ho.add_argument("--uncovered", metavar="内容", default=None,

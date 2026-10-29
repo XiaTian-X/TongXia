@@ -903,3 +903,9 @@
 - 理由: W72、W73 连着两轮撞上同一条路:tester 在 review-impl 挑出漏洞、承认用例抓不到,而 review-impl 只读,只能等 dev 修完、自己再审通过、dev 在 review-test 打回之后才能补用例 —— 多三个回合,还被第二次打回的决策闸逼着为一次事先说好的打回写分歧记录。`--test-gap` 让 tester 在打回的那一回合写上复现漏洞的用例、交出 RED(同 `[bug]` 的 spec),dev 修绿后照常 review-impl → review-test:打回后从五个回合降到三个,不会再有第二次打回,用例在修复前是红的,也不必再靠变异探针证明它抓得到。实现没错只缺覆盖时 `approve --test-gap` 交 GREEN,dev 在 review-test 评审。
 - 已否决: 照路线图原提议在修复后插一个 spec 回合 —— tester 连走两个回合,只省一轮,用例写在修复之后;第二次打回不计数 —— 给"拆成多次小打回绕过死锁闸"留口子;先做 P0-1 剩余的 ①③ —— 路线图自己写着强制力有限、单独评估;放开 refactor —— 它的 review-impl 通过即完成,补的用例没人评审。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/SKILL.md`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+
+## W75 — `--test-gap` 的旗标校验排在转移表之后、抓改动之前;"必须补了用例"不算只追加文件与删除;打回时期望改 RED、绿着单独点名 approve
+
+- 理由: 阶段、流程、空说明三条是纸面问题,和其他纸面校验一样先于跑测试,被拒时什么都不落盘。"dev 带它"不另设一道:review-impl 归 tester,回合归属先拦,dev 自己的阶段都不是 review-impl。只追加的登记表不带旗标也能写,算作补用例就等于旗标空手生效;删除同理。打回时要求 RED 是"补的用例抓得到所挑漏洞"的唯一机器证据,绿着打回多半是该 `approve --test-gap`,所以文案直接点名。讨论回合走另一支交接,也调一次,免得旗标被静默吞掉(这次调用没有用例守着,讨论回合本来只能写散文,影响有限)。
+- 已否决: 把 tester 路径并进 `writable_paths` 的评审分支 —— 那会让 `status` 显示与异议举证一起变,而放开只在声明时生效;单独设"只限 tester"一道 —— 与回合归属重复,变异点抓不出它;绿着打回时降级成 approve —— 替 tester 改裁决,打回计数也跟着变。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`、`tests/conformance/test_v1_test_gap.py`
