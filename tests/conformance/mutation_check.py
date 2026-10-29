@@ -1607,6 +1607,26 @@ MUTATIONS = [
     ('缺口_正文不写测试缺口',
      '        body += "\\n测试缺口: %s" % args.test_gap.strip()',
      '        pass'),
+
+    ('同名_不查与_HEAD_已有条目重复',
+     '    taken = {(e[0], e[1]) for e in parse_decisions(old)}\n',
+     '    taken = set()\n'),
+
+    ('同名_不查新条目之间重复',
+     '        taken.add((eid, title))\n',
+     ''),
+
+    ('同名_只比_ID',
+     '        if (eid, title) in taken:\n',
+     '        if eid in {k[0] for k in taken}:\n'),
+
+    ('同名_只比标题',
+     '        if (eid, title) in taken:\n',
+     '        if title in {k[1] for k in taken}:\n'),
+
+    ('同名_判重只在_resume',
+     '        if (eid, title) in taken:\n',
+     '        if at_resume and (eid, title) in taken:\n'),
 ]
 
 # unittest 的失败行有两种形态:

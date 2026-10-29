@@ -1,5 +1,5 @@
 {
-  "baseline": "01842d62a41f3a9b",
+  "baseline": "9d2461d3ef9cb6a6",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -279,6 +279,21 @@
     ],
     "可写路径不标只追加": [
       "test_v1_review_append.TestStatusMarksAppendOnly.test_执行者看到的只能写那一行也标出只追加"
+    ],
+    "同名_不查与_HEAD_已有条目重复": [
+      "test_v1_decision_unique.TestDiscussEntries.test_discuss_开场写同名条目被拒"
+    ],
+    "同名_不查新条目之间重复": [
+      "test_v1_decision_unique.TestNormalHandoff.test_同一回合两条新条目彼此同名被拒"
+    ],
+    "同名_判重只在_resume": [
+      "test_v1_decision_unique.TestDiscussEntries.test_discuss_开场写同名条目被拒"
+    ],
+    "同名_只比_ID": [
+      "test_v1_decision_overturn.TestAlreadyOverturned.test_重复推翻被拒_点名已推翻它的那一条"
+    ],
+    "同名_只比标题": [
+      "test_v1_decision_unique.TestNormalHandoff.test_标题相同_ID_不同放行"
     ],
     "回落改回解析不出就停": [
       "test_v1_setup_report.TestFallbackToSharedPath.test_解析不出角色时回落到旧路径并说出来"
