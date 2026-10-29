@@ -1,8 +1,8 @@
 {
   "round": 72,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W75",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -81,7 +81,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "712f6ae7049da15f48011f16e238184fda549448",
   "setup_verified_contract": {
     "tester": "712f6ae7049da15f48011f16e238184fda549448",
     "dev": "712f6ae7049da15f48011f16e238184fda549448"
@@ -91,7 +91,7 @@
   "reviewed_contract": "77c8d6154b677cef7e70544eefd68f44e364dd2a",
   "last_full_failed": false,
   "full_failures": [],
-  "item_base": "0aa3458b758d2dba95471b65bfd9e5ff1d7ba6ba",
+  "item_base": "96450b65dfdd94cd1ae595e808c2dad2cf943e60",
   "requests": [],
   "discuss": null,
   "discussed": []
