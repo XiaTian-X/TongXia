@@ -1001,3 +1001,20 @@
     ③`changes --test-gap` 套件必须 RED、绿则拒绝并提示 `approve --test-gap`;`approve --test-gap` 照旧 GREEN;④只在 review-impl、只在有 review-test 的流程(feature、bug)可用,refactor 拒绝并提示开 cover,其他阶段、dev、空说明拒绝;
     ⑤提交正文写 `测试缺口: <说明>`;review-impl 简报说明两种用法;⑥`ENFORCEMENTS` 加 `review-test-gap`;`SKILL.md` 规则 6、`rules.md`、`protocol-spec.md`、`command-reference.md`、`architecture.md`、`troubleshooting.md` 跟上,开放条目 58 标 ✅
   - 对应契约:`docs/pair-run/CONTRACT.md` → review-impl 的测试缺口
+
+### 第四十七轮:决策条目不能同名(开放条目 57)+ 讨论回合拒绝 `--test-gap` 的用例
+
+> 人类要求推送后开始下一个工作项;dev 选开放条目 57:`resume` 时推翻者与被推翻的条目同名,校验放行,推翻者自己也退出注入,而且两条同名条目从此谁也推翻不了 —— 决策记录追加式,写进去就改不掉。
+> 顺带补 W75 评审里"没覆盖到"的那一处:讨论回合的交接拒绝 `--test-gap`,实现在、契约在,只缺用例。规划经 dev 自审后人类批准(2026-10-29),授权 dev 代笔立项。
+
+- [ ] **W76** [bug] — 新决策条目的完整标题(`ID — 结论`)不能与已有条目或同一回合的其他新条目重复
+  - **来源**:开放条目 57(第四十二轮 W71 review-impl 的实测)
+  - 验收标准:①本回合新条目的 `(ID, 标题)` 与 HEAD 里已有条目相同 → 拒绝,文案点名那一条,不提交、状态不变;②本回合两条新条目彼此同名 → 拒绝;
+    ③四个入口都生效(正常交接、`discuss` 开场、讨论回合的 `handoff`、`resume`),`resume` 时推翻者与被推翻的同名被拒;④ID 相同、标题不同照常放行;HEAD 里本来就有的同名条目不追溯;
+    ⑤`ENFORCEMENTS` 加 `decision-unique-title`;`rules.md`、`protocol-spec.md`、`architecture.md`、`troubleshooting.md` 跟上,开放条目 57 标 ✅
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 决策条目不能同名
+
+- [ ] **W77** [cover] — 讨论回合的交接带 `--test-gap` 被拒的用例
+  - **来源**:W75 review-test 的"没覆盖到"(`discuss_handoff` 里那次 `test_gap_refusal` 调用拆掉不会红)
+  - 验收标准:①讨论回合里轮到的一方带 `--test-gap` 交接被拒,提交数与状态不变;②对照组不带旗标照常交接;③登记变异点「拆掉讨论回合的那次调用」并被抓;④不改 `pair.py`
+  - 对应契约:`docs/pair-run/CONTRACT.md` → review-impl 的测试缺口

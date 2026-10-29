@@ -909,3 +909,9 @@
 - 理由: 阶段、流程、空说明三条是纸面问题,和其他纸面校验一样先于跑测试,被拒时什么都不落盘。"dev 带它"不另设一道:review-impl 归 tester,回合归属先拦,dev 自己的阶段都不是 review-impl。只追加的登记表不带旗标也能写,算作补用例就等于旗标空手生效;删除同理。打回时要求 RED 是"补的用例抓得到所挑漏洞"的唯一机器证据,绿着打回多半是该 `approve --test-gap`,所以文案直接点名。讨论回合走另一支交接,也调一次,免得旗标被静默吞掉(这次调用没有用例守着,讨论回合本来只能写散文,影响有限)。
 - 已否决: 把 tester 路径并进 `writable_paths` 的评审分支 —— 那会让 `status` 显示与异议举证一起变,而放开只在声明时生效;单独设"只限 tester"一道 —— 与回合归属重复,变异点抓不出它;绿着打回时降级成 approve —— 替 tester 改裁决,打回计数也跟着变。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`、`tests/conformance/test_v1_test_gap.py`
+
+## SETUP — 第四十七轮做开放条目 57(决策条目不能同名)并补 W75 讨论回合的用例缺口,规划经自审后人类批准(2026-10-29)
+
+- 理由: 开放条目 57 会留下改不掉的坏状态:`resume` 时推翻者与被推翻的条目同名照样放行,注入按 `(ID, 标题)` 判被推翻,推翻者自己也从召回里消失;两条同名条目之后谁也引用不了,而决策记录是追加式的。新条目判重放在四个入口共用的决策校验里,一条规则同时杜绝同名条目与同名推翻。W75 的 review-test 记下 `discuss_handoff` 里那次 `test_gap_refusal` 调用没有用例守着,契约与实现都在,只差用例,开成 `[cover]` 一并做。
+- 已否决: 注入按条目位置判被推翻(只作用于它之前的条目)—— 只修注入,两条同名条目照样留在文件里、谁也推翻不了;先做开放条目 56 —— 要设计改名声明的格式与状态字段,范围大一档,留到下一轮;把 W77 的缺口留到以后 —— 只差一条用例,上一轮刚留下,现在补成本最低。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
