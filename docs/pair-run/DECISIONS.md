@@ -888,3 +888,8 @@
 - 理由: verify-setup 在逐项循环里收集未完成工作项引用的、依据可断言的小节,循环后每节只查一次、文案列出全部引用者。正文另写 `contract_sections_full`:到下一个同级或更高级标题为止、含子小节、保留代码块原文,找标题时把围栏换成等长空白,再在原文上切。先去 HTML 注释再判:模板注释里就有"返回 null"。表格要有分隔行和至少一行有字的数据行,原样复制的模板因此判为没有形状。漂移只对 cover/refactor/bug 查,从代码块抽 `名字(` 与 `def`/`class`/`function`/`fn`/`func` 后的名字,两个角色的模式分别判,按 ASCII 整词匹配。`strict_contract` 只收布尔值。
 - 已否决: 用 `_blank_fenced_blocks` 的结果定位标题再切原文 —— 它把围栏换成等量换行,偏移会错位;同一节按引用者各报一次 —— 两个工作项引用同一节就是两条一样的警告;漂移按子串匹配 —— `widget` 会被 `make_widget_v2` 算成存在。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_contract_shape.py`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `.agents/skills/pair-protocol/references/rules.md`
+## SETUP — 第四十五轮修 W73 带来的变异存活,只改测试,类型是 cover,规划经自审后人类批准(2026-10-29)
+
+- 理由: W73 完成时全量变异检查里「剩余数打成总数」存活。`test_v1_paths.py` 两条截断用例从首行取段到第一个空行,再找"含数字、不含 12"的行当剩余数;W73 之后 verify-setup 紧接着输出形状警告、中间没有空行,警告里的 `W1`/`W2` 满足条件,剩余数打成总数照样绿。实现没错,是测试失去了拦截力:改好的测试一上来就绿,走 `[cover]`(spec → review-test,全程绿、必须改测试、dev 评审"改坏了会不会红")。契约那一节纯追加一张表和"段在哪里结束不作规定",tester 有取段的依据,这一节也过得了 W73 自己的形状检查。
+- 已否决: `[bug]` 类型 —— spec 交不出 RED;每条警告之间加空行 —— 为一条测试改所有警告的格式;给 harness 契约模板的 W1/W2 加表 —— 干扰消失,取段照样脆,下一条带数字的警告还会再来;接受现状 —— 剩余数这条防护没人守。
+- 影响路径: `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`, `tests/conformance/test_v1_paths.py`
