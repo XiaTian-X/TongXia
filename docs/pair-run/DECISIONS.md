@@ -898,3 +898,8 @@
 - 理由: 契约补充写明"一段在哪里结束不作规定",用例不能假设段尾有空行。`warn()` 收集的警告逐条以 `[警告]` 开头、条与条之间不空行,所以下一条警告行就是段的边界;首行本身就是 `[警告]` 行,要跳过,否则段长为 0。隔离副本证明旧版两条在「剩余数打成总数」下都绿(孤儿那条也失效,缓存只记了 `ignore_paths` 那条),新版两条各自单独都红。
 - 已否决: 只修 `ignore_paths` 那条 —— 孤儿那条同样失效,只是缓存没记;按缩进判段(路径行以六个空格开头)—— 契约没规定缩进,比 `[警告]` 前缀更像实现细节;取固定行数(首行 + 11 行)—— 把"超过 10 个"的上限写进取段,换个上限就错。
 - 影响路径: `tests/conformance/test_v1_paths.py`
+## SETUP — 第四十六轮做开放条目 58(review-impl 打回时当场补上测试缺口),规划经自审后人类批准(2026-10-29)
+
+- 理由: W72、W73 连着两轮撞上同一条路:tester 在 review-impl 挑出漏洞、承认用例抓不到,而 review-impl 只读,只能等 dev 修完、自己再审通过、dev 在 review-test 打回之后才能补用例 —— 多三个回合,还被第二次打回的决策闸逼着为一次事先说好的打回写分歧记录。`--test-gap` 让 tester 在打回的那一回合写上复现漏洞的用例、交出 RED(同 `[bug]` 的 spec),dev 修绿后照常 review-impl → review-test:打回后从五个回合降到三个,不会再有第二次打回,用例在修复前是红的,也不必再靠变异探针证明它抓得到。实现没错只缺覆盖时 `approve --test-gap` 交 GREEN,dev 在 review-test 评审。
+- 已否决: 照路线图原提议在修复后插一个 spec 回合 —— tester 连走两个回合,只省一轮,用例写在修复之后;第二次打回不计数 —— 给"拆成多次小打回绕过死锁闸"留口子;先做 P0-1 剩余的 ①③ —— 路线图自己写着强制力有限、单独评估;放开 refactor —— 它的 review-impl 通过即完成,补的用例没人评审。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/SKILL.md`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`

@@ -989,3 +989,15 @@
     ②两条各自独立能抓「剩余数打成总数」(dev 在 review-test 用隔离副本分别验证,写进评审);③全量变异检查全抓;
     ④不改 `pair.py`,不改 harness 的契约模板(那会掩盖而不是修好取段)
   - 对应契约:`docs/pair-run/CONTRACT.md` → 路径归属的可见性
+
+### 第四十六轮:review-impl 打回时当场补上测试缺口(开放条目 58)
+
+> 人类要求推送后开始下一个工作项;dev 选开放条目 58:W72、W73 连着两轮撞上"review-impl 挑出的漏洞同时是测试缺口",每次多绕三个回合、还被迫为一次没有分歧的打回写决策。
+> 方向与路线图原提议(修复后插一个 spec 回合)不同:tester 在打回的那一回合就写上复现漏洞的红用例。规划经 dev 自审后人类批准(2026-10-29),授权 dev 代笔立项。
+
+- [ ] **W75** [feature] — `handoff --test-gap "说明"`:review-impl 里 tester 可以写自己的测试,打回时交 RED、通过时交 GREEN
+  - **来源**:开放条目 58(第四十三、四十四轮的实际回合账)
+  - 验收标准:①review-impl 带 `--test-gap` 时 `roles.tester` 可写(`review_append_paths` 仍只追加),不带时照旧只读;②必须动了 `roles.tester` 名下、`review_append_paths` 以外的文件(非删除);
+    ③`changes --test-gap` 套件必须 RED、绿则拒绝并提示 `approve --test-gap`;`approve --test-gap` 照旧 GREEN;④只在 review-impl、只在有 review-test 的流程(feature、bug)可用,refactor 拒绝并提示开 cover,其他阶段、dev、空说明拒绝;
+    ⑤提交正文写 `测试缺口: <说明>`;review-impl 简报说明两种用法;⑥`ENFORCEMENTS` 加 `review-test-gap`;`SKILL.md` 规则 6、`rules.md`、`protocol-spec.md`、`command-reference.md`、`architecture.md`、`troubleshooting.md` 跟上,开放条目 58 标 ✅
+  - 对应契约:`docs/pair-run/CONTRACT.md` → review-impl 的测试缺口

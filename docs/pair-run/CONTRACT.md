@@ -2504,3 +2504,35 @@ cover 项小节的函数名在 `src/` 下不存在警告且列出名字,存在�
 变异点:形状不查子小节、空数据行的表也算形状、不去 HTML 注释、不可断言的小节也查、严格模式不升级、漂移不限工作项类型、漂移在严格模式下也升级、漂移把 `docs/` 也算进去。
 
 **不做** 不判语义;不查已完成工作项引用的或没人引用的小节;不在 `claim`/`handoff` 时查(契约之后的变更走 W70 分级与提案签字);漂移不升级为失败;不改歧义结论(`setup-report`)的要求。
+
+## review-impl 的测试缺口
+
+- 依据: 人类定稿
+
+**背景** tester 在 review-impl 挑出实现漏洞、同时发现自己的用例抓不到它时,review-impl 只读,只能登记变异点。于是 dev 修、tester 再审通过之后,还要 dev 在 review-test 以"缺用例"打回、tester 补、dev 再审 ——
+多三个回合,而且那次打回算第二次,触发"必须写决策"的闸,而双方没有分歧(开放条目 58,W72、W73 各撞一次)。本项让 tester 在打回的那一回合就写上复现漏洞的用例:修复前它是红的,这本身就证明它抓得到。
+
+**行为** `handoff` 新选项 `--test-gap "说明"`:
+
+| 情形 | 可写路径 | 红绿 | 走向 |
+|---|---|---|---|
+| review-impl,不带 `--test-gap` | 照旧只读(`shared_paths`、记忆层、提案目录,`review_append_paths` 只追加) | GREEN | changes → impl;approve → review-test |
+| review-impl `changes --test-gap "…"` | 以上,加 `roles.tester` | RED,绿则拒绝 | → impl |
+| review-impl `approve --test-gap "…"` | 以上,加 `roles.tester` | GREEN | → review-test |
+
+- 带 `--test-gap` 时必须动了 `roles.tester` 名下、`review_append_paths` 以外的文件(非删除的改动),否则拒绝 —— 只登记变异点不算补用例。
+- `changes --test-gap` 时套件是绿的 → 拒绝,文案说明新用例没有红、抓不到所说的漏洞,实现没错只缺覆盖时用 `approve --test-gap`。
+- 只在 review-impl、只在 review-impl 之后还有 review-test 的流程(`feature`、`bug`)里可用:`refactor` 的 review-impl 通过即完成,补的用例没人评审 → 拒绝,文案提示开 `[cover]` 工作项;
+  其他阶段带它、dev 带它、说明为空(去掉空白后)→ 拒绝。
+- `review_append_paths` 在带 `--test-gap` 时仍然只追加。
+- 其余检查不变:删除测试要 `--allow-deletion`,评审证据、异议落纸、打回计数与死锁闸照旧(`changes --test-gap` 算一次打回)。
+- 放行时提交正文有一行 `测试缺口: <说明>`。review-impl 的简报说明两种用法。
+- 拒绝时不提交、状态不变。
+- 登记 `ENFORCEMENTS`(`review-test-gap`);`SKILL.md` 规则 6 与 `rules.md` 的"评审回合是只读的"补上这个例外;`protocol-spec.md`、`command-reference.md`、`architecture.md`、`troubleshooting.md` 跟上;开放条目 58 标 ✅。
+
+**判据** 用例:`changes --test-gap` 加一条红用例进 impl、正文含 `测试缺口:`;`approve --test-gap` 加一条绿用例进 review-test;不带旗标改测试被拒(越界);`changes --test-gap` 时套件绿被拒;
+带旗标没动测试被拒;只追加了 `review_append_paths` 里的文件被拒;空说明被拒;impl 阶段带被拒;dev 带被拒;refactor 的 review-impl 带被拒;带旗标改写 `review_append_paths` 已有行被拒;
+被拒时提交数与 `state.json` 不变;`changes --test-gap` → impl 修绿 → review-impl approve → review-test approve 走到完成,打回计数为 1。
+变异点:不限 review-impl、不限有 review-test 的流程、`changes --test-gap` 不要求 RED、不要求动测试、`review_append_paths` 算作补用例、带旗标不放开 tester 路径、空说明放行。
+
+**不做** 不判"红的那条是不是本回合新写的用例"(用例 ID 到文件的映射因工具而异,属于路线图 P0-1 ①);不放开 review-test;`report` 不加统计;不改"第二次打回要写决策"的闸。
