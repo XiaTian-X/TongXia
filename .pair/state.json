@@ -88,7 +88,7 @@
   "contract_sha": null,
   "setup_verified_contract": {
     "tester": "4cd10aad11506259e2d5a4e1a4110d5003a06d8f",
-    "dev": "4cd10aad11506259e2d5a4e1a4110d5003a06d8f"
+    "dev": "6821574fcbaa4f9a4bbcdd89ed0da68696a24a69"
   },
   "after_rebound": false,
   "rebound_from": null,
@@ -98,5 +98,6 @@
   "item_base": "2530be3de823159c23059e31d18286d3375210d9",
   "requests": [],
   "discuss": null,
-  "discussed": []
+  "discussed": [],
+  "renamed_tests": {}
 }
