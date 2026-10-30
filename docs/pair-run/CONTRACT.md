@@ -2601,3 +2601,38 @@ review-impl 带 `--test-gap` 时声明放行;多条一次给出、分两回合�
 
 **不做** 不从 diff 自动推断改名(用例 ID 到文件的映射因工具而异,属于路线图 P0-1 ①);不放宽 `--accept-new-failures`,不改新增的红那一半;dev 不能声明;
 声明时不检查新名是否已在跑(门禁报告不一定配了,完成时的全量是唯一可靠的判点)。
+
+## 工作项的回合预算
+
+- 依据: 人类定稿
+
+**背景** 路线图 P1-2 原文担心"每次换个理由打回就能烧掉任意多轮"。核对后这一半早已不成立:`changes_count` 在整个工作项里累计、第 3 次打回撞死锁闸,代办被拒的补计也进死锁闸,
+进讨论的次数受 `discuss_limit` 限制。真正还没上限的是讨论回合内部:`discuss_handoff` 不判红绿、不计数,双方可以在一次讨论里无限来回;以后再加的旁路也会是同样的形状。
+77 个工作项平均 5.4 个交接回合、最多 12 个;现有闸门下不进讨论的最坏情形也是 12 个。所以回合预算是一道正常工作项碰不到的兜底。
+
+**行为** 新配置 `max_item_turns`(整数,默认 20,0 = 不限);新状态字段 `item_turns`(本工作项已换手次数)与 `item_turn_budget_hits`(撞过预算的记录)。
+
+| 情形 | 结果 |
+|---|---|
+| 工作项进行中,一次换手成功 | `item_turns` 加 1 |
+| `item_turns >= max_item_turns` 后再换手 | 拒绝,工作区不变 |
+| 用满后,目标是 `DONE` 的交接 | 不拦,照常完成 |
+| `max_item_turns = 0` | 不限 |
+
+- **换手**指:`handoff`(含讨论回合里的那一种)、`discuss` 开场、`resume`。**不算**:`claim`;`request` / `fulfill` / `decline`(代办不换手,被拒的补计已进死锁闸);`sign` / `ratify`(人类做的);
+  空闲时的 understand(没有工作项)。
+- 判点在跑测试之前:`handoff` 查完转移表、知道目标之后就判;`discuss`、讨论回合的 `handoff`、`resume` 在各自入口判。
+- 第一次撞上时追加 `item_turn_budget_hits`(形如 `W79 x20`),只把状态文件单独提交一次,主题 `chore(pair): 工作项 <ID> 交接 <N> 次,用完回合预算`;同一工作项再撞不重复提交。
+- 拒绝文案说明这不是惩罚,是提示工作项切得太大或讨论没有收敛;交给人类:裁决分歧、拆项,或在 `.pair/config.json` 调高 `max_item_turns`。
+- 认领时与完成时 `item_turns` 清零;老状态没有这两个键 = 0 与空。
+- `status` 在工作项进行中显示"回合预算 : 本工作项已换手 n 次 / 上限";`item_turn_budget_hits` 非空时与死锁闸的记录一样列出。
+- `verify-setup` 要求 `max_item_turns` 是非负整数。
+- 登记 `ENFORCEMENTS`(`item-turn-budget`,不是交接不变量,与 `discuss-quota` 同一档);`protocol-spec.md`(§4 紧跟死锁闸一小节、配置表、状态字段表)、`command-reference.md`、
+  `architecture.md`、`troubleshooting.md`、`rules.md`、`SKILL.md` 跟上;路线图 P1-2 标 ✅。
+
+**判据** 用例(用小预算造场景):`handoff`、`discuss` 开场、讨论回合的 `handoff`、`resume` 各加 1;`request`/`fulfill`/`decline`、`claim` 不加;用满后再 `handoff` 被拒、工作区不变;
+第一次撞上有一次 chore 提交、`item_turn_budget_hits` 记一条,再撞不新增提交;用满后 `discuss` 开场、讨论回合的 `handoff`、`resume` 被拒;用满时 review-test approve 照常完成;
+完成与认领清零;老状态没有键当 0;`0` 不限;`verify-setup` 拒负数与非整数;不配时上限是 20;`status` 显示已换手次数与撞过的记录。
+变异点:不计数、完成时不清零、认领时不清零、不拦用满、拦了完成、`0` 不当不限、讨论三个入口不计数或不拦、撞上时不记录、每次撞都重复提交、`verify-setup` 不查。
+
+**不做** 计时型停滞检测(本协议"人类是时钟",没有可计时的主体);`report` 统计撞预算的工作项(先有数据,`item_turn_budget_hits` 已留痕);给讨论单独设发言上限(总预算已兜住,不开第二个旋钮)。

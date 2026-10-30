@@ -933,3 +933,12 @@
 - 理由: 阶段、格式、一对一、旧名在基线都只看参数与状态,先判就不必为纸面问题跑测试,被拒也什么都不落盘;一对一在"状态里已记的 + 本回合的"合并后判,分两回合声明也拦得住多对一与链,同一对重复声明当作已有。"改了 tester 路径"要等抓到改动才判得了,所以排在补用例检查之后;通过后先把合并后的映射放进内存里的状态,修正回合补的声明 ⑱ 才算得上,否则正是开放条目 56 那个多走两回合的场景。⑱ 与完成时共用 `matched_renames`,只扣旧名不再跑、新名在同一次报告的跑过集合里的那几条,别的照旧按消失算(review-test 补的用例与变异点钉住了这一条);报告读不出时一条都不扣,偏保守。⑱ 那一行原锚点原样保留、扣除另起一行。
 - 已否决: 讨论回合与正常交接合成一次调用 —— 讨论回合那次调用是既有变异锚点;完成时另写一份扣除逻辑 —— ⑱ 与完成的口径会分叉;声明时就查新名在跑 —— 门禁报告可选,完成时的全量是唯一可靠的判点。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_test_rename.py`, `tests/conformance/mutation_check.py`
+
+## SETUP — 第四十九轮做路线图 P1-2(工作项的回合预算,收窄为兜底)并补 P1-12 余项 ②(插入无关行不会红),规划经自审后人类批准(2026-10-30)
+
+- 理由: 编号开放条目已全部关闭。P1-2 的前提核对后一半已被死锁闸覆盖(打回在整个工作项里累计),讨论次数也有额度;剩下没上限的是讨论回合内部的来回,以及以后任何不计数的旁路。
+  一个总预算兜住所有换手,默认 20 高于历史最多的 12 与"不进讨论的最坏 12 + 一次最短讨论 3",正常工作项碰不到;完成不拦,其余交给人类,与死锁闸同一种口径。
+  P1-12 ② 是结构性成立、没有用例,按 W2 的决策不算防护,顺手补上。
+- 已否决: 只给讨论加发言上限 —— 以后的旁路还会漏,两个旋钮不如一个总预算;用满后连完成也拦 —— 做完了的工作项卡在最后一步没有意义;
+  把预算并进死锁闸的计数 —— 两者问的不是一件事(争议与回合多),合并会让死锁闸在没有争议时触发;计时型停滞检测 —— 没有可计时的主体。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/SKILL.md`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`, `tests/conformance/test_docs_consistency.py`

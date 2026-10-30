@@ -1032,3 +1032,23 @@
     新名没跑照旧算不再跑;⑤⑱ 判上一次全量时同样扣除对上了的改名;⑥W61 拒绝文案补 `--renamed` 的用法;`ENFORCEMENTS` 加 `test-rename`;
     `protocol-spec.md`(含状态字段表)、`command-reference.md`、`architecture.md`、`troubleshooting.md`、`rules.md` 跟上,开放条目 56 标 ✅
   - 对应契约:`docs/pair-run/CONTRACT.md` → 用例改名的声明
+
+### 第四十九轮:工作项的回合预算(P1-2)+ 插入无关行不会红(P1-12 余项 ②)
+
+> 人类要求推送后开始下一个工作项;编号开放条目已全部关闭,dev 选 P1-2。先核对了它的前提:"每次换个理由打回就能烧掉任意多轮"那一半早被死锁闸覆盖(`changes_count` 在整个工作项里累计),
+> 讨论次数也有 `discuss_limit`;真正还没上限的是讨论回合内部的来回(`discuss_handoff` 不计数)。77 个工作项平均 5.4 个交接回合、最多 12 个,所以这是一道正常工作项碰不到的兜底。
+> 顺带 P1-12「三项没做」里的第 ②:"插入无关行不会红"是结构性成立,没有用例钉住。规划经 dev 自审后人类批准(2026-10-30),授权 dev 代笔立项。
+
+- [ ] **W79** [feature] — 工作项的回合预算 `max_item_turns`:换手次数用满后再换手被拒,交给人类;完成不拦
+  - **来源**:路线图 P1-2(活性保护),前提核对后收窄为兜底
+  - 验收标准:①工作项进行中每次成功换手(`handoff`,含讨论回合里的;`discuss` 开场;`resume`)状态 `item_turns` 加 1;`claim`、`request`/`fulfill`/`decline`、`sign`/`ratify`、空闲时的 understand 不加;
+    ②`item_turns >= max_item_turns` 后再换手 → 拒绝,工作区不变;第一次撞上追加 `item_turn_budget_hits`(形如 `W79 x20`)并单独提交一次状态,主题 `chore(pair): 工作项 <ID> 交接 <N> 次,用完回合预算`,再撞不重复提交;
+    ③目标是 `DONE` 的交接不拦;`max_item_turns = 0` 不限;默认 20,`verify-setup` 要求非负整数;④认领与完成时 `item_turns` 清零,老状态没有键当 0;
+    ⑤`status` 在工作项进行中显示已换手次数与上限,`item_turn_budget_hits` 非空时列出;⑥`ENFORCEMENTS` 加 `item-turn-budget`(不进交接不变量);
+    `protocol-spec.md`(含配置表与状态字段表)、`command-reference.md`、`architecture.md`、`troubleshooting.md`、`rules.md`、`SKILL.md` 跟上,路线图 P1-2 标 ✅
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 工作项的回合预算
+
+- [ ] **W80** [cover] — 符号引用检查:被引文件插入无关行不会红
+  - **来源**:路线图 P1-12「第三轮 W6 落地了多少」第 ② 项
+  - 验收标准:①被引用文件的符号上方插入若干无关行之后,同一处 `<路径>#<符号>` 引用检查仍然通过;②对照组:符号改名后检出;③登记变异点(检查依赖符号所在行号之类)并被抓;④不改 `pair.py`,不改检查本身
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 文档里的代码引用
