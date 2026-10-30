@@ -199,6 +199,7 @@ pair.py handoff changes "问题清单"     # 评审阶段,或 impl 阶段的异�
   [--allow-deletion "理由"]
   [--no-decision "理由"]
   [--test-gap "说明"]     # 仅 feature/bug 的 review-impl:tester 补自己的用例
+  [--renamed "旧=新"]     # 可多次;仅 tester 的 spec,或带 --test-gap 的 review-impl:声明改了名的用例
 ```
 
 提交信息格式:
@@ -209,6 +210,8 @@ pair.py handoff changes "问题清单"     # 评审阶段,或 impl 阶段的异�
 role=<角色> phase=<从> -> <到> item=<ID> type=<类型>
 [删除测试(已声明): <理由>\n  <文件列表>]
 [测试缺口: <说明>]
+[改名(声明): <旧> → <新>]        # 每条一行
+[改名(对上了): <旧> → <新>]      # 完成时,每条一行
 [未留决策(已声明): <理由>]
 ```
 
@@ -512,13 +515,15 @@ PAIR_ROLE=human pair.py ratify docs/proposals/<主题>.md   # 人类:核对后�
 | `item_base` | string\|null | 认领那一刻的 HEAD(W60)。`affected_test_cmd` 的路径从它算起;老状态没有它时门禁用 `test_cmd` |
 | `discuss` | object\|null | 讨论阶段的现场(W67,§5.6):`{proposal, why, opened_by, turn, spoke, suspended}`,understand 模式另有 `mode: "understand"` 与 `speeches`(累计发言次数,W72);不在讨论时为 `null` |
 | `discussed` | string[] | 每次 `resume` 记一次工作项 ID(可重复,W69)。进入时按当前工作项的出现次数与 `discuss_limit` 比;`claim` 不清 |
+| `renamed_tests` | object | 本工作项里 tester 声明过的用例改名 `{旧用例ID: 新用例ID}`(W78)。完成时旧名不再跑、新名在这一次全量报告里跑过的不算不再跑;⑱ 同样扣除;认领与完成时清空;老状态没有它 = 没有声明 |
 | `requests` | object[] | 本工作项的代办(W65,§5.5)。每条 `{id, item, by, to, paths, what, reason, base, status, carried}`,`status` 为 open / fulfilled / declined;`claim` 时清空;老状态没有它 = 没有代办 |
 
 **全量跑过的用例不在状态里**,在协议产物 `.pair/full-baseline.json`(W61):`{"executed": [...]}`,排序、一行一条,
 上一次全量报告里所有不带 `skipped` 的用例 ID。不进状态文件,是因为大项目几万条用例会让每次提交的状态文件膨胀。
 `verify-setup` 跑全量且报告读得出时写入并随它的提交落地(不看报告与退出码是否一致,W63 —— 那只决定新增的红算不算),每次工作项完成时更新并随完成的提交落地;
 它在 `.pair/` 冻结路径下,agent 改不了,也不进 W57 的指纹。完成时"不再跑的用例" = 它 − 这一次跑过的,
-与新增的红一起拒绝完成(`--accept-new-failures` 同样放行)。文件不在或读不出时不拦,下一次完成时写入。跑过的集合同样只要报告读得出就比:套件跑到一半崩了,报告缺的那一片会被判成不再跑的用例。
+与新增的红一起拒绝完成(`--accept-new-failures` 同样放行)。声明过的改名(`renamed_tests`)里,旧名不再跑而新名在这一次报告里跑过的扣除,
+不算不再跑(W78);新名没跑照旧算。⑱ 判上一次全量时同样扣除。文件不在或读不出时不拦,下一次完成时写入。跑过的集合同样只要报告读得出就比:套件跑到一半崩了,报告缺的那一片会被判成不再跑的用例。
 
 老状态文件缺少新键时取默认值,对应检查自动跳过 —— 存量仓库零成本升级。
 **例外是 `setup_verified_contract`**:缺失时 `claim` 要求重跑一次 `verify-setup`。

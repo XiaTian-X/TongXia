@@ -137,7 +137,7 @@ agent 被人类唤醒
 
 这是理解这个架构最重要的一张表:**哪些规则是脚本拦的,哪些只能靠留痕。**
 
-<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-quota proposal-sign ratify-signed contract-change-tier decision-overturn discuss-decision-format understand-open understand-crosscheck understand-draft contract-shape review-test-gap decision-unique-title -->
+<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-quota proposal-sign ratify-signed contract-change-tier decision-overturn discuss-decision-format understand-open understand-crosscheck understand-draft contract-shape review-test-gap decision-unique-title test-rename -->
 
 | 规则 | 强制方式 | 失效条件 |
 |---|---|---|
@@ -176,6 +176,7 @@ agent 被人类唤醒
 | dev 完成工作项时校验作数 | 脚本拒绝(tester 完成时只提示) | 改代码 |
 | 完成时全量没有新增的红 | 脚本拒绝(要配 `full_test_report`;原来就红的只报告;`--accept-new-failures` 声明放行) | 带声明放行 |
 | 完成时全量没有不再跑的用例 | 脚本拒绝(要配 `full_test_report`;没被收集、变成跳过都算;基线文件不在时不拦;同一个声明放行) | 带声明放行 |
+| 用例改名的声明(W78) | 脚本拒绝(只在 tester 写测试的回合;一对一、不许链;旧名须在基线里);完成时只扣新名真的在跑的 | 把一条删掉的用例"改名"成一条无关的新用例 —— 靠 dev 在 review-test 看正文里的声明 |
 | 代办的形状 | 脚本拒绝(只在自己回合的 spec/impl;路径归对方;冻结与孤儿交人类;内容与理由非空) | 改代码 |
 | 代办只由被请求方办结 | 脚本拒绝(fulfill 要求请求的路径真有改动) | 改了一个无关的字节就 fulfill |
 | 代办收口 | 脚本拒绝(发给自己的开着不能交接;完成时不能有开着的) | 改代码 |

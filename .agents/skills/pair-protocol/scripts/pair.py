@@ -177,6 +177,7 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "proposal-sign",         # 签字:自己回合、非 idle、提案在提案目录且有 diff 块、不重复签(W68)
     "ratify-signed",         # 批准:PAIR_ROLE=human、双方对最后一个 diff 已提交的签字由本人回合提交、只碰 PLAN 与契约、能干净应用(W68)
     "contract-change-tier",  # --contract-change 只放行契约的纯追加;PLAN 的改动与契约的改写走提案签字与人类批准(W70)
+    "test-rename",           # --renamed 只在 tester 能写测试的回合、一对一、旧名在基线里;完成时对上了的不算不再跑(W78)
     "decision-unique-title", # 新决策条目的完整标题不能与 HEAD 里或同一回合的其他条目重复(W76)
     "decision-overturn",     # 带 `推翻:` 的决策只在 resume 时写,引用要正好对上一条已有条目,不重复推翻(W71)
     "discuss-decision-format",  # 讨论回合的三个入口与正常交接同一套决策校验(W71)
@@ -297,6 +298,9 @@ DEFAULT_STATE = {
     "discuss": None,
     # W67:进过 discuss 的工作项 ID。同一工作项只能进一次(D4 再做成可配额度);claim 不清。
     "discussed": [],
+    # W78:本工作项里 tester 声明过的用例改名 {旧用例ID: 新用例ID}。完成时旧名不再跑、新名跑过的不算"不再跑",
+    # ⑱ 同样扣除;认领与完成时清空。老状态没有这个键 = 没有声明。
+    "renamed_tests": {},
 }
 
 # `- [ ] **W1** [bug] — 标题`,类型可省略(缺省 feature)
@@ -1237,6 +1241,60 @@ def vanished_tests(baseline, executed):
     return sorted(set(baseline) - set(executed))
 
 
+def matched_renames(gone, executed, renamed):
+    """不再跑的用例里扣掉声明过、新名真的跑过的改名(W78)→ (剩下的, [(旧, 新)])。
+
+    `executed` 是同一次全量报告里跑过的集合;不知道(None)时一条都不扣 —— 对不上就照旧按消失算。"""
+    if not renamed or executed is None:
+        return list(gone), []
+    ran = set(executed)
+    pairs = [(old, new) for old, new in sorted(renamed.items()) if old in gone and new in ran]
+    done = {old for old, _ in pairs}
+    return [g for g in gone if g not in done], pairs
+
+
+def rename_declarations(phase, test_gap, raws, recorded, baseline):
+    """`--renamed "旧=新"` 的纸面校验(W78)→ (拒绝理由或 None, 本回合的 [(旧, 新)], 合并后的映射)。
+
+    只有 tester、只在它能写测试的回合:spec,或带 `--test-gap` 的 review-impl。回合归属已先判过,
+    所以"dev 带它"落在阶段这一道。一对一在合并后的映射上判:键不重复、值不重复、键与值不相交(不许链)。
+    `baseline` 是上一次全量跑过的集合,读不出(None)时不判旧名在不在。"""
+    if not raws:
+        return None, [], dict(recorded or {})
+    if not (phase == "spec" or (phase == "review-impl" and test_gap is not None)):
+        return ("拒绝交接 —— `--renamed` 只用于 tester 写测试的回合:spec,或带 `--test-gap` 的 review-impl。\n"
+                "当前是 %s 阶段。改名一定是改测试的那一回合做的,声明也在那一回合。" % phase), [], {}
+    pairs = []
+    for raw in raws:
+        old, sep, new = raw.partition("=")
+        old, new = old.strip(), new.strip()
+        if not sep or not old or not new or old == new:
+            return ("拒绝交接 —— `--renamed %s` 的格式不对:要写成 \"旧用例ID=新用例ID\",两边都不能空、也不能相同。\n"
+                    "用例 ID 的拼法和完成时全量拒绝文案里列的一样。" % raw), [], {}
+        pairs.append((old, new))
+    merged = dict(recorded or {})
+    for old, new in pairs:
+        if merged.get(old, new) != new:
+            return ("拒绝交接 —— `%s` 被声明改成了两个名字(%s、%s)。改名要一对一。"
+                    % (old, merged[old], new)), [], {}
+        merged[old] = new
+    news = list(merged.values())
+    twice = sorted({n for n in news if news.count(n) > 1})
+    chained = sorted(set(merged) & set(news))
+    if twice or chained:
+        return ("拒绝交接 —— 改名声明合起来不是一对一:%s。\n"
+                "一个新名只能来自一个旧名;改过一次的名字再改,直接声明最初的旧名 → 最后的新名。"
+                % ";".join(["%s 来自多个旧名" % n for n in twice] +
+                           ["%s 既是旧名又是新名" % n for n in chained])), [], {}
+    if baseline is not None:
+        unknown = [old for old, _ in pairs if old not in set(baseline)]
+        if unknown:
+            return ("拒绝交接 —— 这些旧名不在上一次全量跑过的用例里:%s\n"
+                    "改名的旧名一定跑过;不在里面的多半是拼错了,或者那其实是一条新用例(新用例不用声明)。"
+                    % "、".join(unknown)), [], {}
+    return None, pairs, merged
+
+
 def full_refusal(me, full_new, full_gone, reds_unlisted=False):
     """完成被全量拒绝时的文案(W59 新增的红、W61 不再跑的用例):分两段,各最多 20 条。
     reds_unlisted:报告与退出码对不上、全量是红的(W63)—— 红用例没法列,要说出来,不然只剩"不再跑"一段像是没有红。"""
@@ -1249,7 +1307,9 @@ def full_refusal(me, full_new, full_gone, reds_unlisted=False):
                      "原来就红着的不算(它们照旧只报告)。" % (len(full_new), listing(full_new)))
     if full_gone:
         parts.append("全量套件里有 %d 条用例上一次跑过,这一次没跑(没被收集,或变成了跳过):\n%s\n"
-                     "删测试、改名也算 —— 那是该显式确认的事。" % (len(full_gone), listing(full_gone)))
+                     "删测试、改名也算 —— 那是该显式确认的事。有意改名的,由 tester 在改名那一回合带\n"
+                     "--renamed \"旧=新\" 声明,完成时新名在跑就不算;已经走到这里才发现的,照旧用下面的声明放行。"
+                     % (len(full_gone), listing(full_gone)))
     if reds_unlisted:
         parts.append("全量是红的,但报告与退出码对不上,红用例这一次没有列出(只看退出码);"
                      "不再跑的用例按报告里出现的判。")
@@ -1272,6 +1332,8 @@ def last_full_new_failures(root, cfg, state):
     # W61:被"不再跑的用例"拒绝过也算 —— 同一个坑。被拒时基线文件不动,比的仍是拒绝那一刻的两边。
     # W63:报告与退出码对不上时新增的红不算(failed 为 None),跑过的集合照读。
     gone = vanished_tests(load_executed(root), report_executed(root, cfg))
+    # W78:声明过、新名在那一次报告里跑过的改名不算 —— 状态里含本回合刚声明的(handoff 先放进内存)。
+    gone, _ = matched_renames(gone, report_executed(root, cfg), state.get("renamed_tests"))
     return new_full_failures(failed, state.get("full_failures")) + gone
 
 
@@ -2199,6 +2261,7 @@ def cmd_claim(root, cfg, args):
     state["contract_sha"] = blob_sha(root, cfg["contract_file"])
     state["item_base"] = (git("rev-parse", "HEAD", cwd=root, check=False) or "").strip() or None
     state["requests"] = []                              # W65:代办不跨工作项
+    state["renamed_tests"] = {}                         # W78:改名声明也不跨
     save_state(root, state)
 
     # 认领是协议事件,立即提交:留痕,并让状态文件回到"干净",
@@ -2684,6 +2747,11 @@ def cmd_handoff(root, cfg, args):
     refusal = test_gap_refusal(phase, flow, state["item_type"], args.test_gap)
     if refusal:
         die(refusal)
+    # W78:改名声明的纸面校验。"本回合改了 tester 路径"要等抓完改动,在删除防护之后判。
+    refusal, renames, renamed_map = rename_declarations(
+        phase, args.test_gap, args.renamed, state.get("renamed_tests"), load_executed(root))
+    if refusal:
+        die(refusal)
 
     # W50:dev 执行、会完成工作项的交接,dev 的开工前校验已不作数就当场拒绝。工作项进行中契约变过之后两个角色的
     # 校验都失效;tester 那一半在下一次认领时自愈,dev 那一半在 cover 里没有 impl 回合 —— 不在这里拦住,
@@ -2917,6 +2985,15 @@ def cmd_handoff(root, cfg, args):
                 "只是想记下这条缺口、这回合不写用例,就去掉 `--test-gap`,把它写进评审记录。"
                 % (" ".join(test_paths), " ".join(appendable) or "只追加路径"))
 
+    # --- 声明了改名就得真的改了测试(W78)----------------------------------
+    if renames:
+        if not any(matches_any(p, test_paths) for _, p in entries):
+            die("拒绝交接 —— 带了 `--renamed`,但这一回合没有改动 %s 下的任何文件。\n"
+                "改名一定是改测试的那一回合做的;不是这一回合改的名,在改名的那一回合声明。"
+                % " ".join(test_paths))
+        # 先放进内存里的状态:下面 ⑱ 判捷径时要算上这一回合刚声明的(修正回合正是补声明的那一回合)。
+        state["renamed_tests"] = renamed_map
+
     # --- 评审目录的命名 ---------------------------------------------------
     refusal = check_review_names(
         root, cfg, entries, [i for i, _, _, _ in parse_plan(root, cfg)])
@@ -3047,13 +3124,14 @@ def cmd_handoff(root, cfg, args):
     # 放在翻转回合(勾 PLAN.md)之前:有新增的红就拒绝,拒绝时什么都不能落盘,工作区也要与交接之前相同。
     # W61/W63:跑过的集合只要报告读得出就读(不看与退出码是否一致);读不出就不知道、不拦。
     full_green, full_failed_cases, full_new = True, None, []
-    full_executed, full_gone = None, []
+    full_executed, full_gone, renames_matched = None, [], []
     if target == "DONE" and cfg.get("full_test_cmd"):
         full_green, full_failed_cases = run_tests_detail(root, cfg, cmd=cfg["full_test_cmd"],
                                                          log_rel=FULL_TESTLOG_REL)
         full_new = new_full_failures(full_failed_cases, state.get("full_failures"))
         full_executed = report_executed(root, cfg)
         full_gone = vanished_tests(load_executed(root), full_executed)
+        full_gone, renames_matched = matched_renames(full_gone, full_executed, state.get("renamed_tests"))
         if full_gone and not args.accept_new_failures:
             die(full_refusal(me, full_new, full_gone,
                              reds_unlisted=full_failed_cases is None and not full_green))
@@ -3072,6 +3150,7 @@ def cmd_handoff(root, cfg, args):
         state["item_type"] = None
         state["changes_count"] = 0
         state["contract_sha"] = None
+        state["renamed_tests"] = {}
         next_phase = "idle"
     else:
         next_phase = target
@@ -3127,6 +3206,10 @@ def cmd_handoff(root, cfg, args):
         body += "\n代办(不计打回): %s" % "、".join(r["id"] for r in carried)
     if args.test_gap is not None:                       # W75:放行到这里就一定是用对了的
         body += "\n测试缺口: %s" % args.test_gap.strip()
+    for old, new in renames:                            # W78
+        body += "\n改名(声明): %s \u2192 %s" % (old, new)
+    for old, new in renames_matched:
+        body += "\n改名(对上了): %s \u2192 %s" % (old, new)
     proposals = sorted(p for xy, p in entries
                        if "D" not in xy and matches_any(p, cfg.get("proposal_paths") or []))
     if proposals:                                       # W66:对方在 inbox 里必然看到
@@ -3544,6 +3627,9 @@ def discuss_handoff(root, cfg, args, me, state):
     if me != turn:
         die("现在是 %s 的讨论回合,不是你(%s)的。不要提交。" % (turn, me))
     refusal = test_gap_refusal(DISCUSS, None, state.get("item_type"), args.test_gap)
+    if refusal:
+        die(refusal)
+    refusal = rename_declarations(DISCUSS, None, args.renamed, None, None)[0]
     if refusal:
         die(refusal)
     _discuss_tamper_guard(root, "交接")
@@ -5432,6 +5518,8 @@ def main(argv=None):
                       help="改 PLAN/CONTRACT 时必填:指向一份真实产物的路径")
     p_ho.add_argument("--test-gap", metavar="说明", default=None,
                       help="review-impl 里补自己的用例(tester,feature/bug):打回时交 RED,通过时交 GREEN")
+    p_ho.add_argument("--renamed", metavar="旧=新", action="append", default=None,
+                      help="tester 声明本回合改了名的用例(可给多次):完成时旧名不再跑、新名在跑就不算不再跑")
     p_ho.add_argument("--checked", metavar="内容", default=None,
                       help="approve 必填:你具体检查了什么")
     p_ho.add_argument("--uncovered", metavar="内容", default=None,
