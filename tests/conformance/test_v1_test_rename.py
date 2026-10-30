@@ -266,6 +266,13 @@ class TestCompletion(RenameBase):
         self.suite(B="gone", C="skip")
         self.assertCompletionRefused(self.dev_approve(), "suite.B")
 
+    def test_对上一条_另一条不再跑的照旧被拒_只列它(self):
+        """声明只扣它自己那一条:B → C 对上了,A 也不再跑,照旧按消失拒,文案里只有 A。"""
+        self.suite(A="gone", B="gone", C="green")
+        r = self.dev_approve()
+        self.assertCompletionRefused(r, "suite.A")
+        self.assertNotIn("suite.B", r.text, "对上了的改名不该再列成消失")
+
 
 class TestRefusalHint(RenameBase):
 

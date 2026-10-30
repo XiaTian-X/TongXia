@@ -1699,6 +1699,10 @@ MUTATIONS = [
     ('改名_拒绝文案不提_renamed',
      '"--renamed \\"旧=新\\" 声明',
      '"改名时 \\"旧=新\\" 声明'),
+
+    ('改名_对上一条就整批清空',
+     '    return [g for g in gone if g not in done], pairs\n',
+     '    return ([] if pairs else list(gone)), pairs\n'),
 ]
 
 # unittest 的失败行有两种形态:

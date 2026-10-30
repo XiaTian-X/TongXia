@@ -1,5 +1,5 @@
 {
-  "baseline": "a469a6cf17be5806",
+  "baseline": "437e6b48916c08ca",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -828,6 +828,9 @@
     ],
     "改名_完成时不清空": [
       "test_v1_test_rename.TestCompletion.test_新名在跑_完成成功_正文含对上了_状态清空"
+    ],
+    "改名_对上一条就整批清空": [
+      "test_v1_test_rename.TestCompletion.test_对上一条_另一条不再跑的照旧被拒_只列它"
     ],
     "改名_拒绝文案不提_renamed": [
       "test_v1_test_rename.TestRefusalHint.test_不再跑的拒绝文案提到_renamed"
