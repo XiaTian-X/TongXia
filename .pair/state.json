@@ -1,9 +1,9 @@
 {
   "round": 75,
-  "phase": "review-impl",
+  "phase": "review-test",
   "item": "W78",
   "item_type": "feature",
-  "last_actor": "dev",
+  "last_actor": "tester",
   "changes_count": 0,
   "completed_items": [
     "W2",
@@ -91,7 +91,7 @@
   },
   "after_rebound": false,
   "rebound_from": null,
-  "reviewed_contract": "c0edc21c172cbe97cc803c22fd2da400648838e3",
+  "reviewed_contract": "4cd10aad11506259e2d5a4e1a4110d5003a06d8f",
   "last_full_failed": false,
   "full_failures": [],
   "item_base": "2530be3de823159c23059e31d18286d3375210d9",

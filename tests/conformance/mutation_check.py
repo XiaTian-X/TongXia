@@ -1631,6 +1631,74 @@ MUTATIONS = [
     ('缺口_拆掉讨论回合的那次调用',
      '    refusal = test_gap_refusal(DISCUSS, None, state.get("item_type"), args.test_gap)\n',
      '    refusal = None\n'),
+
+    ('改名_完成时不扣除对上了的',
+     '        full_gone, renames_matched = matched_renames(full_gone, full_executed, state.get("renamed_tests"))\n',
+     ''),
+
+    ('改名_不要求新名在跑',
+     'if old in gone and new in ran]',
+     'if old in gone]'),
+
+    ('改名_捷径不扣除',
+     '    gone, _ = matched_renames(gone, report_executed(root, cfg), state.get("renamed_tests"))\n',
+     ''),
+
+    ('改名_不查一旧对多新',
+     '        if merged.get(old, new) != new:',
+     '        if False:'),
+
+    ('改名_不查多旧对一新与链',
+     '    if twice or chained:',
+     '    if False:'),
+
+    ('改名_不查链',
+     '    if twice or chained:',
+     '    if twice:'),
+
+    ('改名_不查旧名在基线',
+     '    if baseline is not None:\n        unknown',
+     '    if False:\n        unknown'),
+
+    ('改名_不限阶段',
+     '    if not (phase == "spec" or (phase == "review-impl" and test_gap is not None)):',
+     '    if False:'),
+
+    ('改名_review_impl_不要求_test_gap',
+     '(phase == "review-impl" and test_gap is not None)',
+     '(phase == "review-impl")'),
+
+    ('改名_认领时不清空',
+     '    state["renamed_tests"] = {}                         # W78:改名声明也不跨\n',
+     ''),
+
+    ('改名_完成时不清空',
+     '        state["renamed_tests"] = {}\n        next_phase = "idle"',
+     '        next_phase = "idle"'),
+
+    ('改名_不要求改了_tester_路径',
+     '        if not any(matches_any(p, test_paths) for _, p in entries):\n',
+     '        if False:\n'),
+
+    ('改名_讨论回合不拒',
+     '    refusal = rename_declarations(DISCUSS, None, args.renamed, None, None)[0]\n',
+     '    refusal = None\n'),
+
+    ('改名_格式不查空',
+     '        if not sep or not old or not new or old == new:',
+     '        if old == new:'),
+
+    ('改名_正文不写声明行',
+     '        body += "\\n改名(声明): %s \\u2192 %s" % (old, new)',
+     '        pass'),
+
+    ('改名_正文不写对上了',
+     '        body += "\\n改名(对上了): %s \\u2192 %s" % (old, new)',
+     '        pass'),
+
+    ('改名_拒绝文案不提_renamed',
+     '"--renamed \\"旧=新\\" 声明',
+     '"改名时 \\"旧=新\\" 声明'),
 ]
 
 # unittest 的失败行有两种形态:
