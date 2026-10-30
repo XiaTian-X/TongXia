@@ -266,6 +266,50 @@ class TestDiscussTurnBlocked(TestDiscussBlocked):
         self.assertEqual(self.turns(), 1)
 
 
+class TestTamperedStateNotCommitted(BudgetBase):
+    """agent 手改了状态文件、改出来的计数又正好撞上预算:先被"你修改了状态"拒绝并还原,
+    第一次撞上的那次单独提交不能把改过的状态带进 HEAD —— 带进去之后它就不算"改过"了,篡改检查再也看不见。
+    四个入口一样:被拒后提交数不变、状态文件与改之前逐字节相同。"""
+
+    budget = 2
+
+    def tamper(self):
+        st = self.repo.state()
+        st["item_turns"] = 9
+        self.repo.write(STATE, json.dumps(st, ensure_ascii=False, indent=2))
+
+    def assertTamperRefused(self, r, before):
+        self.assertRefused(r)
+        self.assertEqual(self.snapshot(), before, "改过的状态被提交进了 HEAD,或者没还原")
+
+    def test_正常交接(self):
+        self.repo.advance_to("impl")                     # 1
+        before = self.snapshot()
+        self.repo.write("src/W1", "实现\n")
+        self.tamper()
+        self.assertTamperRefused(self.pair("handoff", "实现 W1", role="dev"), before)
+
+    def test_discuss_开场(self):
+        self.repo.advance_to("impl")                     # 1
+        before = self.snapshot()
+        self.tamper()
+        self.assertTamperRefused(self.open("dev"), before)
+
+    def test_讨论回合的_handoff(self):
+        self.repo.advance_to("spec")
+        self.assertAccepted(self.open("tester"))         # 1
+        before = self.snapshot()
+        self.tamper()
+        self.assertTamperRefused(self.reply("dev"), before)
+
+    def test_resume(self):
+        self.repo.advance_to("spec")
+        self.assertAccepted(self.open("tester"))         # 1
+        before = self.snapshot()
+        self.tamper()
+        self.assertTamperRefused(self.resume("dev"), before)
+
+
 class TestUnlimited(BudgetBase):
 
     budget = 0
