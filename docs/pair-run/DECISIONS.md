@@ -927,3 +927,9 @@
 - 理由: 第四十一轮 W70 的实测账:tester 按契约改名了两条用例,完成时被 W61 判成不再跑;之后为一处只改测试的问题打回,修正回合本该走 W17 捷径,却因 ⑱ 看到上一次全量有不再跑的用例而进了 impl,dev 交空回合、tester 再 review-impl,多两个回合只为传递"这是改名"。这个事实在改名那一回合就在 tester 手里,所以让它在那一回合声明、记进状态;完成时只扣除一对一对上、新名真的在跑的,⑱ 同样只扣这些,"一句话带过一批消失"的形状照旧被拦。
 - 已否决: 从 diff 自动推断改名 —— 用例 ID 到文件的映射因工具而异,是路线图 P0-1 ①;⑱ 干脆不看不再跑的用例 —— 实现弄坏收集同样表现为不再跑,W61 把它放进 ⑱ 的理由仍然成立;让 dev 在完成被拒时声明 —— 那一刻已经撞上,省不下回合,而且改名的事实在 tester 手里;只声明不对应 —— 正是 W61 要防的形状。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/command-reference.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+
+## W78 — 改名声明的纸面校验排在 test_gap 之后、抓改动之前,一对一在合并后的映射上判;⑱ 与完成时共用一个只扣对上那几条的函数,通过后先写进内存状态让 ⑱ 看见本回合的声明
+
+- 理由: 阶段、格式、一对一、旧名在基线都只看参数与状态,先判就不必为纸面问题跑测试,被拒也什么都不落盘;一对一在"状态里已记的 + 本回合的"合并后判,分两回合声明也拦得住多对一与链,同一对重复声明当作已有。"改了 tester 路径"要等抓到改动才判得了,所以排在补用例检查之后;通过后先把合并后的映射放进内存里的状态,修正回合补的声明 ⑱ 才算得上,否则正是开放条目 56 那个多走两回合的场景。⑱ 与完成时共用 `matched_renames`,只扣旧名不再跑、新名在同一次报告的跑过集合里的那几条,别的照旧按消失算(review-test 补的用例与变异点钉住了这一条);报告读不出时一条都不扣,偏保守。⑱ 那一行原锚点原样保留、扣除另起一行。
+- 已否决: 讨论回合与正常交接合成一次调用 —— 讨论回合那次调用是既有变异锚点;完成时另写一份扣除逻辑 —— ⑱ 与完成的口径会分叉;声明时就查新名在跑 —— 门禁报告可选,完成时的全量是唯一可靠的判点。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_test_rename.py`, `tests/conformance/mutation_check.py`
