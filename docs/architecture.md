@@ -137,7 +137,7 @@ agent 被人类唤醒
 
 这是理解这个架构最重要的一张表:**哪些规则是脚本拦的,哪些只能靠留痕。**
 
-<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-quota proposal-sign ratify-signed contract-change-tier decision-overturn discuss-decision-format understand-open understand-crosscheck understand-draft contract-shape review-test-gap decision-unique-title test-rename -->
+<!-- pair-enforcements: turn-ownership write-boundary red-green state-untampered test-deletion verdict-valid decision-format archaeology-note contract-change-note note-promotion deadlock setup-report review-evidence scope cover-note contract-provenance refactor-safety-net post-dispute-fix dispute-shape contract-change-shape baseline-shape setup-report-coverage doc-reason roadmap-basis contract-change-basis contract-change-now done-dev-verified full-new-failures full-vanished request-closed request-shape fulfill-owner proposal-append-only discuss-open discuss-prose-only discuss-resume discuss-quota proposal-sign ratify-signed contract-change-tier decision-overturn discuss-decision-format understand-open understand-crosscheck understand-draft contract-shape review-test-gap decision-unique-title test-rename item-turn-budget -->
 
 | 规则 | 强制方式 | 失效条件 |
 |---|---|---|
@@ -185,6 +185,7 @@ agent 被人类唤醒
 | 讨论回合只写散文 | 脚本拒绝(必须追加那份提案;代码、测试、改写已提交的都拒) | 写一句空话凑数 |
 | 双方发言才能恢复 | 脚本拒绝;恢复取挂起时记下的现场 | 对方写一句「同意」 |
 | 讨论额度 | 脚本拒绝(同一工作项进 discuss 的次数不超过 `discuss_limit`,默认 1;撞额度只拒绝、不停轮转) | 人类调高 `discuss_limit` |
+| 回合预算 | 脚本拒绝(同一工作项换手满 `max_item_turns` 次后再换手,默认 20;完成不拦;第一次撞上单独提交状态留痕) | 人类调高 `max_item_turns` |
 | 签字的条件 | 脚本拒绝(自己回合、非 idle、提案有 diff 块、不重复签) | 改代码 |
 | 批准的内容校验 | 脚本拒绝(双方对最后一个 diff 的签字已提交、由本人回合提交、只碰 PLAN 与契约、能干净应用) | 一方在对方回合之外伪造对方的协议提交 |
 | understand 的进入 | 脚本拒绝(只在 idle、由空闲时轮到的一方;工作阶段只能用普通 discuss;不计讨论额度) | 改代码 |

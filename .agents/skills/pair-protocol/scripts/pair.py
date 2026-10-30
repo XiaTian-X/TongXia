@@ -178,6 +178,7 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "ratify-signed",         # 批准:PAIR_ROLE=human、双方对最后一个 diff 已提交的签字由本人回合提交、只碰 PLAN 与契约、能干净应用(W68)
     "contract-change-tier",  # --contract-change 只放行契约的纯追加;PLAN 的改动与契约的改写走提案签字与人类批准(W70)
     "test-rename",           # --renamed 只在 tester 能写测试的回合、一对一、旧名在基线里;完成时对上了的不算不再跑(W78)
+    "item-turn-budget",      # 工作项换手次数用满 max_item_turns 后再换手被拒,完成不拦;第一次撞上单独提交状态留痕(W79)
     "decision-unique-title", # 新决策条目的完整标题不能与 HEAD 里或同一回合的其他条目重复(W76)
     "decision-overturn",     # 带 `推翻:` 的决策只在 resume 时写,引用要正好对上一条已有条目,不重复推翻(W71)
     "discuss-decision-format",  # 讨论回合的三个入口与正常交接同一套决策校验(W71)
@@ -301,6 +302,10 @@ DEFAULT_STATE = {
     # W78:本工作项里 tester 声明过的用例改名 {旧用例ID: 新用例ID}。完成时旧名不再跑、新名跑过的不算"不再跑",
     # ⑱ 同样扣除;认领与完成时清空。老状态没有这个键 = 没有声明。
     "renamed_tests": {},
+    # W79:本工作项已换手几次(handoff、discuss 开场、讨论回合的 handoff、resume),认领与完成时清零;
+    # 撞过回合预算的记录形如 "W3 x20"。老状态没有这两个键 = 0 与空。
+    "item_turns": 0,
+    "item_turn_budget_hits": [],
 }
 
 # `- [ ] **W1** [bug] — 标题`,类型可省略(缺省 feature)
@@ -357,6 +362,8 @@ def load_config(root, required=True):
     cfg.setdefault("proposal_paths", [])
     # W69:每个工作项最多进几次 discuss。默认 1 与 W67 已落地的行为一致;0 = 不允许。
     cfg.setdefault("discuss_limit", 1)
+    # W79:每个工作项最多换手几次。默认 20 高于历史最多的 12;0 = 不限。
+    cfg.setdefault("max_item_turns", 20)
     # W73:契约形状检查默认只警告;true 时形状、返回或错误两条升为失败(漂移始终只警告)。
     cfg.setdefault("strict_contract", False)
     cfg.setdefault("frozen_paths", [])
@@ -1979,6 +1986,11 @@ def cmd_status(root, cfg, args):
     print(" 已完成项 : %d" % len(state["completed_items"]))
     if state["deadlock_hits"]:
         print(" 曾触发死锁闸: %s" % "、".join(state["deadlock_hits"]))
+    if state["item"]:                                   # W79
+        print(" 回合预算 : 本工作项已换手 %d 次 / %s(max_item_turns)"
+              % (state.get("item_turns") or 0, cfg["max_item_turns"] or "不限"))
+    if state.get("item_turn_budget_hits"):
+        print(" 曾用完回合预算: %s" % "、".join(state["item_turn_budget_hits"]))
     print("=" * 52)
 
     # 共用一个目录时角色要来自 PAIR_ROLE(W22)。`.pair/whoami` 只有一个文件、同一目录里只有一个分支,
@@ -2262,6 +2274,7 @@ def cmd_claim(root, cfg, args):
     state["item_base"] = (git("rev-parse", "HEAD", cwd=root, check=False) or "").strip() or None
     state["requests"] = []                              # W65:代办不跨工作项
     state["renamed_tests"] = {}                         # W78:改名声明也不跨
+    state["item_turns"] = 0                             # W79:回合预算按工作项算
     save_state(root, state)
 
     # 认领是协议事件,立即提交:留痕,并让状态文件回到"干净",
@@ -2752,6 +2765,11 @@ def cmd_handoff(root, cfg, args):
         phase, args.test_gap, args.renamed, state.get("renamed_tests"), load_executed(root))
     if refusal:
         die(refusal)
+    # W79:回合预算,纸面问题,不为它跑测试。完成那一次不拦 —— 做完了就该收。
+    if target != "DONE":
+        refusal = turn_budget_refusal(root, cfg, state, me)
+        if refusal:
+            die(refusal)
 
     # W50:dev 执行、会完成工作项的交接,dev 的开工前校验已不作数就当场拒绝。工作项进行中契约变过之后两个角色的
     # 校验都失效;tester 那一半在下一次认领时自愈,dev 那一半在 cover 里没有 impl 回合 —— 不在这里拦住,
@@ -3150,11 +3168,13 @@ def cmd_handoff(root, cfg, args):
         state["item_type"] = None
         state["changes_count"] = 0
         state["contract_sha"] = None
+        state["item_turns"] = 0
         state["renamed_tests"] = {}
         next_phase = "idle"
     else:
         next_phase = target
         state["changes_count"] = changes_n
+        count_item_turn(state)
     state["phase"] = next_phase
     state["last_actor"] = me
     # 任何打回都算 —— review-test 以"覆盖不足"打回时,tester 要补的那条
@@ -3348,6 +3368,37 @@ def _commit_state(root, subject, body):
     """只提交状态文件(窄提交):工作区里没提交的改动、别人事先暂存的东西都不带走。"""
     git("add", "--", STATE_REL, cwd=root)
     git("commit", "-q", "-m", subject, "-m", body, "--", STATE_REL, cwd=root)
+
+
+def count_item_turn(state):
+    """一次换手成功(W79)。没有工作项时(understand)不计。"""
+    if state.get("item"):
+        state["item_turns"] = (state.get("item_turns") or 0) + 1
+
+
+def turn_budget_refusal(root, cfg, state, me):
+    """回合预算(W79):本工作项换手次数用满 `max_item_turns` → 拒绝理由;没用满、没有工作项、上限 0 → None。
+
+    第一次撞上时把记录写进**磁盘上的**状态并只提交状态文件(同死锁闸:人类事后翻得到),工作区里本回合的改动原样留着;
+    同一工作项再撞不重复提交。读磁盘而不是用传进来的 state,免得把调用方在内存里改到一半的东西一起提交。"""
+    limit, item = cfg["max_item_turns"], state.get("item")
+    used = state.get("item_turns") or 0
+    if not item or not limit or used < limit:
+        return None
+    disk = load_state(root)
+    hits = list(disk.get("item_turn_budget_hits") or [])
+    if not any(h.startswith(item + " x") for h in hits):
+        hits.append("%s x%d" % (item, used))
+        disk["item_turn_budget_hits"] = hits
+        state["item_turn_budget_hits"] = hits
+        save_state(root, disk)
+        _commit_state(root, "chore(pair): 工作项 %s 交接 %d 次,用完回合预算" % (item, used),
+                      "role=%s phase=%s item=%s\n回合预算: 已换手 %d 次,max_item_turns = %d"
+                      % (me, state["phase"], item, used, limit))
+    return ("工作项 %s 已经换手 %d 次,用完了回合预算(max_item_turns = %d)。协议要求此时停止轮转。\n"
+            "这不是惩罚:正常的工作项碰不到这个数。撞上说明工作项切得太大,或者讨论没有收敛。\n"
+            "请把现状与分歧写清楚,交给人类:裁决分歧、拆项,或在 %s 里调高 max_item_turns。\n"
+            "完成工作项的那一次交接不受预算限制。" % (item, used, limit, CONFIG_REL))
 
 
 def _find_request(state, rid, me, what):
@@ -3584,6 +3635,9 @@ def cmd_discuss(root, cfg, args):
             die("工作项 %s 的讨论额度已用完(已进 %d 次,discuss_limit = %d)。\n"
                 "还有没谈完的方向问题:写进提案交给人类排期;或者由人类在 %s 里调高 discuss_limit。"
                 % (state["item"], used, cfg["discuss_limit"], CONFIG_REL))
+        refusal = turn_budget_refusal(root, cfg, state, me)     # W79
+        if refusal:
+            die(refusal)
     if not _appended(root, proposal):
         die("本回合没有在 %s 里写下开场陈述。先把问题写进提案,再 discuss。" % proposal)
     entries = _turn_entries(root, cfg)
@@ -3605,6 +3659,7 @@ def cmd_discuss(root, cfg, args):
     if understand:
         state["discuss"].update({"mode": "understand", "speeches": 1})
     state["phase"] = DISCUSS
+    count_item_turn(state)
     save_state(root, state)
     if understand:
         # 第一行不以 discuss=open 开头:report 的讨论次数按工作项算,understand 没有工作项。
@@ -3626,6 +3681,9 @@ def discuss_handoff(root, cfg, args, me, state):
     turn = phase_owner(root, cfg, state)
     if me != turn:
         die("现在是 %s 的讨论回合,不是你(%s)的。不要提交。" % (turn, me))
+    refusal = turn_budget_refusal(root, cfg, state, me)         # W79
+    if refusal:
+        die(refusal)
     refusal = test_gap_refusal(DISCUSS, None, state.get("item_type"), args.test_gap)
     if refusal:
         die(refusal)
@@ -3650,6 +3708,7 @@ def discuss_handoff(root, cfg, args, me, state):
     if understand:
         d["speeches"] = d.get("speeches", 1) + 1
     state["discuss"] = d
+    count_item_turn(state)
     save_state(root, state)
     if understand:
         _commit_prose(root, entries, "understand: %s" % message.splitlines()[0][:80],
@@ -3672,6 +3731,9 @@ def cmd_resume(root, cfg, args):
     turn = phase_owner(root, cfg, state)
     if me != turn:
         die("现在是 %s 的讨论回合,不是你(%s)的。resume 只能在自己的讨论回合用。" % (turn, me))
+    refusal = turn_budget_refusal(root, cfg, state, me)         # W79
+    if refusal:
+        die(refusal)
     conclusion = " ".join(args.conclusion or []).strip()
     if not conclusion:
         die("resume 要写结论:讨论定下了什么,恢复之后照什么做。")
@@ -3717,6 +3779,7 @@ def cmd_resume(root, cfg, args):
     state["discuss"] = None
     if not understand:
         state["discussed"] = list(state.get("discussed") or []) + [state["item"]]
+    count_item_turn(state)
     save_state(root, state)
     if understand:
         body = ("understand=resume role=%s 恢复到 %s\n提案: %s\n结论: %s"
@@ -5242,6 +5305,11 @@ def cmd_verify_setup(root, cfg, args):
     lim = cfg.get("discuss_limit")
     if isinstance(lim, bool) or not isinstance(lim, int) or lim < 0:
         bad("discuss_limit 必须是非负整数(每个工作项最多进几次 discuss,0 = 不允许),现在是 %r" % (lim,))
+
+    # --- 回合预算是非负整数(W79)--------------------------------------------------
+    lim = cfg.get("max_item_turns")
+    if isinstance(lim, bool) or not isinstance(lim, int) or lim < 0:
+        bad("max_item_turns 必须是非负整数(每个工作项最多换手几次,0 = 不限),现在是 %r" % (lim,))
 
     # --- 契约形状检查的开关是布尔值(W73)------------------------------------------
     if not isinstance(cfg.get("strict_contract"), bool):

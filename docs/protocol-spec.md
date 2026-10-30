@@ -177,6 +177,17 @@ blob 哈希,含未跟踪、尊重 `.gitignore`)+ 已跟踪路径的集合;排除
 `approve` 路径**不**被硬锁 —— 打回三次后一方说"我接受"是合理的收敛,
 而且它带理由、进提交记录、人类看得见。
 
+### 4.4 回合预算(W79)
+
+死锁闸管打回,`discuss_limit` 管进讨论的次数;讨论回合内部的来回和以后任何不计数的旁路,由回合预算兜底。
+`item_turns` 记本工作项已换手几次:`handoff`(含讨论回合里的那一种)、`discuss` 开场、`resume` 成功一次加 1;
+`claim`、代办三件套、`sign`/`ratify`、空闲时的 understand 不加。`claim` 与完成时清零。
+
+`item_turns >= max_item_turns`(配置,默认 20,0 = 不限)之后再换手即拒绝,判点在跑测试之前;目标是 `DONE` 的交接不拦。
+第一次撞上时追加 `item_turn_budget_hits`(形如 `W3 x20`),只把状态文件单独提交一次,主题
+`chore(pair): 工作项 <ID> 交接 <N> 次,用完回合预算`;同一工作项再撞不重复提交。工作区里本回合的改动原样留着。
+它不在上表里:讨论的三个入口同样判它(`ENFORCEMENTS` 的 `item-turn-budget`)。
+
 ## 5. 命令契约
 
 完整用法见 [command-reference.md](command-reference.md)。此处只列规范要点。
@@ -440,6 +451,7 @@ PAIR_ROLE=human pair.py ratify docs/proposals/<主题>.md   # 人类:核对后�
 | `roles.dev` | string[] | `["src"]` | dev 可写路径/glob |
 | `shared_paths` | string[] | `["docs/reviews"]` | 双方任何阶段都能写。异议举证认这里 |
 | `strict_contract` | bool | `false` | 契约形状检查(W73)的形状、返回或错误两条从警告升为失败;疑似漂移不受影响。`verify-setup` 要求布尔值 |
+| `max_item_turns` | int | `20` | 每个工作项最多换手几次(W79,§4.4)。0 = 不限。用满后再换手被拒,完成不拦;`verify-setup` 要求非负整数 |
 | `discuss_limit` | int | `1` | 每个工作项最多进几次 discuss(W69,P0-5 的 D4)。0 = 不允许。撞上额度只拒绝这一次 discuss,不停止轮转;`verify-setup` 要求非负整数 |
 | `proposal_paths` | string[] | `[]` | 提案目录(W66,P0-5 的 D1):除 idle 外四个阶段两个角色都能写;已提交的顶层 `.md` 只能追加。**不是** `shared_paths`:异议举证、打回的位置引用、评审命名、`--doc-reason` 都不认它;对 `scope` 豁免、不进 W57 指纹,`inbox` 摆出原文,交接正文写一行 `提案:`。默认不启用,`init` 给新项目写 `["docs/proposals"]` |
 | `frozen_paths` | string[] | `["docs/PLAN.md","docs/CONTRACT.md",".agents",".claude",".pair"]` | agent 一律不得修改 |
@@ -505,6 +517,8 @@ PAIR_ROLE=human pair.py ratify docs/proposals/<主题>.md   # 人类:核对后�
 | `completed_items` | string[] | 已完成的工作项 ID |
 | `setup_verified` | bool | 开工前校验是否通过 |
 | `deadlock_hits` | string[] | 撞过死锁闸的记录,形如 `W3 x3` |
+| `item_turns` | int | 本工作项已换手几次(W79,§4.4);`claim` 与完成时清零;老状态没有它 = 0 |
+| `item_turn_budget_hits` | string[] | 撞过回合预算的记录,形如 `W3 x20`(W79);每个工作项最多一条 |
 | `contract_sha` | string\|null | claim 时契约文件的 blob sha |
 | `setup_verified_contract` | object | 按角色记:该角色上次通过开工前校验时,契约文件**工作区内容**的 blob sha。`claim` 现场比对;与 `contract_sha`(按工作项记、取 HEAD)是两回事 |
 | `after_rebound` | bool | 上一次交接是不是一次打回(异议或评审 changes)。打回之后的 spec 回合豁免 **RED** 要求(不豁免 GREEN) |
