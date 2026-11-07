@@ -1,5 +1,5 @@
 {
-  "baseline": "052cf47edf855e30",
+  "baseline": "548a079edbbdb7db",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -873,6 +873,51 @@
     ],
     "新增的红打回后照走捷径": [
       "test_v1_full_new_failures.TestReboundGoesToImpl.test_有新增的红时_修正回合进_impl"
+    ],
+    "新用例_不判": [
+      "test_v1_cover_executed.TestNoNewTestRan.test_只改已有用例_被拒"
+    ],
+    "新用例_不扣改名新名": [
+      "test_v1_cover_executed.TestRenameIsNotNew.test_只有声明过的改名_没有新增_被拒"
+    ],
+    "新用例_判到_feature_上": [
+      "test_v1_cover_executed.TestFeatureNotJudged.test_feature_的_spec_只改红已有用例_照常放行"
+    ],
+    "新用例_基线不是合法_JSON_时拦": [
+      "test_v1_cover_executed.TestBadBaselineAtClaim.test_认领时基线不是合法_JSON_不判"
+    ],
+    "新用例_扣改名扣成旧名": [
+      "test_v1_cover_executed.TestRenameIsNotNew.test_只有声明过的改名_没有新增_被拒"
+    ],
+    "新用例_报告读不出时拦": [
+      "test_v1_cover_executed.TestReportUnreadable.test_门禁报告读不出_不判"
+    ],
+    "新用例_文案不提认领": [
+      "test_v1_cover_executed.TestNoNewTestRan.test_只改已有用例_被拒"
+    ],
+    "新用例_正文不写那一行": [
+      "test_v1_cover_executed.TestNewTestRan.test_两条新用例_正文写_2_条"
+    ],
+    "新用例_正文条数写死": [
+      "test_v1_cover_executed.TestNewTestRan.test_两条新用例_正文写_2_条"
+    ],
+    "新用例_没有_item_base_时拦": [
+      "test_v1_cover_executed.TestNoItemBase.test_状态里没有_item_base_不判"
+    ],
+    "新用例_没配报告时拦": [
+      "test_v1_brownfield.TestCoverNotes.test_两节都交了就放行"
+    ],
+    "新用例_用_HEAD_基线": [
+      "test_v1_cover_executed.TestNoBaselineAtClaim.test_认领之后才有基线_照旧按认领时没有_不判"
+    ],
+    "新用例_用工作区基线": [
+      "test_v1_cover_executed.TestNoBaselineAtClaim.test_认领之后才有基线_照旧按认领时没有_不判"
+    ],
+    "新用例_认领时没有基线时拦": [
+      "test_v1_cover_executed.TestNoBaselineAtClaim.test_认领之后才有基线_照旧按认领时没有_不判"
+    ],
+    "新用例_跳过的算跑过": [
+      "test_v1_cover_executed.TestNoNewTestRan.test_新用例被跳过_被拒"
     ],
     "晋升闸读旗标时不看完成": [
       "test_v1_effective.TestNoDecisionOnlyWhenRead.test_不在完成那一次时不留痕"

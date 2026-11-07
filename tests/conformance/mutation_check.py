@@ -1791,6 +1791,66 @@ MUTATIONS = [
     ('预算_老状态缺键当_1',
      '    "item_turns": 0,\n    "item_turn_budget_hits": [],\n',
      '    "item_turns": 1,\n    "item_turn_budget_hits": [],\n'),
+
+    ('新用例_不判',
+     '    if fresh_tests == []:\n',
+     '    if False:\n'),
+
+    ('新用例_用工作区基线',
+     '    text = git("show", "%s:%s" % (base, FULL_BASELINE_REL), cwd=root, check=False)\n',
+     '    text = (root / FULL_BASELINE_REL).read_text(encoding="utf-8") if (root / FULL_BASELINE_REL).exists() else None\n'),
+
+    ('新用例_用_HEAD_基线',
+     'git("show", "%s:%s" % (base, FULL_BASELINE_REL)',
+     'git("show", "HEAD:%s" % FULL_BASELINE_REL'),
+
+    ('新用例_跳过的算跑过',
+     '        ran = junit_executed(root / report_rel)\n',
+     '        ran = ["%s.%s" % (c.get("classname"), c.get("name")) for c in ET.parse(str(root / report_rel)).getroot().iter("testcase")]\n'),
+
+    ('新用例_不扣改名新名',
+     '    return sorted(set(ran) - set(executed) - renamed_to)\n',
+     '    return sorted(set(ran) - set(executed))\n'),
+
+    ('新用例_扣改名扣成旧名',
+     '    renamed_to = set((state.get("renamed_tests") or {}).values())\n',
+     '    renamed_to = set((state.get("renamed_tests") or {}).keys())\n'),
+
+    ('新用例_没配报告时拦',
+     '    if not report_rel or not base:\n        return None\n',
+     '    if not report_rel:\n        return []\n    if not base:\n        return None\n'),
+
+    ('新用例_没有_item_base_时拦',
+     '    if not report_rel or not base:\n        return None\n',
+     '    if not report_rel:\n        return None\n    if not base:\n        return []\n'),
+
+    ('新用例_报告读不出时拦',
+     '        ran = junit_executed(root / report_rel)\n    except ValueError:\n        return None\n',
+     '        ran = junit_executed(root / report_rel)\n    except ValueError:\n        return []\n'),
+
+    ('新用例_基线不是合法_JSON_时拦',
+     '        data = json.loads(text) if text is not None else None\n    except ValueError:\n        return None\n',
+     '        data = json.loads(text) if text is not None else None\n    except ValueError:\n        return []\n'),
+
+    ('新用例_认领时没有基线时拦',
+     '    if not isinstance(executed, list):\n        return None\n    renamed_to',
+     '    if not isinstance(executed, list):\n        return []\n    renamed_to'),
+
+    ('新用例_判到_feature_上',
+     'new_tests_ran(root, cfg, state) if phase in flow["require_new_tests"] else None',
+     'new_tests_ran(root, cfg, state) if phase == "spec" else None'),
+
+    ('新用例_正文不写那一行',
+     '        body += "\\n新用例(跑过): %d 条" % len(fresh_tests)\n',
+     '        pass\n'),
+
+    ('新用例_正文条数写死',
+     '"\\n新用例(跑过): %d 条" % len(fresh_tests)',
+     '"\\n新用例(跑过): %d 条" % 1'),
+
+    ('新用例_文案不提认领',
+     '"对照的是认领那一刻的全量基线(%s 在认领时的提交里那一份)',
+     '"对照的是全量基线(%s)'),
 ]
 
 # unittest 的失败行有两种形态:
