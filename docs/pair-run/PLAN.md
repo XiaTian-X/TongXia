@@ -1039,7 +1039,7 @@
 > 讨论次数也有 `discuss_limit`;真正还没上限的是讨论回合内部的来回(`discuss_handoff` 不计数)。77 个工作项平均 5.4 个交接回合、最多 12 个,所以这是一道正常工作项碰不到的兜底。
 > 顺带 P1-12「三项没做」里的第 ②:"插入无关行不会红"是结构性成立,没有用例钉住。规划经 dev 自审后人类批准(2026-10-30),授权 dev 代笔立项。
 
-- [ ] **W79** [feature] — 工作项的回合预算 `max_item_turns`:换手次数用满后再换手被拒,交给人类;完成不拦
+- [x] **W79** [feature] — 工作项的回合预算 `max_item_turns`:换手次数用满后再换手被拒,交给人类;完成不拦
   - **来源**:路线图 P1-2(活性保护),前提核对后收窄为兜底
   - 验收标准:①工作项进行中每次成功换手(`handoff`,含讨论回合里的;`discuss` 开场;`resume`)状态 `item_turns` 加 1;`claim`、`request`/`fulfill`/`decline`、`sign`/`ratify`、空闲时的 understand 不加;
     ②`item_turns >= max_item_turns` 后再换手 → 拒绝,工作区不变;第一次撞上追加 `item_turn_budget_hits`(形如 `W79 x20`)并单独提交一次状态,主题 `chore(pair): 工作项 <ID> 交接 <N> 次,用完回合预算`,再撞不重复提交;
