@@ -1703,6 +1703,94 @@ MUTATIONS = [
     ('改名_对上一条就整批清空',
      '    return [g for g in gone if g not in done], pairs\n',
      '    return ([] if pairs else list(gone)), pairs\n'),
+
+    ('预算_交接不计数',
+     '        state["changes_count"] = changes_n\n        count_item_turn(state)\n',
+     '        state["changes_count"] = changes_n\n'),
+
+    ('预算_完成时不清零',
+     '        state["item_turns"] = 0\n        state["renamed_tests"] = {}\n',
+     '        state["renamed_tests"] = {}\n'),
+
+    ('预算_认领时不清零',
+     '    state["item_turns"] = 0                             # W79:回合预算按工作项算\n',
+     ''),
+
+    ('预算_交接不拦用满',
+     '    if target != "DONE":\n        refusal = turn_budget_refusal(root, cfg, state, me)\n',
+     '    if False:\n        refusal = turn_budget_refusal(root, cfg, state, me)\n'),
+
+    ('预算_拦了完成',
+     '    if target != "DONE":\n        refusal = turn_budget_refusal(root, cfg, state, me)\n',
+     '    if True:\n        refusal = turn_budget_refusal(root, cfg, state, me)\n'),
+
+    ('预算_0_不当不限',
+     '    if not item or not limit or used < limit:\n',
+     '    if not item or limit is None or used < limit:\n'),
+
+    ('预算_用满判差一',
+     '    if not item or not limit or used < limit:\n',
+     '    if not item or not limit or used <= limit:\n'),
+
+    ('预算_开场不计数',
+     '    state["phase"] = DISCUSS\n    count_item_turn(state)\n',
+     '    state["phase"] = DISCUSS\n'),
+
+    ('预算_讨论回合不计数',
+     '    state["discuss"] = d\n    count_item_turn(state)\n',
+     '    state["discuss"] = d\n'),
+
+    ('预算_resume_不计数',
+     '[state["item"]]\n    count_item_turn(state)\n',
+     '[state["item"]]\n'),
+
+    ('预算_开场不拦',
+     'CONFIG_REL))\n        refusal = turn_budget_refusal(root, cfg, state, me)     # W79\n',
+     'CONFIG_REL))\n        refusal = None\n'),
+
+    ('预算_讨论回合不拦',
+     '    refusal = turn_budget_refusal(root, cfg, state, me)         # W79\n    if refusal:\n        die(refusal)\n    message = ',
+     '    refusal = None\n    if refusal:\n        die(refusal)\n    message = '),
+
+    ('预算_resume_不拦',
+     'resume 只能在自己的讨论回合用。" % (turn, me))\n    refusal = turn_budget_refusal(root, cfg, state, me)         # W79\n',
+     'resume 只能在自己的讨论回合用。" % (turn, me))\n    refusal = None\n'),
+
+    ('预算_讨论回合判在篡改检查之前',
+     '    _discuss_tamper_guard(root, "交接")\n',
+     '    turn_budget_refusal(root, cfg, state, me)\n    _discuss_tamper_guard(root, "交接")\n'),
+
+    ('预算_撞上时不记录',
+     '        hits.append("%s x%d" % (item, used))\n',
+     ''),
+
+    ('预算_每次撞都重复提交',
+     '    if not any(h.startswith(item + " x") for h in hits):\n',
+     '    if True:\n'),
+
+    ('预算_撞上时不提交',
+     '        save_state(root, disk)\n        _commit_state(root, "chore(pair): 工作项 %s 交接',
+     '        save_state(root, disk)\n        (lambda *a: None)(root, "chore(pair): 工作项 %s 交接'),
+
+    ('预算_verify_setup_不查',
+     '        bad("max_item_turns 必须是非负整数',
+     '        str("max_item_turns 必须是非负整数'),
+
+    ('预算_默认不是_20',
+     'cfg.setdefault("max_item_turns", 20)',
+     'cfg.setdefault("max_item_turns", 12)'),
+
+    ('预算_status_不显示',
+     '        print(" 回合预算 : 本工作项已换手 %d 次',
+     '        str(" 回合预算 : 本工作项已换手 %d 次'),
+
+    ('预算_status_不列记录',
+     '        print(" 曾用完回合预算: %s"',
+     '        str(" 曾用完回合预算: %s"'),
+
+    ('预算_老状态缺键当_1',
+     '    "item_turns": 0,\n    "item_turn_budget_hits": [],\n',
+     '    "item_turns": 1,\n    "item_turn_budget_hits": [],\n'),
 ]
 
 # unittest 的失败行有两种形态:

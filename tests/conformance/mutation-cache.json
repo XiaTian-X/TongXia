@@ -1,5 +1,5 @@
 {
-  "baseline": "c13005fba2a1f08a",
+  "baseline": "b37d4f02184e5365",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -1137,6 +1137,72 @@
     ],
     "门禁没开也改 idle 归属": [
       "test_v1_both_roles.TestWhoseTurnGateOff.test_门禁关着_只有_tester_校验过时照旧轮到_tester"
+    ],
+    "预算_0_不当不限": [
+      "test_v1_item_turns.TestUnlimited.test_0_不限"
+    ],
+    "预算_resume_不拦": [
+      "test_v1_item_turns.TestDiscussTurnBlocked.test_用满后_resume_被拒"
+    ],
+    "预算_resume_不计数": [
+      "test_v1_item_turns.TestDiscussCounts.test_discuss_开场_讨论回合的_handoff_resume_各加_1"
+    ],
+    "预算_status_不列记录": [
+      "test_v1_item_turns.TestBudgetHit.test_status_显示已换手次数与上限_并列出撞过的记录"
+    ],
+    "预算_status_不显示": [
+      "test_v1_item_turns.TestBudgetHit.test_status_显示已换手次数与上限_并列出撞过的记录"
+    ],
+    "预算_verify_setup_不查": [
+      "test_v1_item_turns.TestVerifySetup.test_不是非负整数判失败"
+    ],
+    "预算_交接不拦用满": [
+      "test_v1_item_turns.TestBudgetHit.test_status_显示已换手次数与上限_并列出撞过的记录"
+    ],
+    "预算_交接不计数": [
+      "test_v1_item_turns.TestBudgetHit.test_status_显示已换手次数与上限_并列出撞过的记录"
+    ],
+    "预算_完成时不清零": [
+      "test_v1_item_turns.TestCompletionNotBlocked.test_用满时_review_test_approve_照常完成_完成后清零"
+    ],
+    "预算_开场不拦": [
+      "test_v1_item_turns.TestDiscussOpenBlocked.test_用满后_discuss_开场被拒"
+    ],
+    "预算_开场不计数": [
+      "test_v1_item_turns.TestDiscussCounts.test_discuss_开场_讨论回合的_handoff_resume_各加_1"
+    ],
+    "预算_拦了完成": [
+      "test_v1_item_turns.TestCompletionNotBlocked.test_用满时_review_test_approve_照常完成_完成后清零"
+    ],
+    "预算_撞上时不提交": [
+      "test_v1_item_turns.TestBudgetHit.test_再撞_不新增提交_记录不重复"
+    ],
+    "预算_撞上时不记录": [
+      "test_v1_item_turns.TestBudgetHit.test_status_显示已换手次数与上限_并列出撞过的记录"
+    ],
+    "预算_每次撞都重复提交": [
+      "test_v1_item_turns.TestBudgetHit.test_再撞_不新增提交_记录不重复"
+    ],
+    "预算_用满判差一": [
+      "test_v1_item_turns.TestBudgetHit.test_status_显示已换手次数与上限_并列出撞过的记录"
+    ],
+    "预算_老状态缺键当_1": [
+      "test_v1_item_turns.TestOldState.test_老状态没有这两个键当_0_与空"
+    ],
+    "预算_认领时不清零": [
+      "test_v1_item_turns.TestClearing.test_认领时清零"
+    ],
+    "预算_讨论回合不拦": [
+      "test_v1_item_turns.TestDiscussTurnBlocked.test_用满后讨论回合的_handoff_被拒"
+    ],
+    "预算_讨论回合不计数": [
+      "test_v1_item_turns.TestDiscussCounts.test_discuss_开场_讨论回合的_handoff_resume_各加_1"
+    ],
+    "预算_讨论回合判在篡改检查之前": [
+      "test_v1_item_turns.TestTamperedStateNotCommitted.test_讨论回合的_handoff"
+    ],
+    "预算_默认不是_20": [
+      "test_v1_item_turns.TestDefault.test_不配时上限是_20"
     ]
   }
 }
