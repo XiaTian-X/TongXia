@@ -104,6 +104,15 @@
 归属却是 tester,驱动器会反复调度 tester。tester 那一份不作数时照旧先轮到 tester。
 - 工作项存在于 PLAN、未完成、类型合法
 - `state.json` 未被篡改
+- 裁判副本 `.pair/enforcer.py` 与正本 `pair.py` 逐字节一致(只在 claim 查:工作项进行中 dev 正在改正本)
+- 非 `cover` 项:`对应契约` 指向的小节(只看第一条)不重名、存在、写了 `依据`,且依据可断言
+  (`人类定稿` 或 `考古观察@<sha>`)
+- `feature` / `bug` 项(W82):同一小节的标题行、正文与子小节里,代码以外没有待澄清标记
+  `[待澄清: <问题>]` / `[NEEDS CLARIFICATION: <问题>]`。冒号与问题可省,冒号认半角与全角,
+  英文不分大小写、两词间任意空白,括号认 `[]`、`［］`、`【】`;问题文本不含右括号,没有右括号的不算。
+  围栏代码块与行内代码(N 个反引号开、恰好 N 个关,不跨空行)里的不算,HTML 注释里的照算。
+  拒绝文案原样列出标记,最多 5 条,超出写"另有 N 处"。cover 断言代码现状、refactor 由保护测试守行为,不拦
+- `refactor` 项:声明了 `保护测试`,路径存在且属 tester
 
 成功后:写入 `item` / `item_type` / `phase`(该类型的起始阶段),
 `changes_count` 归零,记录 `contract_sha`(契约文件当前的 git blob sha),
@@ -332,6 +341,7 @@ PAIR_ROLE=human pair.py ratify docs/proposals/<主题>.md   # 人类:核对后�
 | 被待办项引用的可断言小节有形状:内容非空的代码块,或带非空数据行的表格(W73) | 警告;`strict_contract: true` 时失败 |
 | 同上的小节写了返回或错误(关键词,大小写不敏感,HTML 注释不算) | 警告;`strict_contract: true` 时失败 |
 | `cover`/`refactor`/`bug` 项引用的小节,代码块里的标识符至少一个出现在两个角色名下的已跟踪文件里(疑似漂移) | 警告(始终) |
+| `feature`/`bug` 待办项引用的小节里没有代码以外的待澄清标记(W82;同一节只报一次,点名工作项与条数) | 警告(硬闸在 `claim`) |
 | `strict_contract` 是布尔值 | 失败 |
 | `refactor` 的 `保护测试` 已声明且存在 | 警告(硬闸在 `claim`) |
 | `refactor` 的 `保护测试` 不属 tester | 失败 |
