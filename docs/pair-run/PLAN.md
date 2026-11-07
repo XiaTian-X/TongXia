@@ -1048,7 +1048,7 @@
     `protocol-spec.md`(含配置表与状态字段表)、`command-reference.md`、`architecture.md`、`troubleshooting.md`、`rules.md`、`SKILL.md` 跟上,路线图 P1-2 标 ✅
   - 对应契约:`docs/pair-run/CONTRACT.md` → 工作项的回合预算
 
-- [ ] **W80** [cover] — 符号引用检查:被引文件插入无关行不会红
+- [x] **W80** [cover] — 符号引用检查:被引文件插入无关行不会红
   - **来源**:路线图 P1-12「第三轮 W6 落地了多少」第 ② 项
   - 验收标准:①被引用文件的符号上方插入若干无关行之后,同一处 `<路径>#<符号>` 引用检查仍然通过;②对照组:符号改名后检出;③登记变异点(检查依赖符号所在行号之类)并被抓;④不改 `pair.py`,不改检查本身
   - 对应契约:`docs/pair-run/CONTRACT.md` → 文档里的代码引用
