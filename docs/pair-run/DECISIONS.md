@@ -956,3 +956,11 @@
 - 已否决: 一并做 P0-1 ① —— 契约改写既有行为时改红既有用例是合法的,没有文件映射区分不了"改的"与"无关的";按本回合改的文件找用例 —— 要文件映射,因工具而异;
   用工作区里的基线文件 —— 中途 `verify-setup` 会改写它,修正回合会被误伤;读不出时拦 —— 没配报告的项目会被锁死在 cover 上。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+
+## W81 — cover 的新用例按"门禁报告跑过的 − 认领时提交里的全量基线 − 声明过的改名新名"判,判点在红绿之后,六种读不出一律不判
+
+- 理由: 一个小函数返回"新用例列表或不知道",调用处只区分空列表(拒绝)与 None(不判),读不出的六种情形(没配报告、报告读不出、没有 `item_base`、那一刻没有基线、基线不是合法 JSON、没有 `executed` 列表)都落在 None 上,不另开分支。
+  基线用 `git show <item_base>:` 读,不读工作区也不读 HEAD:修正回合要把第一回合的用例照旧算新,中途重跑 `verify-setup` 会改写工作区与 HEAD 里的那份。改名新名从内存里的 `renamed_tests` 扣 —— W78 在本回合声明通过后已经先写进去,同一回合的声明才扣得到。
+  判点在红绿不变量之后,因为要用这一次门禁的报告;只在 `require_new_tests` 的阶段(即 cover 的 spec)判。
+- 已否决: 认领时读不出基线就退回读当前基线 —— 认领之后才出现的基线会把认领前就有的用例算成"已有",误伤;按报告里本回合改动的文件过滤用例 —— 要文件映射,因工具而异;读不出时打一行警告 —— 与 W59/W61 的"不知道的不拦"口径不一,`verify-setup` 已经提示没配报告。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_cover_executed.py`, `tests/conformance/mutation_check.py`, `docs/protocol-spec.md`

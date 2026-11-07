@@ -178,6 +178,7 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "ratify-signed",         # 批准:PAIR_ROLE=human、双方对最后一个 diff 已提交的签字由本人回合提交、只碰 PLAN 与契约、能干净应用(W68)
     "contract-change-tier",  # --contract-change 只放行契约的纯追加;PLAN 的改动与契约的改写走提案签字与人类批准(W70)
     "test-rename",           # --renamed 只在 tester 能写测试的回合、一对一、旧名在基线里;完成时对上了的不算不再跑(W78)
+    "cover-executed",        # cover 的 spec 回合:门禁报告里至少有一条认领时基线里没有的、跑过的用例;读不出不判(W81)
     "item-turn-budget",      # 工作项换手次数用满 max_item_turns 后再换手被拒,完成不拦;第一次撞上单独提交状态留痕(W79)
     "decision-unique-title", # 新决策条目的完整标题不能与 HEAD 里或同一回合的其他条目重复(W76)
     "decision-overturn",     # 带 `推翻:` 的决策只在 resume 时写,引用要正好对上一条已有条目,不重复推翻(W71)
@@ -1233,6 +1234,31 @@ def load_executed(root):
         return None
     executed = data.get("executed") if isinstance(data, dict) else None
     return executed if isinstance(executed, list) else None
+
+
+def new_tests_ran(root, cfg, state):
+    """cover 的 spec 回合里新跑起来的用例(W81)→ 排序列表;不知道 → None(不知道的不拦)。
+
+    新用例 = 这一次门禁报告里跑过的(跳过的不算,同 W61)− 认领时基线 − 本工作项声明过的改名新名。
+    认领时基线取 `<item_base>` 那一刻提交里的基线文件,不读工作区:工作项中途重跑 verify-setup 会改写它,
+    而修正回合要把第一回合加的用例照旧算新。没配 `test_report`、报告读不出、没有 item_base、那一刻没有或读不出基线 → None。"""
+    report_rel, base = cfg.get("test_report"), state.get("item_base")
+    if not report_rel or not base:
+        return None
+    try:
+        ran = junit_executed(root / report_rel)
+    except ValueError:
+        return None
+    text = git("show", "%s:%s" % (base, FULL_BASELINE_REL), cwd=root, check=False)
+    try:
+        data = json.loads(text) if text is not None else None
+    except ValueError:
+        return None
+    executed = data.get("executed") if isinstance(data, dict) else None
+    if not isinstance(executed, list):
+        return None
+    renamed_to = set((state.get("renamed_tests") or {}).values())
+    return sorted(set(ran) - set(executed) - renamed_to)
 
 
 def save_executed(root, executed):
@@ -3110,6 +3136,19 @@ def cmd_handoff(root, cfg, args):
         die("%s 阶段结束时测试必须是 GREEN,现在是 RED。\n"
             "看 %s。还没弄绿就不要交接。" % (phase, TESTLOG_REL))
 
+    # --- cover 新增的用例确实跑了(W81)------------------------------------------
+    # 上面"必须真的写了测试"只看文件被碰过;这里看门禁报告。判点在红绿之后:要先有这一次的报告。
+    fresh_tests = new_tests_ran(root, cfg, state) if phase in flow["require_new_tests"] else None
+    if fresh_tests == []:
+        die("拒绝交接 —— 你碰了测试文件,但门禁报告(%s)里没有一条新跑起来的用例。\n"
+            "对照的是认领那一刻的全量基线(%s 在认领时的提交里那一份):跑过的用例全都在里面。\n\n"
+            "常见原因:\n"
+            "  - 新用例的文件名或函数名不合测试工具的收集规则,根本没被收集;\n"
+            "  - 新用例被跳过了(跳过的不算跑过);\n"
+            "  - 只改了注释或已有用例 —— cover 要为已有行为补上新的用例;\n"
+            "  - 只是改了名(声明过的改名新名不算新增)。\n"
+            "确认新用例真的跑了,再交接。" % (cfg.get("test_report"), FULL_BASELINE_REL))
+
     # --- 只涉及测试的打回不再经过 impl(W17)-----------------------------------
     if target == "impl" and rebound_shortcut(root, cfg, state, green, changed_named_frozen):
         target = "review-test"
@@ -3228,6 +3267,8 @@ def cmd_handoff(root, cfg, args):
         body += "\n测试缺口: %s" % args.test_gap.strip()
     for old, new in renames:                            # W78
         body += "\n改名(声明): %s \u2192 %s" % (old, new)
+    if fresh_tests:
+        body += "\n新用例(跑过): %d 条" % len(fresh_tests)
     for old, new in renames_matched:
         body += "\n改名(对上了): %s \u2192 %s" % (old, new)
     proposals = sorted(p for xy, p in entries
@@ -3380,7 +3421,8 @@ def turn_budget_refusal(root, cfg, state, me):
     """回合预算(W79):本工作项换手次数用满 `max_item_turns` → 拒绝理由;没用满、没有工作项、上限 0 → None。
 
     第一次撞上时把记录写进**磁盘上的**状态并只提交状态文件(同死锁闸:人类事后翻得到),工作区里本回合的改动原样留着;
-    同一工作项再撞不重复提交。读磁盘而不是用传进来的 state,免得把调用方在内存里改到一半的东西一起提交。"""
+    同一工作项再撞不重复提交。读磁盘而不是用传进来的 state,免得把调用方在内存里改到一半的东西一起提交。
+    **调用方必须先过篡改检查**:提交的是磁盘上的整份状态,手改过的会被当成真的落进 HEAD(W79 review-impl)。"""
     limit, item = cfg["max_item_turns"], state.get("item")
     used = state.get("item_turns") or 0
     if not item or not limit or used < limit:
