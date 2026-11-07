@@ -1,8 +1,8 @@
 {
   "round": 79,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W82",
+  "item_type": "feature",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -88,7 +88,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "13aebeb796561980ea4c9c93e011c9e24378ead3",
   "setup_verified_contract": {
     "tester": "13aebeb796561980ea4c9c93e011c9e24378ead3",
     "dev": "13aebeb796561980ea4c9c93e011c9e24378ead3"
@@ -98,7 +98,7 @@
   "reviewed_contract": "f2cd24d76d6070772511e0df177f1f46b1d7d887",
   "last_full_failed": false,
   "full_failures": [],
-  "item_base": "03882a1e99a43433d79806f3481d674fdce14d1c",
+  "item_base": "bea8febdb6ee0af69a6c8ca5ab7c2ef04cd9aa76",
   "requests": [],
   "discuss": null,
   "discussed": [],
