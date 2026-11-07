@@ -948,3 +948,11 @@
 - 理由: 判点函数拿"没有工作项、上限 0、没用满"三种情形直接放行,用满时第一次往磁盘上的状态追加记录、经 `_commit_state` 只提交状态文件(与代办的窄提交同一个函数),再返回拒绝文案;读磁盘而不是调用方手里的 state,免得把内存里改到一半的东西一起提交。代价是它提交的是磁盘上的整份状态:哪个入口把判点放在篡改检查之前,手改过的状态就会被当成真的洗进 HEAD,之后篡改检查再也看不见 —— review-impl 在讨论回合的 `handoff` 上实测到了,改成排在 `_discuss_tamper_guard` 之后,四个入口都有用例与变异点钉住先后。`handoff` 的判点在转移表之后、跑测试之前,目标是 `DONE` 时不调;计数放在各入口 `save_state` 之前,`handoff` 只在非 `DONE` 分支加,`DONE` 与认领清零。同一工作项只记一条、只提交一次;人类调高上限后再撞照常拒绝、不再记。
 - 已否决: 撞上时只拒绝、不提交 —— 人类事后翻不到曾经卡过,死锁闸为同样的理由单独提交;撞上时把当前内存里的 state 整份保存提交 —— 会把调用方改到一半的字段一起落盘;把判点放进 `discuss_handoff` 最前面以便与 `cmd_handoff` 对称 —— 讨论回合那一支的篡改检查在它自己的守卫里,排在它前面正是 review-impl 指出的漏洞。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_item_turns.py`, `tests/conformance/mutation_check.py`, `docs/protocol-spec.md`
+
+## SETUP — 第五十轮做路线图 P0-1 ③(cover 新增的用例确实跑了),顺带把 P1-12 ② 标 ✅,规划经自审后人类批准(2026-11-07)
+
+- 理由: cover 全程是绿的,`new-tests` 只看文件被碰过,不被收集、被跳过、只改注释的用例都能交接。W61/W63 之后门禁报告与全量基线都给出"跑过的用例 ID 集合",两者相减就是新跑起来的用例,不需要原文担心的文件映射。
+  基线取认领那一刻 HEAD 里的那份:修正回合仍把第一回合的用例算新,中途重跑 `verify-setup` 也改不动它。P1-12 ② 上一轮 W80 已做完,review-test 只读写不了路线图,在这里补标。
+- 已否决: 一并做 P0-1 ① —— 契约改写既有行为时改红既有用例是合法的,没有文件映射区分不了"改的"与"无关的";按本回合改的文件找用例 —— 要文件映射,因工具而异;
+  用工作区里的基线文件 —— 中途 `verify-setup` 会改写它,修正回合会被误伤;读不出时拦 —— 没配报告的项目会被锁死在 cover 上。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
