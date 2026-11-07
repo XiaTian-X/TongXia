@@ -1851,6 +1851,154 @@ MUTATIONS = [
     ('新用例_文案不提认领',
      '"对照的是认领那一刻的全量基线(%s 在认领时的提交里那一份)',
      '"对照的是全量基线(%s)'),
+
+    ('待澄清_不查',
+     '            if item_type in UNCLARIFIED_TYPES:\n                marks = unclarified_marks',
+     '            if False:\n                marks = unclarified_marks'),
+
+    ('待澄清_拦了_refactor',
+     'UNCLARIFIED_TYPES = ("feature", "bug")',
+     'UNCLARIFIED_TYPES = ("feature", "bug", "refactor")'),
+
+    ('待澄清_不拦_bug',
+     'UNCLARIFIED_TYPES = ("feature", "bug")',
+     'UNCLARIFIED_TYPES = ("feature",)'),
+
+    ('待澄清_不含子小节',
+     '        chunk = text[start:end]\n',
+     '        chunk = text[start:end].split("\\n#", 1)[0]\n'),
+
+    ('待澄清_不看标题行',
+     'for name, start, _, end in _full_section_spans(text):',
+     'for name, _, start, end in _full_section_spans(text):'),
+
+    ('待澄清_围栏里的也算',
+     'chars = list(_FENCE_RE.sub(lambda m: spaces(m.group(0)), text))',
+     'chars = list(text)'),
+
+    ('待澄清_行内代码里的也算',
+     '                chars[p] = " "',
+     '                pass'),
+
+    ('待澄清_任意反引号串都能关',
+     'if len(runs[k].group(0)) == len(opener.group(0)):',
+     'if True:'),
+
+    ('待澄清_没关上的吞到结尾',
+     '        if close is None:\n            i += 1\n            continue',
+     '        if close is None:\n            chars[opener.start():] = [c if c == "\\n" else " " for c in chars[opener.start():]]\n            break'),
+
+    ('待澄清_跨空行配对',
+     '            if _BLANK_LINE_RE.search(text, opener.end(), runs[k].start()):\n                break',
+     '            if False:\n                break'),
+
+    ('待澄清_HTML_注释先抹掉',
+     '        chunk = text[start:end]\n',
+     '        chunk = _HTML_COMMENT_RE.sub("", text[start:end])\n'),
+
+    ('待澄清_不认全角冒号',
+     '_FW_COLON = chr(0xFF1A)',
+     '_FW_COLON = ":"'),
+
+    ('待澄清_问题文本必填',
+     '(?:[:%s][^%s]*)?[%s]',
+     '(?:[:%s][^%s]+)[%s]'),
+
+    ('待澄清_不认英文',
+     '(?:待澄清|NEEDS\\s+CLARIFICATION)',
+     '(?:待澄清)'),
+
+    ('待澄清_英文分大小写',
+     '% (_FW_LBRACKET, _CJK_LBRACKET, _FW_COLON, _MARK_CLOSERS, _MARK_CLOSERS), re.I)',
+     '% (_FW_LBRACKET, _CJK_LBRACKET, _FW_COLON, _MARK_CLOSERS, _MARK_CLOSERS))'),
+
+    ('待澄清_两词间只认空格',
+     'NEEDS\\s+CLARIFICATION',
+     'NEEDS +CLARIFICATION'),
+
+    ('待澄清_不认全角方括号',
+     '_FW_LBRACKET, _FW_RBRACKET = chr(0xFF3B), chr(0xFF3D)',
+     '_FW_LBRACKET, _FW_RBRACKET = chr(0x3010), chr(0xFF3D)'),
+
+    ('待澄清_不认黑括号',
+     '_CJK_LBRACKET, _CJK_RBRACKET = chr(0x3010), chr(0x3011)',
+     '_CJK_LBRACKET, _CJK_RBRACKET = chr(0xFF3B), chr(0x3011)'),
+
+    ('待澄清_没有右括号也算',
+     '(?:[:%s][^%s]*)?[%s]"',
+     '(?:[:%s][^%s\\n]*)?(?:[%s]|\\n|$)"'),
+
+    ('待澄清_扫整份契约',
+     'marks = unclarified_marks(_read(root / cfg["contract_file"])).get(anchor_name)',
+     'marks = sum(unclarified_marks(_read(root / cfg["contract_file"])).values(), [])'),
+
+    ('待澄清_文案不列标记',
+     'shown = "\\n".join("  " + m for m in marks[:5])',
+     'shown = "  (略)"'),
+
+    ('待澄清_全列不截断',
+     'for m in marks[:5])',
+     'for m in marks)'),
+
+    ('待澄清_截到四条',
+     'for m in marks[:5])',
+     'for m in marks[:4])'),
+
+    ('待澄清_不写另有',
+     '        shown += "\\n  …… 另有 %d 处" % (len(marks) - 5)',
+     '        pass'),
+
+    ('待澄清_另有条数写错',
+     '另有 %d 处" % (len(marks) - 5)',
+     '另有 %d 处" % len(marks)'),
+
+    ('待澄清_五条也写另有',
+     '    if len(marks) > 5:\n        shown +=',
+     '    if len(marks) >= 5:\n        shown +='),
+
+    ('待澄清_文案不提人类与重跑',
+     '"契约是人类的产物 —— 请交给人类回答这些问题,把标记换成答案。\\n"\n            "契约改了之后两个角色的开工前校验都会作废,要各自重跑 verify-setup。\\n"',
+     '"请处理。\\n"'),
+
+    ('待澄清_verify_不提醒',
+     '            if marks:\n                warn("契约小节 \'%s\'(%s 引用)里还有',
+     '            if False:\n                warn("契约小节 \'%s\'(%s 引用)里还有'),
+
+    ('待澄清_verify_判失败',
+     '                warn("契约小节 \'%s\'(%s 引用)里还有',
+     '                bad("契约小节 \'%s\'(%s 引用)里还有'),
+
+    ('待澄清_verify_每项都报',
+     '        for anchor, ids in unclear_refs.items():\n            marks = marks_by.get(anchor)\n            if marks:',
+     '        for anchor, ids in [(a, [i]) for a, l in unclear_refs.items() for i in l]:\n            marks = marks_by.get(anchor)\n            if marks:'),
+
+    ('待澄清_verify_不点名工作项',
+     '% (anchor, "、".join(ids), len(marks), " ".join(marks[0].split())))',
+     '% (anchor, "?", len(marks), " ".join(marks[0].split())))'),
+
+    ('待澄清_verify_不写条数',
+     '% (anchor, "、".join(ids), len(marks), " ".join(marks[0].split())))',
+     '% (anchor, "、".join(ids), 0, " ".join(marks[0].split())))'),
+
+    ('待澄清_verify_提醒_cover',
+     '            if typ in UNCLARIFIED_TYPES:\n                unclear_refs',
+     '            if True:\n                unclear_refs'),
+
+    ('待澄清_简报不写',
+     '    - 有没有做了契约没要求的事(多出来的分支、参数、行为)—— 没人测、也没人评审\n',
+     ''),
+
+    ('待澄清_骨架标记不写成代码',
+     '写一个 `[待澄清: <问题>]`',
+     '写一个 [待澄清: <问题>]'),
+
+    ('待澄清_骨架不写用法',
+     '写一个 `[待澄清: <问题>]`\n     (Spec Kit 的 `[NEEDS CLARIFICATION: <问题>]` 也认)。',
+     '写一个标记。'),
+
+    ('待澄清_骨架不做留旧口径',
+     'tester 不断言,dev 不该实现:多出来的行为没人测、也没人评审。 -->',
+     'tester 不为它写断言,dev 也不必实现它。 -->'),
 ]
 
 # unittest 的失败行有两种形态:

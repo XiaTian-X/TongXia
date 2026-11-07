@@ -1,5 +1,5 @@
 {
-  "baseline": "548a079edbbdb7db",
+  "baseline": "38bb4603ade44798",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -402,6 +402,117 @@
     ],
     "形状_非布尔值照收": [
       "test_v1_contract_shape.TestStrictValue.test_不是布尔值失败_文案写明只接受_true_false"
+    ],
+    "待澄清_HTML_注释先抹掉": [
+      "test_v1_contract_unclarified.TestRefused.test_标记在_HTML_注释里_照样拒绝"
+    ],
+    "待澄清_verify_不写条数": [
+      "test_v1_contract_unclarified.TestVerifySetup.test_有标记时放行并提醒_点名工作项与条数"
+    ],
+    "待澄清_verify_不提醒": [
+      "test_v1_contract_unclarified.TestVerifySetup.test_bug_项引用的同样提醒"
+    ],
+    "待澄清_verify_不点名工作项": [
+      "test_v1_contract_unclarified.TestVerifySetup.test_bug_项引用的同样提醒"
+    ],
+    "待澄清_verify_判失败": [
+      "test_v1_contract_unclarified.TestVerifySetup.test_bug_项引用的同样提醒"
+    ],
+    "待澄清_verify_提醒_cover": [
+      "test_v1_contract_unclarified.TestVerifySetup.test_只被_cover_或_refactor_引用的不提醒"
+    ],
+    "待澄清_verify_每项都报": [
+      "test_v1_contract_unclarified.TestVerifySetup.test_两个工作项引用同一节_只提醒一次_点名两个"
+    ],
+    "待澄清_不写另有": [
+      "test_v1_contract_unclarified.TestListing.test_六处标记_列五处并写另有一处"
+    ],
+    "待澄清_不含子小节": [
+      "test_v1_contract_unclarified.TestRefused.test_标记在子小节里_拒绝"
+    ],
+    "待澄清_不拦_bug": [
+      "test_v1_contract_unclarified.TestRefused.test_bug_项同样被拒"
+    ],
+    "待澄清_不查": [
+      "test_v1_contract_unclarified.TestCodeExempt.test_两段里各一个落单的反引号不跨空行配对_中间段的标记照拦"
+    ],
+    "待澄清_不看标题行": [
+      "test_v1_contract_unclarified.TestRefused.test_标记在标题行里_拒绝"
+    ],
+    "待澄清_不认全角冒号": [
+      "test_v1_contract_unclarified.TestSpellings.test_全角冒号"
+    ],
+    "待澄清_不认全角方括号": [
+      "test_v1_contract_unclarified.TestSpellings.test_全角方括号"
+    ],
+    "待澄清_不认英文": [
+      "test_v1_contract_unclarified.TestSpellings.test_英文两词之间换行"
+    ],
+    "待澄清_不认黑括号": [
+      "test_v1_contract_unclarified.TestSpellings.test_黑括号"
+    ],
+    "待澄清_两词间只认空格": [
+      "test_v1_contract_unclarified.TestSpellings.test_英文两词之间换行"
+    ],
+    "待澄清_五条也写另有": [
+      "test_v1_contract_unclarified.TestListing.test_五处标记_全列不写另有"
+    ],
+    "待澄清_任意反引号串都能关": [
+      "test_v1_contract_unclarified.TestCodeExempt.test_单反引号开_双反引号串不算关_标记在代码外_拒绝"
+    ],
+    "待澄清_全列不截断": [
+      "test_v1_contract_unclarified.TestListing.test_六处标记_列五处并写另有一处"
+    ],
+    "待澄清_另有条数写错": [
+      "test_v1_contract_unclarified.TestListing.test_六处标记_列五处并写另有一处"
+    ],
+    "待澄清_围栏里的也算": [
+      "test_v1_contract_unclarified.TestCodeExempt.test_波浪线围栏里的放行"
+    ],
+    "待澄清_截到四条": [
+      "test_v1_contract_unclarified.TestListing.test_五处标记_全列不写另有"
+    ],
+    "待澄清_扫整份契约": [
+      "test_v1_contract_unclarified.TestListing.test_五处标记_全列不写另有"
+    ],
+    "待澄清_拦了_refactor": [
+      "test_v1_contract_unclarified.TestScope.test_refactor_项不拦"
+    ],
+    "待澄清_文案不列标记": [
+      "test_v1_contract_unclarified.TestListing.test_五处标记_全列不写另有"
+    ],
+    "待澄清_文案不提人类与重跑": [
+      "test_v1_contract_unclarified.TestRefused.test_文案说明交给人类与重跑开工前校验"
+    ],
+    "待澄清_没关上的吞到结尾": [
+      "test_v1_contract_unclarified.TestCodeExempt.test_两段里各一个落单的反引号不跨空行配对_中间段的标记照拦"
+    ],
+    "待澄清_没有右括号也算": [
+      "test_v1_contract_unclarified.TestSpellings.test_没有右括号的不算标记"
+    ],
+    "待澄清_简报不写": [
+      "test_v1_contract_unclarified.TestReviewImplBrief.test_review_impl_的简报有契约没要求那一条"
+    ],
+    "待澄清_英文分大小写": [
+      "test_v1_contract_unclarified.TestSpellings.test_英文大小写混写"
+    ],
+    "待澄清_行内代码里的也算": [
+      "test_v1_contract_unclarified.TestCodeExempt.test_单反引号行内代码里的放行"
+    ],
+    "待澄清_跨空行配对": [
+      "test_v1_contract_unclarified.TestCodeExempt.test_两段里各一个落单的反引号不跨空行配对_中间段的标记照拦"
+    ],
+    "待澄清_问题文本必填": [
+      "test_v1_contract_unclarified.TestSpellings.test_没有冒号与问题"
+    ],
+    "待澄清_骨架不做留旧口径": [
+      "test_v1_contract_unclarified.TestSkeleton.test_骨架的不做口径统一"
+    ],
+    "待澄清_骨架不写用法": [
+      "test_v1_contract_unclarified.TestSkeleton.test_骨架注释里有行内代码写的标记用法"
+    ],
+    "待澄清_骨架标记不写成代码": [
+      "test_v1_contract_unclarified.TestSkeleton.test_骨架整份当契约_认领指向骨架小节的_feature_项放行"
     ],
     "执行前不删旧报告": [
       "test_v1_junit_report.TestDegrades.test_上一次的报告还在而这一次没写_不读上一次的"

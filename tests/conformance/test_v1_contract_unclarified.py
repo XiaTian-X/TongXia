@@ -180,6 +180,10 @@ class TestCodeExempt(ClaimBase):
     def test_没关上的反引号之后的标记_拒绝(self):
         self.refused_with("这里有一个落单的反引号 ` 之后是 %s" % MARK)
 
+    def test_两段里各一个落单的反引号不跨空行配对_中间段的标记照拦(self):
+        """CommonMark 的行内代码不跨段落:跨空行配上会把中间整段连同标记吞掉,等于静默放行(review-impl 补)。"""
+        self.refused_with("前一段有一个落单的反引号 ` 在这里", MARK, "后一段也有一个落单的反引号 ` 在这里")
+
 
 class TestScope(ClaimBase):
 
