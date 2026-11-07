@@ -1,8 +1,8 @@
 {
   "round": 77,
-  "phase": "idle",
-  "item": null,
-  "item_type": null,
+  "phase": "spec",
+  "item": "W80",
+  "item_type": "cover",
   "last_actor": "dev",
   "changes_count": 0,
   "completed_items": [
@@ -86,7 +86,7 @@
   ],
   "setup_verified": true,
   "deadlock_hits": [],
-  "contract_sha": null,
+  "contract_sha": "6821574fcbaa4f9a4bbcdd89ed0da68696a24a69",
   "setup_verified_contract": {
     "tester": "6821574fcbaa4f9a4bbcdd89ed0da68696a24a69",
     "dev": "6821574fcbaa4f9a4bbcdd89ed0da68696a24a69"
@@ -96,9 +96,11 @@
   "reviewed_contract": "6821574fcbaa4f9a4bbcdd89ed0da68696a24a69",
   "last_full_failed": false,
   "full_failures": [],
-  "item_base": "8520cb5e3a0c35f106f1abe523580f2a15124492",
+  "item_base": "661bf8a4d81a65e7aea65d4a3e331fbd9cb01489",
   "requests": [],
   "discuss": null,
   "discussed": [],
-  "renamed_tests": {}
+  "renamed_tests": {},
+  "item_turns": 0,
+  "item_turn_budget_hits": []
 }
