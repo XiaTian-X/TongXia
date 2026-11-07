@@ -964,3 +964,13 @@
   判点在红绿不变量之后,因为要用这一次门禁的报告;只在 `require_new_tests` 的阶段(即 cover 的 spec)判。
 - 已否决: 认领时读不出基线就退回读当前基线 —— 认领之后才出现的基线会把认领前就有的用例算成"已有",误伤;按报告里本回合改动的文件过滤用例 —— 要文件映射,因工具而异;读不出时打一行警告 —— 与 W59/W61 的"不知道的不拦"口径不一,`verify-setup` 已经提示没配报告。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_cover_executed.py`, `tests/conformance/mutation_check.py`, `docs/protocol-spec.md`
+
+## SETUP — 第五十一轮做 Spec Kit 复查采纳的两条(待澄清标记挡住认领、review-impl 查契约没要求的行为),规划经自审与独立审查后人类批准(2026-11-07)
+
+- 理由: 对照 Spec Kit v1.3.2 源码,它的规则几乎都写在提示词里,本项目借形状、用脚本强制。待澄清标记是最便宜的一条:起草人拿不准的地方有了脚本认得出的表示,
+  认领闸才拦得住"契约里还有没定下来的地方";"做了规格没要求的事"是 review-impl 清单上真缺的一类。独立审查改动了几处设计:行内代码按 CommonMark 反引号串配对(否则双反引号写法会被切开)、
+  HTML 注释不豁免、只拦 feature / bug、标题行也扫、`verify-setup` 按小节聚合;豁免代码的理由是"以后引用这一节的工作项",不是"W82 自己"(它认领时跑的是钉住的旧裁判)。
+- 已否决: 照搬 3 个上限 —— 那是为了少打扰用户,在这里会把歧义藏起来;只认一种写法 —— 认不出就是静默放行;豁免 HTML 注释 —— agent 看得见注释,人类常把待办藏在注释里;
+  扫整份契约 —— 未引用小节的未决点不该挡别的工作项;拦 cover / refactor —— cover 的依据是代码现状,refactor 由保护测试守行为;把"契约没要求的行为"做成脚本检查 —— 判不了;
+  评审严重度分级卡裁决 —— 严重度由评审方自填,会诱导虚报,最近的打回都是实打实的问题,没有数据支持。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/SKILL.md`, `.agents/skills/pair-protocol/references/contract-templates.md`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/architecture.md`, `docs/command-reference.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/prior-art.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`

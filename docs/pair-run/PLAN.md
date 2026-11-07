@@ -1065,3 +1065,19 @@
     ③没配 `test_report`、门禁报告读不出、认领时基线读不出(没有 `item_base` 或那一刻基线不存在)→ 不判,照旧只查碰了测试文件;④工作项中途工作区基线被改写不影响判法;feature / bug 的 spec 不受影响;
     ⑤`ENFORCEMENTS` 加 `cover-executed`(不进交接不变量,`new-tests` 一行补说明);`protocol-spec.md`、`architecture.md`、`troubleshooting.md`、`rules.md` 跟上,路线图 P0-1 ③ 标 ✅
   - 对应契约:`docs/pair-run/CONTRACT.md` → cover 新增的用例确实跑了
+
+### 第五十一轮:契约里的待澄清标记挡住认领,review-impl 查契约没要求的行为(Spec Kit 复查)
+
+> 人类让 dev 分析一份 Spec Kit 调研;dev 对照 Spec Kit v1.3.2 源码与本仓库现状,采纳其中两条:`[NEEDS CLARIFICATION]` 标记挡住认领,converge 的"做了规格没要求的事"进 review-impl 简报。
+> 其余三条改造后再说或等数据(开放条目 60、61),一条前提有误(Copilot 本来就读 `.agents/skills/`)。规划经 dev 自审与一次独立审查后人类批准(2026-11-07),授权 dev 代笔立项。
+
+- [ ] **W82** [feature] — 契约里的待澄清标记挡住 feature / bug 的认领;review-impl 简报加"做了契约没要求的事",「不做」口径统一
+  - **来源**:Spec Kit v1.3.2 复查(`specify` 的待澄清标记、`converge` 的第四类差距);开放条目 59
+  - 验收标准:①`[待澄清: …]` 与 `[NEEDS CLARIFICATION: …]` 两种写法都认(冒号与问题可省、冒号全角半角、英文不分大小写且两词间可换行、括号 `[]` `［］` `【】`),不对正文做 NFKC 归一;
+    ②围栏代码块与行内代码(N 个反引号开、恰好 N 个关)里的不算,先抹围栏再从左到右扫反引号串;HTML 注释里的照样算;
+    ③feature / bug 项认领时,引用小节的标题行与正文连同子小节里有标记 → 拒绝,文案原样列出标记(最多 5 条,超出写"另有 N 处")、说明交给人类与重跑校验;cover / refactor 不拦;提交数与状态不变;
+    ④`verify-setup` 对未完成的 feature / bug 项按小节聚合提醒(同一节只报一次,注明认领时会硬拦),不判失败;
+    ⑤review-impl 简报"重点查"加"有没有做了契约没要求的事";契约骨架注释与契约模板里「不做」统一成"tester 不断言,dev 不该实现";骨架注释加标记用法(写成行内代码);
+    ⑥`ENFORCEMENTS` 加 `contract-unclarified`(不进交接不变量);`protocol-spec.md`(§3.3 补齐认领前置条件、§5.4 检查表)、`architecture.md`、`command-reference.md`、`troubleshooting.md`、
+    `contract-templates.md`、`rules.md`、`SKILL.md` 跟上;开放条目 59 标 ✅
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 契约的未决点与越界

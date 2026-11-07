@@ -187,11 +187,29 @@ ChatDev 同属这一类(瀑布式对话链、instructor/assistant 双角色),
 | `analyze` 一致性校验 | `verify-setup` 的契约覆盖度检查(弱得多) |
 
 **该学的是 `clarify` 和 `analyze` 的机器化程度。** 本项目的 `verify-setup`
-只做两件事:检查工作项有没有指向存在的契约小节;强制交出一份不短于 120 字的
+最初只做两件事:检查工作项有没有指向存在的契约小节;强制交出一份不短于 120 字的
 歧义结论。它查不了"契约小节里到底有没有可断言的东西"。
 
 而 README 自己承认:**契约含糊是唯一会致命的失败模式**。
 这块的投入产出比最高。
+
+**2026-11-07 复查(Spec Kit v1.3.2)。** 上面那段已经过时:第四十四轮 W73 之后,`verify-setup` 还查被引用小节的形状、
+有没有写返回或错误、存量项目的疑似漂移;审查结论要逐节点名并声明作者身份。Spec Kit 这一年多了 `checklist`
+("需求写作的单元测试",条目要可追溯)与 `converge`(把实现与规格的差距分成缺失、部分实现、矛盾、做了规格没要求的事,只追加不改写)。
+它的规则几乎都写在提示词里:最多 3 个 `[NEEDS CLARIFICATION]`、clarify 最多 5 问、analyze 只读 —— 命令文件里没有工具层面的限制。
+本项目的区别正在于规则由脚本强制,所以借的是**形状**,不是约束方式:
+
+| 采纳情况 | 内容 |
+|---|---|
+| 第五十一轮 W82 | 待澄清标记(中英两种写法)挡住 feature / bug 的认领;**不设数量上限** —— 它的上限是为了少打扰用户,在这里会把歧义藏起来 |
+| 第五十一轮 W82 | converge 的"做了规格没要求的事"进 review-impl 简报(开放条目 59) |
+| 排后 | clarify 的"问题 + 推荐答案"改造开工前审查结论(开放条目 60) |
+| 等数据 | analyze 的严重度分级只做可选记录,不卡裁决(开放条目 61) |
+| 不借 | 拆成多条命令(本项目由 `status` 决定这一回合做什么)、`handoffs` 建议字段、扩展钩子、"测试任务可选"、"合理猜测并记录假设"(本项目没写进契约的 tester 不许假设) |
+
+另:Spec Kit 给 Copilot 装技能用 `.github/skills/`,但 GitHub 官方文档写明 Copilot 的项目级技能目录
+`.github/skills`、`.claude/skills`、`.agents/skills` 三者都认([About agent skills](https://docs.github.com/en/copilot/concepts/customizations/agent-skills)),
+本项目的 `.agents/skills/` 不用为它另建链接。
 
 ### BMAD-Method
 
