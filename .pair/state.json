@@ -1,9 +1,9 @@
 {
   "round": 78,
-  "phase": "spec",
+  "phase": "impl",
   "item": "W81",
   "item_type": "feature",
-  "last_actor": "dev",
+  "last_actor": "tester",
   "changes_count": 0,
   "completed_items": [
     "W2",
@@ -102,6 +102,6 @@
   "discuss": null,
   "discussed": [],
   "renamed_tests": {},
-  "item_turns": 0,
+  "item_turns": 1,
   "item_turn_budget_hits": []
 }
