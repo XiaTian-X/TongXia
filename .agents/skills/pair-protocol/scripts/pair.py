@@ -3681,9 +3681,6 @@ def discuss_handoff(root, cfg, args, me, state):
     turn = phase_owner(root, cfg, state)
     if me != turn:
         die("现在是 %s 的讨论回合,不是你(%s)的。不要提交。" % (turn, me))
-    refusal = turn_budget_refusal(root, cfg, state, me)         # W79
-    if refusal:
-        die(refusal)
     refusal = test_gap_refusal(DISCUSS, None, state.get("item_type"), args.test_gap)
     if refusal:
         die(refusal)
@@ -3691,6 +3688,10 @@ def discuss_handoff(root, cfg, args, me, state):
     if refusal:
         die(refusal)
     _discuss_tamper_guard(root, "交接")
+    # W79:撞上预算时会提交磁盘上的状态,必须排在篡改检查之后 —— 否则手改过的状态整份进 HEAD,之后再也查不出来。
+    refusal = turn_budget_refusal(root, cfg, state, me)         # W79
+    if refusal:
+        die(refusal)
     message = " ".join(args.words).strip()
     if not message:
         die("请附一句话说明:python3 %s handoff \"你这回合说了什么\"" % PROG_HINT)
