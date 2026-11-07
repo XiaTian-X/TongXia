@@ -27,3 +27,8 @@
 - 同一次交接同时撞死锁闸与回合预算的先后;
 - 判点在跑测试之前的先后;
 - `max_item_turns: true`(实现会拒,没有用例)。
+
+## 更正(W80 spec 回合补记)
+
+上面"`turn_budget_refusal` 的 docstring 写明调用方必须先过篡改检查"一句不对:7e5c0f2 的 diff 里没有这处改动(dev 在 review-test 里已指出,笔记已更正)。
+我照修正提交的说明写了,没有和 diff 逐行核对。修正实际只有判点挪位与旁边那行注释;裁决不受影响 —— 那条缺陷由判点挪位修好,`TestTamperedStateNotCommitted` 钉住。

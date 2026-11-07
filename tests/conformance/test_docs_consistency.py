@@ -618,6 +618,69 @@ class TestSymbolReferences(unittest.TestCase):
         """rules.md 拿 `src/auth.py:42` 举例,那是虚构项目,没有符号可迁移。"""
         self.assertEqual(self._one("见 `src/auth.py:42`"), [])
 
+    # --- W80:插入无关行不会红(路线图 P1-12 余项 ②)-----------------
+    # 符号引用"在源头不发生漂移"是结构性成立的:检查只认名字,不看行号。这几条把它钉住 ——
+    # 被引文件里每个符号上方都插一批无关行,同一处引用照样通过;对照组改名就检出。
+    # 被引文件是临时造的:登记进 PY_BY_REL,用完撤掉;每次改写之后清掉这个文件的符号缓存,
+    # 否则"插行之后仍通过"可能只是读了插行之前的缓存,改名那条对照组也会跟着失效。
+    FIXTURE_REL = "w80_fixture/target.py"
+    FIXTURE = (
+        "LIMIT = 3\n"
+        "\n"
+        "def target_fn(x):\n"
+        "    def inner(y):\n"
+        "        return y\n"
+        "    return inner(x)\n"
+        "\n"
+        "class Widget:\n"
+        "    def render(self):\n"
+        "        return LIMIT\n"
+    )
+    REFS = ("见 `w80_fixture/target.py#LIMIT`、`w80_fixture/target.py#target_fn`、"
+            "`w80_fixture/target.py#target_fn.inner`、`w80_fixture/target.py#Widget.render`\n")
+
+    def _fixture(self, text):
+        import tempfile, shutil
+        if self.FIXTURE_REL not in PY_BY_REL:
+            d = Path(tempfile.mkdtemp(prefix="w80-symref-"))
+            self.addCleanup(shutil.rmtree, d, True)
+            PY_BY_REL[self.FIXTURE_REL] = d / "target.py"
+            self.addCleanup(PY_BY_REL.pop, self.FIXTURE_REL, None)
+            self.addCleanup(_symbol_index.__dict__.setdefault("_c", {}).pop, self.FIXTURE_REL, None)
+        PY_BY_REL[self.FIXTURE_REL].write_text(text, encoding="utf-8")
+        _symbol_index.__dict__.setdefault("_c", {}).pop(self.FIXTURE_REL, None)
+
+    @staticmethod
+    def _pad(text, n=40):
+        """每个 def / class / 模块级赋值上方插 n 行无关内容:注释、空行、别的函数,缩进与所在层级一致。"""
+        out = []
+        for line in text.splitlines(keepends=True):
+            stripped = line.lstrip()
+            if stripped.startswith(("def ", "class ")) or (stripped and not line[0].isspace() and "=" in line):
+                ind = line[:len(line) - len(stripped)]
+                for i in range(n):
+                    out.append(ind + ("# 无关的注释 %d\n" % i if i % 3 == 0 else
+                                      "\n" if i % 3 == 1 else
+                                      "def _noise_%d():\n%s    pass\n" % (i, ind)))
+            out.append(line)
+        return "".join(out)
+
+    def test_被引文件每个符号上方插入无关行_同一处引用仍通过(self):
+        self._fixture(self.FIXTURE)
+        self.assertEqual(self._one(self.REFS), [], "插行之前就不通过,场景没搭对")
+        padded = self._pad(self.FIXTURE)
+        self.assertGreater(len(padded.splitlines()), len(self.FIXTURE.splitlines()) + 100, "确实插了行")
+        self._fixture(padded)
+        self.assertEqual(self._one(self.REFS), [])
+
+    def test_对照组_插行之后再把符号改名_检出(self):
+        """证明上一条的"仍通过"不是因为检查没在看这个文件。"""
+        self._fixture(self._pad(self.FIXTURE).replace("def target_fn(", "def target_fn_v2("))
+        bad = self._one(self.REFS)
+        self.assertEqual(len(bad), 2, bad)        # target_fn 与 target_fn.inner
+        self.assertTrue(all("不存在的符号" in b for b in bad), bad)
+        self.assertTrue(any("`target_fn`" in b for b in bad), bad)
+
 
 class TestLoadBearingDocHeaders(unittest.TestCase):
     """W11:`PLAN.md` 与 `CONTRACT.md` 的开头不能再说自己是"agent 只读"。
