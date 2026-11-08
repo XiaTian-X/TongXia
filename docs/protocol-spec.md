@@ -102,6 +102,9 @@
 **idle 时轮到谁**:门禁开着、tester 那一份作数而 dev 那一份不作数时,idle 的归属是 **dev**
 (`whose-turn` 输出 `turn dev`,dev 的 `status` 给出重跑指引)—— 否则只有 dev 能解锁、
 归属却是 tester,驱动器会反复调度 tester。tester 那一份不作数时照旧先轮到 tester。
+**idle 时认领闸把路全堵死**(W83):裁判副本与正本不一致,或者每个未完成的工作项都过不了下面工作项级的认领检查
+(类型合法及之后几条,与 `claim` 同一个函数),`whose-turn` 输出 `stop` 并逐项点名 `<ID>:<拒绝理由头一行>` ——
+这些只有人类能解。至少一项能认领就照旧;工作项进行中不判。
 - 工作项存在于 PLAN、未完成、类型合法
 - `state.json` 未被篡改
 - 裁判副本 `.pair/enforcer.py` 与正本 `pair.py` 逐字节一致(只在 claim 查:工作项进行中 dev 正在改正本)
