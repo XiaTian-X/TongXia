@@ -993,3 +993,11 @@
 - 已否决: 让 `drive.py` 自己预判认领 —— 驱动器里不能有协议逻辑;只靠驱动器自停 —— 说不出真正原因,还白烧两个回合;进行中也判副本 —— 会让每个 impl 回合都停;
   角色级检查(校验作数、篡改)也算 —— agent 自己解得开,停下会多叫一次人类;`status` 也列出被拦的项 —— 认领被拒的文案已说清,驱动器只认 `whose-turn`。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/command-reference.md`, `docs/protocol-spec.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+## W83 — 认领闸并成一个函数,whose-turn 只在 idle 复用它:类型合法挪进 check_item_preconditions,副本先判,全被拦才停,逐项点名头一行
+
+- 理由: 契约要求与 `claim` 用同一份判定。类型合法原来是 `cmd_claim` 里单独一句 `die`,挪进 `check_item_preconditions` 当第一条之后,两个调用方共用一个函数。`claim` 的先后与文案不变(类型检查原本就排在"已完成"之后、其余前提之前)。
+  `whose-turn` 调它,所以这个函数必须保持只读;用例前后比对提交数、状态与工作区,以后谁给它加了提交副作用都会红。
+  副本不一致排在逐项检查之前单独判:那时每一次认领都会被拒,逐项列出没有意义。进行中不判,因为 dev 正在改正本,不一致是常态。
+  逐项只取拒绝理由的头一行、去掉 `拒绝认领 —— ` 前缀与行尾冒号,一行输出,满足 `drive.py` 取最后一行的约定。
+- 已否决: 在 `whose-turn` 里另拼一句类型非法的理由 —— 会和 `claim` 漂移;任一项被拦就停 —— 能认领的项还在时停下,会白叫一次人类;只在归属 tester 时判 —— dev 重跑校验解不开认领闸。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_unclaimable_stop.py`, `tests/conformance/mutation_check.py`, `docs/command-reference.md`, `docs/protocol-spec.md`, `docs/troubleshooting.md`, `docs/improvements.md`

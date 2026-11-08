@@ -2166,11 +2166,17 @@ def cmd_status(root, cfg, args):
 # --------------------------------------------------------------------------
 
 def check_item_preconditions(root, cfg, item_id, item_type):
-    """认领前的工作项级检查。返回拒绝理由;None 放行。
+    """认领前的工作项级检查(含类型合法)。返回拒绝理由;None 放行。
+
+    `whose-turn` 在 idle 时也拿它逐项判"还有没有能认领的"(W83)—— 同一份判定,
+    所以这里**只能读、不能提交或改状态**。
 
     verify-setup 已经查过一遍,这里再查是因为**人类可能在那之后动过 PLAN 或
     契约** —— 而这两份都是冻结文件,agent 看不见它们什么时候变的。
     """
+    if item_type not in ITEM_TYPES:
+        return ("工作项 '%s' 的类型 '[%s]' 非法。只支持:%s"
+                % (item_id, item_type, "、".join(ITEM_TYPES)))
     block = next((b for i, _, _, b in _plan_blocks(root, cfg) if i == item_id), "")
 
     # --- 契约依据:非 cover 的工作项不能建在未经核实的规格上 -----------------
@@ -2285,9 +2291,6 @@ def cmd_claim(root, cfg, args):
     item_id, item_type, done = match[0]
     if done:
         die("工作项 '%s' 已经完成了。请认领一个未完成的。" % item_id)
-    if item_type not in ITEM_TYPES:
-        die("工作项 '%s' 的类型 '[%s]' 非法。只支持:%s"
-            % (item_id, item_type, "、".join(ITEM_TYPES)))
 
     refusal = check_item_preconditions(root, cfg, args.item_id, item_type)
     if refusal:
@@ -4188,9 +4191,44 @@ def cmd_whose_turn(root, cfg, args):
     if state_is_tampered(root):
         print("stop %s 被改动过,先跑 status 确认真实状态" % STATE_REL)
         return 0
+    if state["phase"] == "idle":                        # 进行中不判:dev 正在改正本(W83)
+        blocked = idle_claim_blocked(root, cfg)
+        if blocked:
+            print("stop %s" % blocked)
+            return 0
 
     print("turn %s" % phase_owner(root, cfg, state))
     return 0
+
+
+def idle_claim_blocked(root, cfg):
+    """idle 时认领闸把路全堵死的理由(W83);至少有一项能认领时返回 None。
+
+    认领闸拦的东西都要人类处理,而驱动器只认 `whose-turn` 这一行 —— 照样输出
+    `turn tester` 的话,tester 认领被拒,驱动器要白跑两回合、靠"没进展"自停,
+    停下时还说不出原因。只看工作项级的检查(与 `claim` 同一个函数);角色级的
+    (两个角色的校验作数、篡改)agent 自己解得开,不算。
+    """
+    if not judge_in_sync(root):
+        return ("裁判副本 %s 与正本不一致,每一次认领都会被拒;副本是冻结文件,"
+                "要人类重钉(把正本复制成副本并提交)" % JUDGE_REL)
+    blocked = []
+    for item_id, item_type, done, _ in _plan_blocks(root, cfg):
+        if done:
+            continue
+        refusal = check_item_preconditions(root, cfg, item_id, item_type)
+        if refusal is None:
+            return None
+        head = refusal.split("\n", 1)[0].strip()
+        if head.startswith(CLAIM_REFUSED_PREFIX):
+            head = head[len(CLAIM_REFUSED_PREFIX):]
+        blocked.append("%s:%s" % (item_id, head.rstrip(":" + _FW_COLON).strip()))
+    if not blocked:
+        return None
+    return "每个待办项都过不了认领检查,要人类处理:" + ";".join(blocked)
+
+
+CLAIM_REFUSED_PREFIX = "拒绝认领 —— "
 
 
 # --------------------------------------------------------------------------
