@@ -984,3 +984,12 @@
   契约写法表"冒号 `:` 与 `:` 都认"在开轮时丢了全角冒号,两个都是半角;本意(PLAN 验收标准、契约判据、用例、实现)一直是半角全角都认。人类授权在工作项中途改回 `:` 与 `：`(0cfb66e),只动那一个字符。
 - 已否决: 配对允许跨空行(契约字面没禁)—— 会让一个落单反引号静默放行整段标记;标记在原文上匹配、只把落在代码区间里的剔掉 —— 与"先抹再找"等价但要多维护一套区间;等 W82 完成后在下一轮开轮时再修契约笔误 —— 人类要求当场修,完成时由本条记下即可。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_contract_unclarified.py`, `tests/conformance/mutation_check.py`, `docs/pair-run/CONTRACT.md`, `docs/protocol-spec.md`
+
+## SETUP — 第五十二轮做开放条目 62(每个待办项都认领不了时 whose-turn 停下),规划经自审后人类批准(2026-11-08)
+
+- 理由: 编号开放条目里 60 排在 W82 之后等标记跑几轮、61 等数据,62 是唯一前提清楚、能脚本判定的,而且 W82 刚加了一道认领闸,它会更常出现。
+  `whose-turn` 存在的理由是驱动器里没有协议逻辑;每个待办项都被认领闸拦住时它仍输出 `turn tester`,驱动器只能靠"连续两回合没进展"自停,停下时说不出原因。
+  判定复用 `claim` 的工作项级检查,只在 idle 判:进行中 dev 正在改正本,副本不一致是常态。
+- 已否决: 让 `drive.py` 自己预判认领 —— 驱动器里不能有协议逻辑;只靠驱动器自停 —— 说不出真正原因,还白烧两个回合;进行中也判副本 —— 会让每个 impl 回合都停;
+  角色级检查(校验作数、篡改)也算 —— agent 自己解得开,停下会多叫一次人类;`status` 也列出被拦的项 —— 认领被拒的文案已说清,驱动器只认 `whose-turn`。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `docs/command-reference.md`, `docs/protocol-spec.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`

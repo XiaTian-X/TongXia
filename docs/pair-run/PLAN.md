@@ -1081,3 +1081,18 @@
     ⑥`ENFORCEMENTS` 加 `contract-unclarified`(不进交接不变量);`protocol-spec.md`(§3.3 补齐认领前置条件、§5.4 检查表)、`architecture.md`、`command-reference.md`、`troubleshooting.md`、
     `contract-templates.md`、`rules.md`、`SKILL.md` 跟上;开放条目 59 标 ✅
   - 对应契约:`docs/pair-run/CONTRACT.md` → 契约的未决点与越界
+
+### 第五十二轮:每个待办项都认领不了时,`whose-turn` 停下交给人类(开放条目 62)
+
+> 人类要求推送后开始下一个工作项;dev 选开放条目 62。认领闸拦的东西(`依据` 不可断言、待澄清标记、保护测试缺失、类型非法、裁判副本不一致)都要人类处理,
+> 而每个待办项都被拦时 idle 的 `whose-turn` 照样输出 `turn tester`,驱动器要白烧两个回合、靠"没进展"自停,停下时说不出真正原因。规划经 dev 自审后人类批准(2026-11-08),授权 dev 代笔立项。
+
+- [ ] **W83** [feature] — idle 时裁判副本不一致、或未完成的工作项一个都过不了认领检查,`whose-turn` 输出 `stop` 并逐项点名理由
+  - **来源**:开放条目 62
+  - 验收标准:①只在 idle 判,工作项进行中照旧(dev 正在改正本,副本不一致是常态);
+    ②裁判副本与正本不一致 → `stop`,说明每一次认领都会被拒、要人类重钉;没有副本算一致;
+    ③未完成的工作项每一项都过不了认领的工作项级检查(类型合法、契约小节的几条、待澄清标记、refactor 保护测试)→ `stop`,一行里逐项写 `<ID>:<拒绝理由的头一行>`;
+    只要有一项能认领 → 照旧 `turn <归属>`;已完成项不算;角色级检查(校验作数、篡改)不算;
+    ④只读、退出码 0、一行、以 `stop ` 开头;
+    ⑤`command-reference.md`(§6.6 的 `stop` 理由)、`protocol-spec.md`(§3.3)、`troubleshooting.md` 跟上;开放条目 62 标 ✅
+  - 对应契约:`docs/pair-run/CONTRACT.md` → 每个待办项都认领不了时停下
