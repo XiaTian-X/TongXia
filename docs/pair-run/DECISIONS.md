@@ -974,3 +974,13 @@
   扫整份契约 —— 未引用小节的未决点不该挡别的工作项;拦 cover / refactor —— cover 的依据是代码现状,refactor 由保护测试守行为;把"契约没要求的行为"做成脚本检查 —— 判不了;
   评审严重度分级卡裁决 —— 严重度由评审方自填,会诱导虚报,最近的打回都是实打实的问题,没有数据支持。
 - 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `.agents/skills/pair-protocol/SKILL.md`, `.agents/skills/pair-protocol/references/contract-templates.md`, `.agents/skills/pair-protocol/references/rules.md`, `docs/protocol-spec.md`, `docs/architecture.md`, `docs/command-reference.md`, `docs/troubleshooting.md`, `docs/improvements.md`, `docs/prior-art.md`, `docs/pair-run/PLAN.md`, `docs/pair-run/CONTRACT.md`
+
+## W82 — 待澄清标记在"抹掉代码之后"的引用小节全文上找,反引号按串长配对且不跨空行;只拦 feature / bug 的认领,verify-setup 按节提醒;契约写法表的全角冒号笔误由人类授权在工作项中途修正
+
+- 理由: 契约要能提到这个写法,否则以后引用讲它的小节的工作项都会被拦,所以围栏与行内代码豁免,HTML 注释不豁免(agent 看得见注释)。
+  行内代码按 CommonMark 配对:先抹围栏,再从左到右扫反引号串,N 开、恰好 N 关,关不上的当字面字符;配对不跨空行,因为行内代码本来就不跨段落。跨了的话,前一段落单的反引号会和后一段的配上,把中间一段连同标记吞掉,等于静默放行。
+  这一条是实现时提出的、契约没逐字写,review-impl 认定由"按 CommonMark"推得出且只会更严,补了用例。
+  范围取标题行加含子小节的全文,取节循环从 `contract_sections_full` 抽成 `_full_section_spans` 两处共用;标记在抹过的文本上找,原文按位置从未抹的那份取,文案原样引用。
+  契约写法表"冒号 `:` 与 `:` 都认"在开轮时丢了全角冒号,两个都是半角;本意(PLAN 验收标准、契约判据、用例、实现)一直是半角全角都认。人类授权在工作项中途改回 `:` 与 `：`(0cfb66e),只动那一个字符。
+- 已否决: 配对允许跨空行(契约字面没禁)—— 会让一个落单反引号静默放行整段标记;标记在原文上匹配、只把落在代码区间里的剔掉 —— 与"先抹再找"等价但要多维护一套区间;等 W82 完成后在下一轮开轮时再修契约笔误 —— 人类要求当场修,完成时由本条记下即可。
+- 影响路径: `.agents/skills/pair-protocol/scripts/pair.py`, `tests/conformance/test_v1_contract_unclarified.py`, `tests/conformance/mutation_check.py`, `docs/pair-run/CONTRACT.md`, `docs/protocol-spec.md`

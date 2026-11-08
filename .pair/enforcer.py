@@ -154,6 +154,7 @@ ENFORCEMENTS = HANDOFF_INVARIANTS + (
     "cover-note",            # cover 的 spec 回合要交出特征测试记录
     "contract-provenance",   # 契约小节必须写 `依据`,不可断言的不能开非 cover 项
     "contract-shape",        # 被引用的可断言小节要有代码块或填了数据的表、写返回或错误;存量类工作项查疑似漂移(W73)
+    "contract-unclarified",  # feature/bug 认领时,引用小节(标题行、正文、子小节)里代码以外的待澄清标记挡住认领;verify-setup 按节提醒(W82)
     "refactor-safety-net",   # refactor 必须声明保护它的测试
     "post-dispute-fix",      # 异议后的 spec 回合豁免红绿,但必须真的改了测试
     "dispute-shape",         # document-shape 的子项:异议必须存在且有三小节
@@ -1836,6 +1837,7 @@ PHASE_BRIEF = {
     - 有没有针对测试输入特判/硬编码
     - 有没有偏离 %(contract)s
     - 有没有明显未覆盖的边界情况
+    - 有没有做了契约没要求的事(多出来的分支、参数、行为)—— 没人测、也没人评审
 
   【本回合只读】只能写:%(paths)s
   夹带任何代码改动都会被拒绝。
@@ -2203,6 +2205,11 @@ def check_item_preconditions(root, cfg, item_id, item_type):
                         "整条链上每一步都合规,结果是线上炸。\n\n"
                         "正确顺序:先做一个 [cover] 工作项建立事实,人类定稿之后再开这一项。"
                         % (anchor_name, raw or "(没写)"))
+            # --- 待澄清标记(W82):走到这里,小节存在、不重名、依据可断言 ---------
+            if item_type in UNCLARIFIED_TYPES:
+                marks = unclarified_marks(_read(root / cfg["contract_file"])).get(anchor_name)
+                if marks:
+                    return unclarified_refusal(anchor_name, marks)
 
     # --- refactor 的安全网 ---------------------------------------------------
     if item_type == "refactor":
@@ -4539,7 +4546,12 @@ CONTRACT_SKELETON = """# 接口契约（冻结 — agent 只读，变更需双�
      **只有前两者可以被 tester 断言。** 存量项目老文档的头号病症是过时:
      它写"返回 null"而实际代码抛异常时,tester 会照它写断言、dev 会以为
      发现了 bug 去改行为,整条链每一步都合规,结果是线上炸。
-     待核实的小节只能由 [cover] 工作项去建立事实,再由人类定稿。 -->
+     待核实的小节只能由 [cover] 工作项去建立事实,再由人类定稿。
+
+     拿不准的地方别写成看似确定的句子,写一个 `[待澄清: <问题>]`
+     (Spec Kit 的 `[NEEDS CLARIFICATION: <问题>]` 也认)。引用这一节的
+     feature / bug 项认领时会被拦下,等人类回答、把标记换成答案。
+     注释里的标记照样算;只是提到写法时,写进行内代码或代码块。 -->
 
 ### `函数名(参数: 类型) -> 返回类型`
 
@@ -4563,7 +4575,7 @@ CONTRACT_SKELETON = """# 接口契约（冻结 — agent 只读，变更需双�
 <!-- 空输入、超长输入、并发、null。没在这里写明的边界,tester 不能凭空假设。 -->
 
 **不做**
-<!-- 明确不承诺的行为。写在这里的,tester 不为它写断言,dev 也不必实现它。 -->
+<!-- 明确不承诺的行为。写在这里的,tester 不断言,dev 不该实现:多出来的行为没人测、也没人评审。 -->
 """
 
 DECISIONS_SKELETON = """# 决策记录（追加式 — 只能往后加，不能改已有条目）
@@ -4934,17 +4946,99 @@ def contract_sections_full(text):
     与 `contract_sections` 的取法不同,这是有意的:那边要防子小节的 `依据` 被父小节
     继承,这里要看小节**整体**有没有能被断言的东西 —— 模板把签名放在 `###` 里。
     """
+    out = {}
+    for name, _, body_start, end in _full_section_spans(text):
+        out.setdefault(name, text[body_start:end])
+    return out
+
+
+def _full_section_spans(text):
+    """逐节给出 (小节名, 标题行起点, 标题行终点, 含子小节的终点)。找标题时把代码块抹成空白。"""
     blanked = _FENCE_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), text)
     heads = list(_LEVELLED_HEADING_RE.finditer(blanked))
-    out = {}
     for i, m in enumerate(heads):
         level, end = len(m.group(1)), len(text)
         for n in heads[i + 1:]:
             if len(n.group(1)) <= level:
                 end = n.start()
                 break
-        out.setdefault(m.group(2).strip().strip("`"), text[m.end():end])
+        yield m.group(2).strip().strip("`"), m.start(), m.end(), end
+
+
+# W82:契约里的待澄清标记 `[待澄清: <问题>]` / `[NEEDS CLARIFICATION: <问题>]`。
+# 括号与冒号用显式字符类,不对正文做 NFKC 归一 —— 拒绝文案要原样引用标记。
+_FW_LBRACKET, _FW_RBRACKET = chr(0xFF3B), chr(0xFF3D)      # 全角方括号
+_CJK_LBRACKET, _CJK_RBRACKET = chr(0x3010), chr(0x3011)    # 黑括号
+_FW_COLON = chr(0xFF1A)                                    # 全角冒号
+_MARK_CLOSERS = r"\]" + _FW_RBRACKET + _CJK_RBRACKET
+UNCLARIFIED_RE = re.compile(
+    r"[\[%s%s](?:待澄清|NEEDS\s+CLARIFICATION)(?:[:%s][^%s]*)?[%s]"
+    % (_FW_LBRACKET, _CJK_LBRACKET, _FW_COLON, _MARK_CLOSERS, _MARK_CLOSERS), re.I)
+# 有 tester 照契约写断言的 spec 回合的类型:cover 断言代码现状,refactor 由保护测试守行为。
+UNCLARIFIED_TYPES = ("feature", "bug")
+_BACKTICK_RUN_RE = re.compile(r"`+")
+_BLANK_LINE_RE = re.compile(r"\n[ \t]*\n")
+
+
+def _blank_code(text):
+    """把代码换成等长空白(换行保留):契约要能**提到**标记的写法,而不被当成用了它(W82)。
+
+    先抹围栏代码块,再从左到右扫反引号串:N 个开、恰好 N 个关(CommonMark),这一对连同中间
+    一起抹掉;找不到同长的串,这一串就是字面字符,从下一串接着扫。**不跨空行配对** ——
+    行内代码不跨段落,跨了会让一个落单的反引号把后面整段正文(连同里面的标记)吞掉。
+    HTML 注释不抹:agent 读的是原始 markdown,看得见注释。
+    """
+    def spaces(s):
+        return re.sub(r"[^\n]", " ", s)
+    chars = list(_FENCE_RE.sub(lambda m: spaces(m.group(0)), text))
+    text = "".join(chars)
+    runs = list(_BACKTICK_RUN_RE.finditer(text))
+    i = 0
+    while i < len(runs):
+        opener, close = runs[i], None
+        for k in range(i + 1, len(runs)):
+            if _BLANK_LINE_RE.search(text, opener.end(), runs[k].start()):
+                break
+            if len(runs[k].group(0)) == len(opener.group(0)):
+                close = k
+                break
+        if close is None:
+            i += 1
+            continue
+        for p in range(opener.start(), runs[close].end()):
+            if chars[p] != "\n":
+                chars[p] = " "
+        i = close + 1
+    return "".join(chars)
+
+
+def unclarified_marks(text):
+    """{小节名: [代码以外的待澄清标记原文, …]}(W82)。
+
+    范围与 `contract_sections_full` 相同(含子小节、重名取第一个),外加标题行本身。
+    原文从未抹的那份里取:标记的问题文本里有行内代码时,引用的仍是人写下的样子。
+    """
+    out = {}
+    for name, start, _, end in _full_section_spans(text):
+        if name in out:
+            continue
+        chunk = text[start:end]
+        out[name] = [chunk[m.start():m.end()] for m in UNCLARIFIED_RE.finditer(_blank_code(chunk))]
     return out
+
+
+def unclarified_refusal(name, marks):
+    """认领被待澄清标记拦下时的文案:原样列出,最多 5 条。"""
+    shown = "\n".join("  " + m for m in marks[:5])
+    if len(marks) > 5:
+        shown += "\n  …… 另有 %d 处" % (len(marks) - 5)
+    return ("拒绝认领 —— 契约小节「%s」里还有 %d 处待澄清的标记:\n\n%s\n\n"
+            "标记记的是起草时没定下来的地方。tester 照着一句没定的话写断言、dev 照着断言实现,\n"
+            "两边各自都\"对\",合起来是废的 —— 这是契约含糊这个唯一致命的失败模式。\n\n"
+            "契约是人类的产物 —— 请交给人类回答这些问题,把标记换成答案。\n"
+            "契约改了之后两个角色的开工前校验都会作废,要各自重跑 verify-setup。\n"
+            "(只是提到这个写法时,写进行内代码或代码块里就不算。)"
+            % (name, len(marks), shown))
 
 
 def _has_filled_table(text):
@@ -5231,6 +5325,7 @@ def cmd_verify_setup(root, cfg, args):
         text = cpath.read_text(encoding="utf-8")
         sections, dupes = contract_sections(text)
         shaped_refs = {}      # 小节名 -> [(工作项, 类型)],形状检查每节只报一次(W73)
+        unclear_refs = {}     # 小节名 -> [feature / bug 工作项],待澄清标记每节只报一次(W82)
         for name in sorted(dupes):
             bad("契约里有多个标题都叫「%s」。工作项按标题文本指向小节,\n"
                 "      重名会让它读到另一节的 `依据` —— 请把标题改得唯一。" % name)
@@ -5255,6 +5350,8 @@ def cmd_verify_setup(root, cfg, args):
                     % (item_id, anchor, cfg["contract_file"],
                        "、".join(sorted(sections)) or "(无)"))
                 continue
+            if typ in UNCLARIFIED_TYPES:
+                unclear_refs.setdefault(anchor, []).append(item_id)
             raw, ok = section_provenance(sections[anchor])
             if ok:
                 shaped_refs.setdefault(anchor, []).append((item_id, typ))
@@ -5301,6 +5398,15 @@ def cmd_verify_setup(root, cfg, args):
                      "      一个都不在 roles.tester / roles.dev 名下的已跟踪文件里。%s 动的是已有代码,\n"
                      "      契约写的应该是现在的代码 —— 核对名字是不是改过。名字是从代码块里猜的,这条只提醒。"
                      % (anchor, "、".join(drift), "、".join(names), "、".join(drift)))
+
+        # --- 待澄清标记(W82):顺序问题,同 `依据` 不可断言 —— 只提醒,硬闸在 claim ---
+        marks_by = unclarified_marks(text) if unclear_refs else {}
+        for anchor, ids in unclear_refs.items():
+            marks = marks_by.get(anchor)
+            if marks:
+                warn("契约小节 '%s'(%s 引用)里还有 %d 处待澄清的标记,头一处是 %s。\n"
+                     "      feature / bug 项认领时会硬拦,要等人类回答、把标记换成答案。现在只是提醒,不阻断。"
+                     % (anchor, "、".join(ids), len(marks), " ".join(marks[0].split())))
 
     # --- refactor 的安全网 --------------------------------------------------
     for item_id, typ, _, block in pending:
