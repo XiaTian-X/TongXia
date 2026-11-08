@@ -1999,6 +1999,62 @@ MUTATIONS = [
     ('待澄清_骨架不做留旧口径',
      'tester 不断言,dev 不该实现:多出来的行为没人测、也没人评审。 -->',
      'tester 不为它写断言,dev 也不必实现它。 -->'),
+
+    ('认领不了_不判',
+     '        if blocked:\n            print("stop %s" % blocked)\n            return 0\n',
+     '        if False:\n            pass\n'),
+
+    ('认领不了_进行中也判',
+     '    if state["phase"] == "idle":                        # 进行中不判',
+     '    if True:                        # 进行中不判'),
+
+    ('认领不了_已完成项也算',
+     '        if done:\n            continue\n        refusal = check_item_preconditions(root, cfg, item_id, item_type)',
+     '        refusal = check_item_preconditions(root, cfg, item_id, item_type)'),
+
+    ('认领不了_任一被拦就停',
+     '        if refusal is None:\n            return None\n        head =',
+     '        if refusal is None:\n            continue\n        head ='),
+
+    ('认领不了_不判副本',
+     '    if not judge_in_sync(root):\n        return ("裁判副本 %s 与正本不一致',
+     '    if False:\n        return ("裁判副本 %s 与正本不一致'),
+
+    ('认领不了_进行中也判副本',
+     '    if state["phase"] == "idle":                        # 进行中不判',
+     '    if not judge_in_sync(root):\n        print("stop 副本不一致,要人类重钉")\n        return 0\n    if state["phase"] == "idle":                        # 进行中不判'),
+
+    ('认领不了_理由不点名工作项',
+     'blocked.append("%s:%s" % (item_id, head.rstrip(',
+     'blocked.append("%s%s" % ("", head.rstrip('),
+
+    ('认领不了_多项只报第一项',
+     ' + ";".join(blocked)',
+     ' + blocked[0]'),
+
+    ('认领不了_写成多行',
+     ' + ";".join(blocked)',
+     ' + "\\n".join(blocked)'),
+
+    ('认领不了_不去前缀',
+     '        if head.startswith(CLAIM_REFUSED_PREFIX):\n            head = head[len(CLAIM_REFUSED_PREFIX):]\n',
+     ''),
+
+    ('认领不了_类型非法不拦',
+     '    if item_type not in ITEM_TYPES:\n        return ("工作项 \'%s\' 的类型 \'[%s]\' 非法。只支持:%s"',
+     '    if False:\n        return ("工作项 \'%s\' 的类型 \'[%s]\' 非法。只支持:%s"'),
+
+    ('认领不了_排在现有stop之前',
+     '    state = load_state(root)\n\n    if cfg["require_setup_verification"] and not state["setup_verified"]:\n        print("stop 尚未通过开工前校验',
+     '    state = load_state(root)\n    if state["phase"] == "idle" and idle_claim_blocked(root, cfg):\n        print("stop %s" % idle_claim_blocked(root, cfg))\n        return 0\n\n    if cfg["require_setup_verification"] and not state["setup_verified"]:\n        print("stop 尚未通过开工前校验'),
+
+    ('认领不了_只在归属tester时判',
+     '    if state["phase"] == "idle":                        # 进行中不判',
+     '    if state["phase"] == "idle" and phase_owner(root, cfg, state) == "tester":  # 进行中不判'),
+
+    ('认领不了_副本文案不提重钉',
+     '要人类重钉(把正本复制成副本并提交)',
+     '要处理'),
 ]
 
 # unittest 的失败行有两种形态:

@@ -1,5 +1,5 @@
 {
-  "baseline": "38bb4603ade44798",
+  "baseline": "b3d9e2a1ef68e924",
   "catchers": {
     "ACTIVATOR 改了而样板没跟上": [
       "test_v1_shipped.TestAllEntryFilesMatchInit.test_每个入口文件都与_merge_entry_写出的逐字节一致"
@@ -1206,6 +1206,48 @@
     ],
     "规范性文档不算删除": [
       "test_v1_docreason.TestDocReasonRequired.test_删掉一份规范性文档同样要理由"
+    ],
+    "认领不了_不判": [
+      "test_v1_unclaimable_stop.TestEachRefusalStops.test_refactor_没声明保护测试"
+    ],
+    "认领不了_不判副本": [
+      "test_v1_unclaimable_stop.TestJudgeCopy.test_idle_时副本不一致_停下_要人类重钉"
+    ],
+    "认领不了_不去前缀": [
+      "test_v1_unclaimable_stop.TestEachRefusalStops.test_refactor_没声明保护测试"
+    ],
+    "认领不了_任一被拦就停": [
+      "test_v1_unclaimable_stop.TestSomeClaimable.test_一项被拦_一项能认领_照旧轮到_tester"
+    ],
+    "认领不了_写成多行": [
+      "test_v1_unclaimable_stop.TestSomeClaimable.test_三项都被拦_每一项都点名"
+    ],
+    "认领不了_副本文案不提重钉": [
+      "test_v1_unclaimable_stop.TestJudgeCopy.test_idle_时副本不一致_停下_要人类重钉"
+    ],
+    "认领不了_只在归属tester时判": [
+      "test_v1_unclaimable_stop.TestIdleOwnedByDev.test_所有项被拦时停下_不是轮到_dev"
+    ],
+    "认领不了_多项只报第一项": [
+      "test_v1_unclaimable_stop.TestSomeClaimable.test_三项都被拦_每一项都点名"
+    ],
+    "认领不了_已完成项也算": [
+      "test_v1_unclaimable_stop.TestSomeClaimable.test_已完成项能认领_未完成项被拦_停下"
+    ],
+    "认领不了_排在现有stop之前": [
+      "test_v1_unclaimable_stop.TestExistingStopsComeFirst.test_尚未通过校验且所有项被拦_仍是校验那一条"
+    ],
+    "认领不了_理由不点名工作项": [
+      "test_v1_unclaimable_stop.TestEachRefusalStops.test_refactor_没声明保护测试"
+    ],
+    "认领不了_类型非法不拦": [
+      "test_v1_flows.TestItemType.test_非法类型被拒绝"
+    ],
+    "认领不了_进行中也判": [
+      "test_v1_unclaimable_stop.TestInProgress.test_进行中其余项和当前项都被拦_照旧轮到当前阶段的归属"
+    ],
+    "认领不了_进行中也判副本": [
+      "test_v1_unclaimable_stop.TestJudgeCopy.test_进行中副本不一致_照旧轮到当前阶段的归属"
     ],
     "认领时不记 item_base": [
       "test_v1_affected_tests.TestFallsBackToGate.test_路径正好_200_条仍走选择器"
